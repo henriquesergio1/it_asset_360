@@ -1040,6 +1040,12 @@ export const AjusteRota: React.FC = () => {
     const [itineraryQuinzena, setItineraryQuinzena] = useState<'1_3' | '2_4'>('1_3');
     const [copiedItinerary, setCopiedItinerary] = useState(false);
 
+    // Modal de Diagnóstico e Reequilíbrio de Dias Sobrecarregados
+    const [rebalanceDay, setRebalanceDay] = useState<string | null>(null);
+    const [selectedRebalanceClients, setSelectedRebalanceClients] = useState<Set<number>>(new Set());
+    const [targetRebalanceDay, setTargetRebalanceDay] = useState<string>('');
+    const [rebalanceToast, setRebalanceToast] = useState<string | null>(null);
+
     // Parâmetros de Roteirização
     const [optMaxClients, setOptMaxClients] = useState(15);
     const [optLimitClients, setOptLimitClients] = useState(false);
@@ -2004,6 +2010,201 @@ export const AjusteRota: React.FC = () => {
             unallocatedCount
         };
     }, [scopedAdjustedRoutes, selectedPromoter, colaboradores, getClientServiceTime]);
+
+    // Auto-dismiss do toast de reequilíbrio
+    useEffect(() => {
+        if (!rebalanceToast) return;
+        const timer = setTimeout(() => setRebalanceToast(null), 5000);
+        return () => clearTimeout(timer);
+    }, [rebalanceToast]);
+
+    // Lista de dias com jornada excedente / sobrecarregada (>= 60min acima da jornada configurada)
+    const overloadedDays = useMemo(() => {
+        return WEEKDAYS.filter(day => {
+            const dayMetrics = operationalSummary.dayMap[day];
+            if (!dayMetrics) return false;
+            const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) 
+                ? (optLimitHours ? optMaxHours : 8) / 2 
+                : (optLimitHours ? optMaxHours : 8);
+            const dayLimitMin = dayLimitHours * 60;
+            const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
+            return maxDayTime > dayLimitMin && (maxDayTime - dayLimitMin) >= 60;
+        });
+    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod]);
+
+    // Lista de dias em atenção de jornada (< 60min acima da jornada configurada)
+    const attentionDays = useMemo(() => {
+        return WEEKDAYS.filter(day => {
+            const dayMetrics = operationalSummary.dayMap[day];
+            if (!dayMetrics) return false;
+            const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) 
+                ? (optLimitHours ? optMaxHours : 8) / 2 
+                : (optLimitHours ? optMaxHours : 8);
+            const dayLimitMin = dayLimitHours * 60;
+            const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
+            const excess = maxDayTime - dayLimitMin;
+            return excess > 0 && excess < 60;
+        });
+    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod]);
+
+    // Dados consolidados para o modal de reequilíbrio de carga
+    const rebalanceData = useMemo(() => {
+        if (!rebalanceDay) return null;
+
+        const sourceDay = rebalanceDay;
+        const sourceMetrics = operationalSummary.dayMap[sourceDay];
+        const sourceLimitHours = (sourceDay === 'SÁBADO' && optSatHalfPeriod) 
+            ? (optLimitHours ? optMaxHours : 8) / 2 
+            : (optLimitHours ? optMaxHours : 8);
+        const sourceLimitMin = sourceLimitHours * 60;
+        const sourceTime13 = sourceMetrics?.time13 || 0;
+        const sourceTime24 = sourceMetrics?.time24 || 0;
+        const sourceMaxTime = Math.max(sourceTime13, sourceTime24);
+        const sourceExcessMin = Math.max(0, sourceMaxTime - sourceLimitMin);
+
+        // Clientes pertencentes a este dia no escopo atual
+        const clientsOnDay = scopedAdjustedRoutes.filter(r => r.Dia_Semana === sourceDay);
+        const uniqueClientsMap = new Map<number, VisitaPrevista>();
+        clientsOnDay.forEach(c => {
+            if (!uniqueClientsMap.has(c.Cod_Cliente)) {
+                uniqueClientsMap.set(c.Cod_Cliente, c);
+            }
+        });
+        const uniqueClients = Array.from(uniqueClientsMap.values());
+
+        // Análise dos outros dias da semana
+        const otherDays = WEEKDAYS.filter(d => d !== sourceDay).map(day => {
+            const m = operationalSummary.dayMap[day];
+            const limitHours = (day === 'SÁBADO' && optSatHalfPeriod) 
+                ? (optLimitHours ? optMaxHours : 8) / 2 
+                : (optLimitHours ? optMaxHours : 8);
+            const limitMin = limitHours * 60;
+            const time13 = m?.time13 || 0;
+            const time24 = m?.time24 || 0;
+            const maxTime = Math.max(time13, time24);
+            const freeMinutes = Math.max(0, limitMin - maxTime);
+            const pdvsCount = scopedAdjustedRoutes.filter(r => r.Dia_Semana === day).length;
+            const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: day, bg: 'bg-indigo-600' };
+
+            let status: 'high' | 'medium' | 'full';
+            if (freeMinutes >= 60) status = 'high';
+            else if (freeMinutes > 0) status = 'medium';
+            else status = 'full';
+
+            return {
+                day,
+                limitHours,
+                limitMin,
+                maxTime,
+                freeMinutes,
+                pdvsCount,
+                dayCfg,
+                status
+            };
+        });
+
+        // Ordena dias receptores pelo maior tempo livre
+        otherDays.sort((a, b) => b.freeMinutes - a.freeMinutes);
+        const bestTargetDay = otherDays.length > 0 && otherDays[0].freeMinutes > 0 ? otherDays[0] : null;
+
+        return {
+            sourceDay,
+            sourceMetrics,
+            sourceLimitHours,
+            sourceLimitMin,
+            sourceMaxTime,
+            sourceExcessMin,
+            uniqueClients,
+            otherDays,
+            bestTargetDay
+        };
+    }, [rebalanceDay, operationalSummary.dayMap, scopedAdjustedRoutes, optLimitHours, optMaxHours, optSatHalfPeriod]);
+
+    // Executar Reequilíbrio Automático em 1 Clique
+    const handleAutoRebalance = () => {
+        if (!rebalanceData || !rebalanceData.bestTargetDay) {
+            alert("Nenhum dia com capacidade ociosa encontrado para reequilíbrio automático.");
+            return;
+        }
+
+        const targetDay = rebalanceData.bestTargetDay.day;
+        const targetFreeMin = rebalanceData.bestTargetDay.freeMinutes;
+        let excessToCover = rebalanceData.sourceExcessMin;
+
+        if (excessToCover <= 0) {
+            excessToCover = 45;
+        }
+
+        // Ordenar clientes pelo tempo em loja + percurso médio estimado
+        const clientsWithTime = rebalanceData.uniqueClients.map(c => {
+            const sTime = getClientServiceTime(c) + 12;
+            return { client: c, estTime: sTime };
+        });
+
+        const clientsToMove: number[] = [];
+        let accumulatedTime = 0;
+
+        for (const item of clientsWithTime) {
+            if (accumulatedTime + item.estTime <= targetFreeMin + 30 || clientsToMove.length === 0) {
+                clientsToMove.push(item.client.Cod_Cliente);
+                accumulatedTime += item.estTime;
+                if (accumulatedTime >= excessToCover) {
+                    break;
+                }
+            }
+        }
+
+        if (clientsToMove.length === 0 && clientsWithTime.length > 0) {
+            clientsToMove.push(clientsWithTime[0].client.Cod_Cliente);
+        }
+
+        const toMoveSet = new Set(clientsToMove);
+
+        setAdjustedRoutes(prev => prev.map(v => {
+            if (v.Dia_Semana === rebalanceData.sourceDay && toMoveSet.has(v.Cod_Cliente)) {
+                return {
+                    ...v,
+                    Dia_Semana: targetDay
+                };
+            }
+            return v;
+        }));
+
+        const count = clientsToMove.length;
+        setRebalanceToast(`✓ Reequilíbrio concluído! ${count} ${count === 1 ? 'cliente transferido' : 'clientes transferidos'} de ${rebalanceData.sourceDay} para ${targetDay}.`);
+        setRebalanceDay(null);
+        setSelectedRebalanceClients(new Set());
+        setTargetRebalanceDay('');
+    };
+
+    // Executar Transferência Manual dos Clientes Selecionados
+    const handleManualRebalanceApply = () => {
+        if (!rebalanceData) return;
+        if (selectedRebalanceClients.size === 0) {
+            alert("Selecione ao menos um cliente da lista para transferir.");
+            return;
+        }
+        if (!targetRebalanceDay) {
+            alert("Selecione o dia de destino para os clientes selecionados.");
+            return;
+        }
+
+        const count = selectedRebalanceClients.size;
+        setAdjustedRoutes(prev => prev.map(v => {
+            if (v.Dia_Semana === rebalanceData.sourceDay && selectedRebalanceClients.has(v.Cod_Cliente)) {
+                return {
+                    ...v,
+                    Dia_Semana: targetRebalanceDay
+                };
+            }
+            return v;
+        }));
+
+        setRebalanceToast(`✓ Sucesso! ${count} ${count === 1 ? 'cliente transferido' : 'clientes transferidos'} de ${rebalanceData.sourceDay} para ${targetRebalanceDay}.`);
+        setRebalanceDay(null);
+        setSelectedRebalanceClients(new Set());
+        setTargetRebalanceDay('');
+    };
 
     // Limite dinâmico de renderização da tabela para Scroll Spy
     const visibleRoutesLimit = useMemo(() => {
@@ -5921,6 +6122,53 @@ export const AjusteRota: React.FC = () => {
                                             </button>
                                         )}
 
+                                        {/* FILTRO RÁPIDO PARA DIAS SOBRECARREGADOS */}
+                                        {overloadedDays.length > 0 ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const isFilterActive = overloadedDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === overloadedDays.length;
+                                                    if (isFilterActive) {
+                                                        setSelectedDaysFilter([]);
+                                                    } else {
+                                                        setSelectedDaysFilter(overloadedDays);
+                                                    }
+                                                }}
+                                                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
+                                                    overloadedDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === overloadedDays.length
+                                                        ? 'bg-red-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-red-400 font-black animate-pulse'
+                                                        : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                                }`}
+                                                title={`Isolar com 1 clique apenas os dias com sobrecarga de jornada (${overloadedDays.join(', ')}).`}
+                                            >
+                                                <span>🚨 Sobrecarga:</span>
+                                                <span className="font-black">{overloadedDays.length}</span>
+                                            </button>
+                                        ) : (
+                                            attentionDays.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const isFilterActive = attentionDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === attentionDays.length;
+                                                        if (isFilterActive) {
+                                                            setSelectedDaysFilter([]);
+                                                        } else {
+                                                            setSelectedDaysFilter(attentionDays);
+                                                        }
+                                                    }}
+                                                    className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
+                                                        attentionDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === attentionDays.length
+                                                            ? 'bg-amber-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-amber-400 font-black'
+                                                            : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                                                    }`}
+                                                    title={`Isolar com 1 clique os dias em atenção de jornada (${attentionDays.join(', ')}).`}
+                                                >
+                                                    <span>⚠️ Atenção:</span>
+                                                    <span className="font-black">{attentionDays.length}</span>
+                                                </button>
+                                            )
+                                        )}
+
                                         {selectedDaysFilter.length > 0 && (
                                             <button
                                                 type="button"
@@ -6073,15 +6321,22 @@ export const AjusteRota: React.FC = () => {
                                                         )}
                                                         {dayOverload && (
                                                             <span 
-                                                                className={`text-[10px] font-black px-2 py-0.5 rounded-md border shadow-2xs shrink-0 whitespace-nowrap inline-flex items-center gap-1 ${
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setRebalanceDay(day);
+                                                                    setSelectedRebalanceClients(new Set());
+                                                                    setTargetRebalanceDay('');
+                                                                }}
+                                                                className={`text-[10px] font-black px-2 py-0.5 rounded-md border shadow-2xs shrink-0 whitespace-nowrap inline-flex items-center gap-1 cursor-pointer transition hover:scale-105 active:scale-95 select-none ${
                                                                     dayOverload.isSevere 
-                                                                        ? 'bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 border-red-300 dark:border-red-800' 
-                                                                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                                                        ? 'bg-red-100 hover:bg-red-200 text-red-800 dark:bg-red-950/80 dark:hover:bg-red-900/90 dark:text-red-300 border-red-300 dark:border-red-800' 
+                                                                        : 'bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-950/80 dark:hover:bg-amber-900/90 dark:text-amber-300 border-amber-300 dark:border-amber-800'
                                                                 }`}
-                                                                title={`Jornada estimada (${formatDuration(dayOverload.maxDayTime)}) acima da meta de ${dayOverload.dayLimitHours}h em +${dayOverload.excessH > 0 ? `${dayOverload.excessH}h ` : ''}${dayOverload.remM}m.`}
+                                                                title={`Clique para diagnosticar e reequilibrar a jornada de ${day} (excesso de +${dayOverload.excessH > 0 ? `${dayOverload.excessH}h ` : ''}${dayOverload.remM}m).`}
                                                             >
                                                                 <span>{dayOverload.isSevere ? '🚨' : '⚠️'}</span>
                                                                 <span>{dayOverload.isSevere ? 'Sobrecarga' : 'Atenção'}</span>
+                                                                <span className="text-[9px] font-bold opacity-75 underline ml-0.5">Reequilibrar</span>
                                                             </span>
                                                         )}
                                                     </div>
@@ -6102,15 +6357,27 @@ export const AjusteRota: React.FC = () => {
                                                                     {dayOverload && (
                                                                         dayOverload.isSevere ? (
                                                                             <span 
-                                                                                className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 border border-red-300 dark:border-red-800 inline-flex items-center gap-0.5 shrink-0 shadow-2xs"
-                                                                                title={`🚨 Sobrecarga: jornada de ${formatDuration(dayOverload.maxDayTime)} ultrapassa o limite de ${dayOverload.dayLimitHours}h em +${dayOverload.excessH}h${dayOverload.remM > 0 ? ` ${dayOverload.remM}m` : ''} neste dia.`}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setRebalanceDay(day);
+                                                                                    setSelectedRebalanceClients(new Set());
+                                                                                    setTargetRebalanceDay('');
+                                                                                }}
+                                                                                className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-red-100 hover:bg-red-200 text-red-800 dark:bg-red-950/80 dark:hover:bg-red-900/90 dark:text-red-300 border border-red-300 dark:border-red-800 inline-flex items-center gap-0.5 shrink-0 shadow-2xs cursor-pointer transition hover:scale-105 active:scale-95 select-none"
+                                                                                title={`🚨 Sobrecarga: jornada de ${formatDuration(dayOverload.maxDayTime)} ultrapassa o limite de ${dayOverload.dayLimitHours}h em +${dayOverload.excessH}h${dayOverload.remM > 0 ? ` ${dayOverload.remM}m` : ''}. Clique para reequilibrar.`}
                                                                             >
                                                                                 <span>🚨</span> +{dayOverload.excessH}h{dayOverload.remM > 0 ? ` ${dayOverload.remM}m` : ''}
                                                                             </span>
                                                                         ) : (
                                                                             <span 
-                                                                                className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800 inline-flex items-center gap-0.5 shrink-0 shadow-2xs"
-                                                                                title={`⚠️ Atenção: jornada de ${formatDuration(dayOverload.maxDayTime)} ultrapassa o limite de ${dayOverload.dayLimitHours}h em +${dayOverload.excessMin}m.`}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setRebalanceDay(day);
+                                                                                    setSelectedRebalanceClients(new Set());
+                                                                                    setTargetRebalanceDay('');
+                                                                                }}
+                                                                                className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-950/80 dark:hover:bg-amber-900/90 dark:text-amber-300 border border-amber-300 dark:border-amber-800 inline-flex items-center gap-0.5 shrink-0 shadow-2xs cursor-pointer transition hover:scale-105 active:scale-95 select-none"
+                                                                                title={`⚠️ Atenção: jornada de ${formatDuration(dayOverload.maxDayTime)} ultrapassa o limite de ${dayOverload.dayLimitHours}h em +${dayOverload.excessMin}m. Clique para reequilibrar.`}
                                                                             >
                                                                                 <span>⚠️</span> +{dayOverload.excessMin}m
                                                                             </span>
@@ -7998,6 +8265,289 @@ export const AjusteRota: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* MODAL DE SUGESTÃO AUTOMÁTICA DE TROCA DE DIA E REEQUILÍBRIO DE CARGA */}
+            {rebalanceDay && rebalanceData && (
+                <div className="fixed inset-0 z-[2000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in zoom-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+                        {/* Header */}
+                        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                                    <ClockIcon className="w-5 h-5"/>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        Reequilíbrio de Carga: {rebalanceData.sourceDay}
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+                                            {rebalanceData.sourceExcessMin >= 60 ? '🚨 Sobrecarga' : '⚠️ Atenção'}
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Diagnóstico de jornada e remanejamento inteligente entre dias da semana.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setRebalanceDay(null)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Corpo do Modal com Scroll */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-5 text-slate-700 dark:text-slate-300">
+                            {/* 1. Diagnóstico do Dia */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+                                    <div className="text-[10px] font-black uppercase text-slate-400">Jornada Estimada</div>
+                                    <div className="text-base font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                                        {formatDuration(rebalanceData.sourceMaxTime)}
+                                    </div>
+                                </div>
+                                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+                                    <div className="text-[10px] font-black uppercase text-slate-400">Teto Configurado</div>
+                                    <div className="text-base font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                                        {rebalanceData.sourceLimitHours}h / dia
+                                    </div>
+                                </div>
+                                <div className="p-3 bg-red-50/80 dark:bg-red-950/30 rounded-2xl border border-red-200 dark:border-red-800/50">
+                                    <div className="text-[10px] font-black uppercase text-red-500">Excesso de Carga</div>
+                                    <div className="text-base font-black text-red-600 dark:text-red-400 mt-0.5">
+                                        +{Math.floor(rebalanceData.sourceExcessMin / 60)}h {Math.round(rebalanceData.sourceExcessMin % 60)}m
+                                    </div>
+                                </div>
+                                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+                                    <div className="text-[10px] font-black uppercase text-slate-400">PDVs no Dia</div>
+                                    <div className="text-base font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                                        {rebalanceData.uniqueClients.length} clientes
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 2. Análise de Ociosidade dos Dias Receptores */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                        Dias da Semana com Capacidade Ociosa:
+                                    </span>
+                                    <span className="text-[11px] text-slate-400">
+                                        Selecione um dia receptor para remanejamento
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {rebalanceData.otherDays.map(d => {
+                                        const isSelected = targetRebalanceDay === d.day;
+                                        const isBest = rebalanceData.bestTargetDay?.day === d.day;
+
+                                        return (
+                                            <div 
+                                                key={d.day}
+                                                onClick={() => setTargetRebalanceDay(d.day)}
+                                                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 select-none ${
+                                                    isSelected 
+                                                        ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20 shadow-xs' 
+                                                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/80'
+                                                }`}
+                                            >
+                                                <div className="flex items-center space-x-2.5 min-w-0">
+                                                    <span 
+                                                        className="px-2 py-0.5 rounded-lg text-[10px] font-black text-white shrink-0 uppercase"
+                                                        style={{ backgroundColor: d.dayCfg.hex }}
+                                                    >
+                                                        {d.day.split('-')[0]}
+                                                    </span>
+                                                    <div className="truncate">
+                                                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate flex items-center gap-1.5">
+                                                            <span>{d.day}</span>
+                                                            {isBest && (
+                                                                <span className="text-[9px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-300 dark:border-emerald-800">
+                                                                    Mais Ocioso
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-[10px] text-slate-400 dark:text-slate-500">
+                                                            Carga: {formatDuration(d.maxTime)} • {d.pdvsCount} PDVs
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="text-right shrink-0">
+                                                    {d.status === 'high' ? (
+                                                        <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                                                            +{Math.floor(d.freeMinutes / 60)}h{d.freeMinutes % 60 > 0 ? ` ${d.freeMinutes % 60}m` : ''} livres
+                                                        </span>
+                                                    ) : d.status === 'medium' ? (
+                                                        <span className="text-[10px] font-black text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
+                                                            +{d.freeMinutes}m livres
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                                                            Sem folga
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* 3. Ação Principal: Reequilíbrio Automático (1 Clique) */}
+                            {rebalanceData.bestTargetDay && (
+                                <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/90 to-indigo-100/50 dark:from-indigo-950/40 dark:to-indigo-900/20 border border-indigo-200/80 dark:border-indigo-800/50 space-y-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <h4 className="text-xs font-black text-indigo-950 dark:text-indigo-200 uppercase tracking-wider flex items-center gap-1.5">
+                                                <span>⚡</span> Sugestão de Reequilíbrio Automático
+                                            </h4>
+                                            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                                                Transfere automaticamente clientes excedentes de <strong>{rebalanceData.sourceDay}</strong> para o dia com maior folga (<strong>{rebalanceData.bestTargetDay.day}</strong>, com +{Math.floor(rebalanceData.bestTargetDay.freeMinutes / 60)}h {rebalanceData.bestTargetDay.freeMinutes % 60}m disponíveis), ajustando a jornada para a meta legal.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleAutoRebalance}
+                                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] shadow-md shadow-indigo-600/20 transition flex items-center justify-center space-x-2 cursor-pointer"
+                                    >
+                                        <span>⚡ Reequilibrar Automaticamente com 1 Clique</span>
+                                        <span>➔</span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* 4. Remanejamento Manual: Seleção de Clientes */}
+                            <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                        Ou Selecione Manualmente os Clientes a Mover:
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (selectedRebalanceClients.size === rebalanceData.uniqueClients.length) {
+                                                    setSelectedRebalanceClients(new Set());
+                                                } else {
+                                                    setSelectedRebalanceClients(new Set(rebalanceData.uniqueClients.map(c => c.Cod_Cliente)));
+                                                }
+                                            }}
+                                            className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                                        >
+                                            {selectedRebalanceClients.size === rebalanceData.uniqueClients.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                                        </button>
+                                        <span className="text-[10px] font-bold text-slate-400">
+                                            ({selectedRebalanceClients.size} selecionados)
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="max-h-48 overflow-y-auto custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800/60">
+                                    {rebalanceData.uniqueClients.map(client => {
+                                        const isChecked = selectedRebalanceClients.has(client.Cod_Cliente);
+                                        const estService = getClientServiceTime(client);
+
+                                        return (
+                                            <div 
+                                                key={client.Cod_Cliente}
+                                                onClick={() => {
+                                                    setSelectedRebalanceClients(prev => {
+                                                        const next = new Set(prev);
+                                                        if (next.has(client.Cod_Cliente)) next.delete(client.Cod_Cliente);
+                                                        else next.add(client.Cod_Cliente);
+                                                        return next;
+                                                    });
+                                                }}
+                                                className={`p-2.5 flex items-center justify-between gap-3 text-xs transition cursor-pointer select-none ${
+                                                    isChecked ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                                                }`}
+                                            >
+                                                <div className="flex items-center space-x-2.5 min-w-0">
+                                                    <input 
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        onChange={() => {}} // handled by row
+                                                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
+                                                    />
+                                                    <div className="min-w-0 truncate">
+                                                        <div className="font-bold text-slate-800 dark:text-slate-200 truncate flex items-center gap-1.5">
+                                                            <span className="font-mono text-slate-400 text-[10px]">#{client.Cod_Cliente}</span>
+                                                            <span className="truncate">{client.Razao_Social}</span>
+                                                        </div>
+                                                        <div className="text-[10px] text-slate-400 truncate">
+                                                            {client.Bairro ? `${client.Bairro}` : ''}{client.Cidade ? ` • ${client.Cidade}` : ''} ({client.Periodicidade || 'Semanal'})
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="text-right shrink-0">
+                                                    <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                                        ~{estService}m em loja
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {selectedRebalanceClients.size > 0 && (
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2">
+                                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                            Destino selecionado: <strong>{targetRebalanceDay || 'Nenhum dia escolhido acima'}</strong>
+                                        </span>
+                                        <button
+                                            type="button"
+                                            disabled={!targetRebalanceDay}
+                                            onClick={handleManualRebalanceApply}
+                                            className={`px-4 py-2 rounded-xl text-xs font-black text-white transition flex items-center justify-center space-x-1.5 ${
+                                                targetRebalanceDay 
+                                                    ? 'bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20 cursor-pointer active:scale-95' 
+                                                    : 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed opacity-60'
+                                            }`}
+                                        >
+                                            <span>Mover {selectedRebalanceClients.size} {selectedRebalanceClients.size === 1 ? 'Cliente' : 'Clientes'} para {targetRebalanceDay || '...'}</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Footer do Modal */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                Ao mover clientes, os circuitos viários e tempos OSRM são recalculados instantaneamente.
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setRebalanceDay(null)}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TOAST FLOATING FEEDBACK DE REEQUILÍBRIO */}
+            {rebalanceToast && (
+                <div className="fixed bottom-6 right-6 z-[3000] bg-emerald-600 text-white font-bold px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500 flex items-center space-x-2 animate-in slide-in-from-bottom-5 duration-300 max-w-md">
+                    <CheckCircleIcon className="w-5 h-5 text-white shrink-0" />
+                    <span className="text-xs">{rebalanceToast}</span>
+                    <button 
+                        type="button" 
+                        onClick={() => setRebalanceToast(null)} 
+                        className="ml-2 text-white/80 hover:text-white font-black p-1"
+                    >
+                        ✕
+                    </button>
                 </div>
             )}
         </div>

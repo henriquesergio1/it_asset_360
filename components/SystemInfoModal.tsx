@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.160.0',
+    date: 'Hoje',
+    title: 'Fuel360: Filtro Rápido de Dias Sobrecarregados e Sugestão Inteligente de Troca de Dia',
+    changes: [
+      'Filtro Rápido na Barra de Ferramentas: Botão direto "🚨 Sobrecarga" para isolar instantaneamente na grade os dias cuja jornada ultrapassa o limite estabelecido.',
+      'Sugestão Automática de Troca de Dia: Clique na tag de sobrecarga/atenção do dia para abrir diagnóstico com análise de ociosidade dos demais dias da semana.',
+      'Reequilíbrio com 1 Clique e Remanejamento Assistido: Possibilidade de reequilibrar visitas automaticamente para o dia mais ocioso ou escolher clientes manualmente com recálculo instantâneo de percursos OSRM.'
+    ]
+  },
+  {
     version: '3.159.0',
     date: 'Hoje',
     title: 'Fuel360: Indicador de Sobrecarga por Dia e Resumo Elegante Integrado no Modal',
