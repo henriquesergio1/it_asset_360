@@ -9,6 +9,19 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.150.0',
+    date: 'Hoje',
+    title: 'Fuel360: Tratamento de Capacidade Excedida e Grade em Sanfona por Dia e Ciclo',
+    changes: [
+      'Tratamento de Capacidade e Jornada Excedida: Pré-checagem inteligente de viabilidade ao otimizar rotas com limites de tempo (ex: 8h/dia) ou clientes. Se a carteira demandar mais capacidade do que a jornada permite, o sistema alerta detalhando métricas e apresenta decisão interativa.',
+      'Decisão de Overflow Flexibilizada: Opção A para aumentar/flexibilizar o tempo de atendimento garantindo 100% dos clientes distribuídos; ou Opção B para manter limite estrito e alocar clientes excedentes como "SEM ATENDIMENTO" para conferência.',
+      'Grade de Ajuste Fino em Sanfona por Dia: Agrupamento dia a dia (Segunda a Sexta/Sábado + Sem Atendimento) com sanfonas expansíveis e indicadores cromáticos.',
+      'Resumo Operacional no Cabeçalho do Dia: Exibição instantânea de tempo total de atendimento e trânsito OSRM, total de KM estimado, quantidade de clientes (com separação Sem 1/3 e Sem 2/4) e sequência de visitação (#1 a #N).',
+      'Alternância Flexível de Visualização: Seletor na barra de ferramentas para alternar entre "Visão por Dias (Sanfona)" e "Lista Contínua", com atalhos de "Expandir Todos" e "Recolher Todos".',
+      'Isolamento de Clientes Fora de Atendimento: Clientes sem atendimento ficam fora do circuito viário OSRM para evitar traçados espúrios, permitindo reatribuição direta de dia ou colaborador via grade.'
+    ]
+  },
+  {
     version: '3.149.0',
     date: 'Hoje',
     title: 'Fuel360: Detecção de Anomalias Geográficas e Ajuste de Coordenadas GPS',

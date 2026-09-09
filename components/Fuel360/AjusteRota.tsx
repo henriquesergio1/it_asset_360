@@ -14,6 +14,7 @@ import {
     ArrowRightIcon,
     RefreshIcon,
     ChevronDownIcon,
+    ChevronUpIcon,
     CheckCircleIcon,
     ExclamationIcon,
     UserGroupIcon,
@@ -102,7 +103,8 @@ export const DAY_COLORS: Record<string, { bg: string, text: string, border: stri
     'QUINTA-FEIRA':  { bg: 'bg-amber-600', text: 'text-amber-600', border: 'border-amber-500', hex: '#d97706', label: 'QUI' },
     'SEXTA-FEIRA':   { bg: 'bg-rose-600', text: 'text-rose-600', border: 'border-rose-500', hex: '#e11d48', label: 'SEX' },
     'SÁBADO':        { bg: 'bg-cyan-600', text: 'text-cyan-600', border: 'border-cyan-500', hex: '#0891b2', label: 'SÁB' },
-    'DOMINGO':       { bg: 'bg-slate-600', text: 'text-slate-600', border: 'border-slate-500', hex: '#64748b', label: 'DOM' }
+    'DOMINGO':       { bg: 'bg-slate-600', text: 'text-slate-600', border: 'border-slate-500', hex: '#64748b', label: 'DOM' },
+    'SEM ATENDIMENTO': { bg: 'bg-red-600', text: 'text-red-600', border: 'border-red-500', hex: '#ef4444', label: 'SEM ATEND.' }
 };
 
 // Camada de Mapa de Calor (Heatmap) em Canvas 2D acoplado ao Leaflet
@@ -992,6 +994,36 @@ export const AjusteRota: React.FC = () => {
     const [isGeocodingCoord, setIsGeocodingCoord] = useState<boolean>(false);
     const [coordGeocodeFeedback, setCoordGeocodeFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+    // Tratamento de Capacidade Excedida / Tempo Limite na Otimização
+    const [showCapacityModal, setShowCapacityModal] = useState(false);
+    const [capacityOverflowData, setCapacityOverflowData] = useState<{
+        sellers: number[];
+        overflowCount: number;
+        maxVisitsNeeded: number;
+        totalCapacityForWeek: number;
+        neededHoursPerDay: number;
+        configuredHours: number;
+        sellersSummary: Array<{
+            sellerId: number;
+            sellerName: string;
+            totalClients: number;
+            capacity: number;
+            overflow: number;
+        }>;
+    } | null>(null);
+
+    // Controle de Exibição da Grade de Ajuste Fino em Sanfona por Dia
+    const [tableViewMode, setTableViewMode] = useState<'accordion' | 'flat'>('accordion');
+    const [openDaysMap, setOpenDaysMap] = useState<Record<string, boolean>>({
+        'SEGUNDA-FEIRA': true,
+        'TERÇA-FEIRA': true,
+        'QUARTA-FEIRA': true,
+        'QUINTA-FEIRA': true,
+        'SEXTA-FEIRA': true,
+        'SÁBADO': true,
+        'SEM ATENDIMENTO': true
+    });
+
     // Carregar canais de atendimento gravados no banco de dados corporativo
     const loadChannelServiceTimes = useCallback(async () => {
         try {
@@ -1711,6 +1743,16 @@ export const AjusteRota: React.FC = () => {
         });
     }, [filteredRoutes, sortField, sortDirection]);
 
+    // Lista de dias visíveis na Grade de Ajuste Fino (considerando filtros ativos e clientes sem atendimento)
+    const visibleDays = useMemo(() => {
+        let days = selectedDaysFilter.length > 0 ? selectedDaysFilter : [...WEEKDAYS];
+        const hasUnallocated = sortedRoutes.some(r => r.Dia_Semana === 'SEM ATENDIMENTO');
+        if (hasUnallocated && !days.includes('SEM ATENDIMENTO')) {
+            days = [...days, 'SEM ATENDIMENTO'];
+        }
+        return days;
+    }, [selectedDaysFilter, sortedRoutes]);
+
     // Resumo Operacional Consolidado de KM, Tempo e Balanceamento Quinzena a Quinzena
     const operationalSummary = useMemo(() => {
         // Base de colaboradores do escopo
@@ -1822,6 +1864,9 @@ export const AjusteRota: React.FC = () => {
             };
         });
 
+        const unallocatedVisits = scopedAdjustedRoutes.filter(r => r.Dia_Semana === 'SEM ATENDIMENTO');
+        const unallocatedCount = unallocatedVisits.length;
+
         const diffPdvs = Math.abs(totalPdvs13 - totalPdvs24);
         const maxPdvs = Math.max(totalPdvs13, totalPdvs24);
         const imbalancePct = maxPdvs > 0 ? Math.round((diffPdvs / maxPdvs) * 100) : 0;
@@ -1840,7 +1885,8 @@ export const AjusteRota: React.FC = () => {
             totalTime13,
             totalTime24,
             imbalancePct,
-            isBalanced: imbalancePct <= 15
+            isBalanced: imbalancePct <= 15,
+            unallocatedCount
         };
     }, [scopedAdjustedRoutes, selectedPromoter, colaboradores, getClientServiceTime]);
 
@@ -1867,6 +1913,11 @@ export const AjusteRota: React.FC = () => {
     const handleScrollToPdvInTable = (codCliente: number) => {
         const targetRoute = scopedAdjustedRoutes.find(r => r.Cod_Cliente === codCliente);
         if (!targetRoute) return;
+
+        // Se estiver em modo sanfona, garante que o dia do cliente esteja aberto
+        if (targetRoute.Dia_Semana) {
+            setOpenDaysMap(prev => ({ ...prev, [targetRoute.Dia_Semana]: true }));
+        }
 
         // Se houver filtro de dia da semana ativo que exclua este cliente, inclui o dia no filtro
         if (selectedDaysFilter.length > 0 && !selectedDaysFilter.includes(targetRoute.Dia_Semana)) {
@@ -2348,8 +2399,121 @@ export const AjusteRota: React.FC = () => {
         reader.readAsArrayBuffer(file);
     };
 
+    // Pré-checagem de viabilidade de capacidade e jornada semanal
+    const checkCapacityFeasibility = (sellers: number[], baseRoutes: VisitaPrevista[]) => {
+        if (!optLimitHours && !optLimitKm) {
+            return { hasOverflow: false, totalOverflow: 0, overflowData: null };
+        }
+
+        const activeDays = optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA'];
+
+        let totalOverflow = 0;
+        let maxVisitsNeededTotal = 0;
+        let totalCapacityAcrossSellers = 0;
+        let maxNeededHours = 0;
+
+        const sellersSummary: Array<{
+            sellerId: number;
+            sellerName: string;
+            totalClients: number;
+            capacity: number;
+            overflow: number;
+        }> = [];
+
+        sellers.forEach(sellerId => {
+            const sellerVisits = baseRoutes.filter(r => r.Cod_Vend === sellerId);
+            if (sellerVisits.length === 0) return;
+
+            const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
+            const sellerName = colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`);
+
+            const uniqueClientsMap = new Map<number, VisitaPrevista>();
+            sellerVisits.forEach(v => {
+                if (!uniqueClientsMap.has(v.Cod_Cliente)) {
+                    uniqueClientsMap.set(v.Cod_Cliente, v);
+                }
+            });
+            const uniqueClients = Array.from(uniqueClientsMap.values());
+            if (uniqueClients.length === 0) return;
+
+            let semanalCount = 0;
+            let quinzenalCount = 0;
+            uniqueClients.forEach(c => {
+                const parsed = parsePeriodicidade(c.Periodicidade);
+                if (parsed.tipo === 'SEMANAL') semanalCount++;
+                else quinzenalCount++;
+            });
+
+            // Demanda de visitas em um ciclo semanal (Semanas 1/3 ou 2/4)
+            const visitsPerCycle = semanalCount + Math.ceil(quinzenalCount / 2);
+
+            // Capacidade semanal máxima do colaborador
+            let sellerWeeklyCap = 0;
+            activeDays.forEach(day => {
+                let cap = (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients;
+                if (optLimitHours) {
+                    const hoursForDay = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
+                    const estimatedTravelMins = 60;
+                    const availableMins = Math.max(30, (hoursForDay * 60) - estimatedTravelMins);
+                    const avgServiceMins = uniqueClients.length 
+                        ? (uniqueClients.reduce((acc, c) => acc + getClientServiceTime(c), 0) / uniqueClients.length) 
+                        : (channelServiceTimes['PADRAO'] || 15);
+                    const maxClientsByHours = Math.max(1, Math.floor(availableMins / Math.max(5, avgServiceMins)));
+                    cap = Math.min(cap, maxClientsByHours);
+                }
+                sellerWeeklyCap += cap;
+            });
+
+            const sellerOverflow = Math.max(0, visitsPerCycle - sellerWeeklyCap);
+            if (sellerOverflow > 0) {
+                totalOverflow += sellerOverflow;
+            }
+
+            // Horas diárias necessárias para cobrir todos os clientes
+            const avgServiceMins = uniqueClients.length 
+                ? (uniqueClients.reduce((acc, c) => acc + getClientServiceTime(c), 0) / uniqueClients.length) 
+                : (channelServiceTimes['PADRAO'] || 15);
+            const totalServiceMinsNeeded = visitsPerCycle * avgServiceMins;
+            const effectiveDays = activeDays.reduce((acc, d) => acc + ((d === 'SÁBADO' && optSatHalfPeriod) ? 0.5 : 1), 0);
+            const totalTravelMinsNeeded = effectiveDays * 60;
+            const neededHoursForThisSeller = Math.round(((totalServiceMinsNeeded + totalTravelMinsNeeded) / 60 / Math.max(1, effectiveDays)) * 10) / 10;
+            if (neededHoursForThisSeller > maxNeededHours) {
+                maxNeededHours = neededHoursForThisSeller;
+            }
+
+            maxVisitsNeededTotal += visitsPerCycle;
+            totalCapacityAcrossSellers += sellerWeeklyCap;
+
+            sellersSummary.push({
+                sellerId,
+                sellerName,
+                totalClients: uniqueClients.length,
+                capacity: sellerWeeklyCap,
+                overflow: sellerOverflow
+            });
+        });
+
+        if (totalOverflow > 0) {
+            return {
+                hasOverflow: true,
+                totalOverflow,
+                overflowData: {
+                    sellers,
+                    overflowCount: totalOverflow,
+                    maxVisitsNeeded: maxVisitsNeededTotal,
+                    totalCapacityForWeek: totalCapacityAcrossSellers,
+                    neededHoursPerDay: maxNeededHours,
+                    configuredHours: optMaxHours,
+                    sellersSummary
+                }
+            };
+        }
+
+        return { hasOverflow: false, totalOverflow: 0, overflowData: null };
+    };
+
     // Motor de Roteirização Avançado: Clusterização Espacial por Dia + TSP Circuito Fechado 2-Opt (Base -> Clientes -> Base)
-    const runOptimizationForSellers = async (sellers: number[], baseRoutes: VisitaPrevista[]) => {
+    const runOptimizationForSellers = async (sellers: number[], baseRoutes: VisitaPrevista[], allowOverflow: boolean = true) => {
         if (sellers.length === 0) return [];
 
         setLoading(true);
@@ -2508,62 +2672,141 @@ export const AjusteRota: React.FC = () => {
                 };
             });
 
-            let remSemanais = [...allSemanais];
-            let accSemanais = 0;
-            let cumWeightSemanais = 0;
-            dayBuckets.forEach((bucket, idx) => {
-                cumWeightSemanais += bucket.weight;
-                const isLast = idx === dayBuckets.length - 1;
-                const cumTarget = isLast ? allSemanais.length : Math.round(allSemanais.length * (cumWeightSemanais / totalWeight));
-                const quota = Math.max(0, Math.min(remSemanais.length, cumTarget - accSemanais));
-                bucket.semanais = remSemanais.splice(0, quota);
-                accSemanais += bucket.semanais.length;
-            });
+            const unallocatedClients: typeof uniqueClients = [];
 
-            const totalTargetVisits13 = allSemanais.length + poolQuinzenais13.length;
-            let remQ13 = [...poolQuinzenais13];
-            let accVisits13 = 0;
-            let cumWeight13 = 0;
-            dayBuckets.forEach((bucket, idx) => {
-                cumWeight13 += bucket.weight;
-                const isLast = idx === dayBuckets.length - 1;
-                const cumTarget = isLast ? totalTargetVisits13 : Math.round(totalTargetVisits13 * (cumWeight13 / totalWeight));
-                const targetForThisBucket = Math.max(0, cumTarget - accVisits13);
-                const neededQ13 = Math.max(0, targetForThisBucket - bucket.semanais.length);
-                const maxAllowed = optLimitKm ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
-                const quota = isLast ? remQ13.length : Math.max(0, Math.min(remQ13.length, Math.min(maxAllowed, neededQ13)));
-                bucket.quinzenais13 = remQ13.splice(0, quota);
-                accVisits13 += (bucket.semanais.length + bucket.quinzenais13.length);
-            });
-            while (remQ13.length > 0) {
-                const c = remQ13.shift()!;
-                const bestBucket = [...dayBuckets].sort((a, b) => 
-                    (a.semanais.length + a.quinzenais13.length) - (b.semanais.length + b.quinzenais13.length)
-                )[0];
-                bestBucket.quinzenais13.push(c);
-            }
+            if (allowOverflow) {
+                // Distribuição flexibilizada: 100% dos clientes distribuídos nos dias disponíveis
+                let remSemanais = [...allSemanais];
+                let accSemanais = 0;
+                let cumWeightSemanais = 0;
+                dayBuckets.forEach((bucket, idx) => {
+                    cumWeightSemanais += bucket.weight;
+                    const isLast = idx === dayBuckets.length - 1;
+                    const cumTarget = isLast ? allSemanais.length : Math.round(allSemanais.length * (cumWeightSemanais / totalWeight));
+                    const quota = Math.max(0, Math.min(remSemanais.length, cumTarget - accSemanais));
+                    bucket.semanais = remSemanais.splice(0, quota);
+                    accSemanais += bucket.semanais.length;
+                });
 
-            const totalTargetVisits24 = allSemanais.length + poolQuinzenais24.length;
-            let remQ24 = [...poolQuinzenais24];
-            let accVisits24 = 0;
-            let cumWeight24 = 0;
-            dayBuckets.forEach((bucket, idx) => {
-                cumWeight24 += bucket.weight;
-                const isLast = idx === dayBuckets.length - 1;
-                const cumTarget = isLast ? totalTargetVisits24 : Math.round(totalTargetVisits24 * (cumWeight24 / totalWeight));
-                const targetForThisBucket = Math.max(0, cumTarget - accVisits24);
-                const neededQ24 = Math.max(0, targetForThisBucket - bucket.semanais.length);
-                const maxAllowed = optLimitKm ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
-                const quota = isLast ? remQ24.length : Math.max(0, Math.min(remQ24.length, Math.min(maxAllowed, neededQ24)));
-                bucket.quinzenais24 = remQ24.splice(0, quota);
-                accVisits24 += (bucket.semanais.length + bucket.quinzenais24.length);
-            });
-            while (remQ24.length > 0) {
-                const c = remQ24.shift()!;
-                const bestBucket = [...dayBuckets].sort((a, b) => 
-                    (a.semanais.length + a.quinzenais24.length) - (b.semanais.length + b.quinzenais24.length)
-                )[0];
-                bestBucket.quinzenais24.push(c);
+                const totalTargetVisits13 = allSemanais.length + poolQuinzenais13.length;
+                let remQ13 = [...poolQuinzenais13];
+                let accVisits13 = 0;
+                let cumWeight13 = 0;
+                dayBuckets.forEach((bucket, idx) => {
+                    cumWeight13 += bucket.weight;
+                    const isLast = idx === dayBuckets.length - 1;
+                    const cumTarget = isLast ? totalTargetVisits13 : Math.round(totalTargetVisits13 * (cumWeight13 / totalWeight));
+                    const targetForThisBucket = Math.max(0, cumTarget - accVisits13);
+                    const neededQ13 = Math.max(0, targetForThisBucket - bucket.semanais.length);
+                    const maxAllowed = optLimitKm ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
+                    const quota = isLast ? remQ13.length : Math.max(0, Math.min(remQ13.length, Math.min(maxAllowed, neededQ13)));
+                    bucket.quinzenais13 = remQ13.splice(0, quota);
+                    accVisits13 += (bucket.semanais.length + bucket.quinzenais13.length);
+                });
+                while (remQ13.length > 0) {
+                    const c = remQ13.shift()!;
+                    const bestBucket = [...dayBuckets].sort((a, b) => 
+                        (a.semanais.length + a.quinzenais13.length) - (b.semanais.length + b.quinzenais13.length)
+                    )[0];
+                    bestBucket.quinzenais13.push(c);
+                }
+
+                const totalTargetVisits24 = allSemanais.length + poolQuinzenais24.length;
+                let remQ24 = [...poolQuinzenais24];
+                let accVisits24 = 0;
+                let cumWeight24 = 0;
+                dayBuckets.forEach((bucket, idx) => {
+                    cumWeight24 += bucket.weight;
+                    const isLast = idx === dayBuckets.length - 1;
+                    const cumTarget = isLast ? totalTargetVisits24 : Math.round(totalTargetVisits24 * (cumWeight24 / totalWeight));
+                    const targetForThisBucket = Math.max(0, cumTarget - accVisits24);
+                    const neededQ24 = Math.max(0, targetForThisBucket - bucket.semanais.length);
+                    const maxAllowed = optLimitKm ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
+                    const quota = isLast ? remQ24.length : Math.max(0, Math.min(remQ24.length, Math.min(maxAllowed, neededQ24)));
+                    bucket.quinzenais24 = remQ24.splice(0, quota);
+                    accVisits24 += (bucket.semanais.length + bucket.quinzenais24.length);
+                });
+                while (remQ24.length > 0) {
+                    const c = remQ24.shift()!;
+                    const bestBucket = [...dayBuckets].sort((a, b) => 
+                        (a.semanais.length + a.quinzenais24.length) - (b.semanais.length + b.quinzenais24.length)
+                    )[0];
+                    bestBucket.quinzenais24.push(c);
+                }
+            } else {
+                // Limite Estrito: Preenche rigorosamente até maxCap. Excedentes vão para unallocatedClients
+                let remSemanais = [...allSemanais];
+                let accSemanais = 0;
+                let cumWeightSemanais = 0;
+                dayBuckets.forEach((bucket, idx) => {
+                    cumWeightSemanais += bucket.weight;
+                    const isLast = idx === dayBuckets.length - 1;
+                    const cumTarget = isLast ? allSemanais.length : Math.round(allSemanais.length * (cumWeightSemanais / totalWeight));
+                    const desired = Math.max(0, Math.min(remSemanais.length, cumTarget - accSemanais));
+                    const quota = Math.min(bucket.maxCap, desired);
+                    bucket.semanais = remSemanais.splice(0, quota);
+                    accSemanais += bucket.semanais.length;
+                });
+
+                // Se restarem semanais, tenta preencher buckets que ainda possuam espaço
+                while (remSemanais.length > 0) {
+                    const availableBucket = dayBuckets.find(b => b.semanais.length < b.maxCap);
+                    if (!availableBucket) break;
+                    availableBucket.semanais.push(remSemanais.shift()!);
+                }
+                if (remSemanais.length > 0) {
+                    unallocatedClients.push(...remSemanais);
+                }
+
+                // Quinzenais 1/3 com teto estrito (maxCap - semanais)
+                let remQ13 = [...poolQuinzenais13];
+                let accVisits13 = 0;
+                let cumWeight13 = 0;
+                const totalTargetVisits13 = allSemanais.length + poolQuinzenais13.length;
+                dayBuckets.forEach((bucket, idx) => {
+                    cumWeight13 += bucket.weight;
+                    const isLast = idx === dayBuckets.length - 1;
+                    const cumTarget = isLast ? totalTargetVisits13 : Math.round(totalTargetVisits13 * (cumWeight13 / totalWeight));
+                    const targetForThisBucket = Math.max(0, cumTarget - accVisits13);
+                    const neededQ13 = Math.max(0, targetForThisBucket - bucket.semanais.length);
+                    const maxAllowed = Math.max(0, bucket.maxCap - bucket.semanais.length);
+                    const quota = Math.max(0, Math.min(remQ13.length, Math.min(maxAllowed, neededQ13)));
+                    bucket.quinzenais13 = remQ13.splice(0, quota);
+                    accVisits13 += (bucket.semanais.length + bucket.quinzenais13.length);
+                });
+                while (remQ13.length > 0) {
+                    const availableBucket = dayBuckets.find(b => (b.semanais.length + b.quinzenais13.length) < b.maxCap);
+                    if (!availableBucket) break;
+                    availableBucket.quinzenais13.push(remQ13.shift()!);
+                }
+                if (remQ13.length > 0) {
+                    unallocatedClients.push(...remQ13);
+                }
+
+                // Quinzenais 2/4 com teto estrito (maxCap - semanais)
+                let remQ24 = [...poolQuinzenais24];
+                let accVisits24 = 0;
+                let cumWeight24 = 0;
+                const totalTargetVisits24 = allSemanais.length + poolQuinzenais24.length;
+                dayBuckets.forEach((bucket, idx) => {
+                    cumWeight24 += bucket.weight;
+                    const isLast = idx === dayBuckets.length - 1;
+                    const cumTarget = isLast ? totalTargetVisits24 : Math.round(totalTargetVisits24 * (cumWeight24 / totalWeight));
+                    const targetForThisBucket = Math.max(0, cumTarget - accVisits24);
+                    const neededQ24 = Math.max(0, targetForThisBucket - bucket.semanais.length);
+                    const maxAllowed = Math.max(0, bucket.maxCap - bucket.semanais.length);
+                    const quota = Math.max(0, Math.min(remQ24.length, Math.min(maxAllowed, neededQ24)));
+                    bucket.quinzenais24 = remQ24.splice(0, quota);
+                    accVisits24 += (bucket.semanais.length + bucket.quinzenais24.length);
+                });
+                while (remQ24.length > 0) {
+                    const availableBucket = dayBuckets.find(b => (b.semanais.length + b.quinzenais24.length) < b.maxCap);
+                    if (!availableBucket) break;
+                    availableBucket.quinzenais24.push(remQ24.shift()!);
+                }
+                if (remQ24.length > 0) {
+                    unallocatedClients.push(...remQ24);
+                }
             }
 
             const calcDayCentroid = (bucket: DayBucket) => {
@@ -2681,6 +2924,27 @@ export const AjusteRota: React.FC = () => {
                     });
                 });
             }
+
+            // Clientes excedentes deixados sem atendimento por limite estrito de capacidade/tempo
+            if (unallocatedClients.length > 0) {
+                const uniqueUnallocated = new Map<number, typeof uniqueClients[0]>();
+                unallocatedClients.forEach(c => {
+                    if (!uniqueUnallocated.has(c.sampleVisit.Cod_Cliente)) {
+                        uniqueUnallocated.set(c.sampleVisit.Cod_Cliente, c);
+                    }
+                });
+
+                uniqueUnallocated.forEach(c => {
+                    result.push({
+                        ...c.sampleVisit,
+                        Cod_Vend: sellerId,
+                        Nome_Vendedor: sellerName,
+                        Dia_Semana: 'SEM ATENDIMENTO',
+                        Periodicidade: c.originalPeriodicidade || 'Semanal',
+                        Data_da_Visita: c.sampleVisit.Data_da_Visita || ''
+                    });
+                });
+            }
         }
 
         setOptimizeProgress({
@@ -2715,7 +2979,15 @@ export const AjusteRota: React.FC = () => {
             return;
         }
 
-        const result = await runOptimizationForSellers(sellers, adjustedRoutes);
+        // Pré-checagem de viabilidade de capacidade / jornada
+        const feasibility = checkCapacityFeasibility(sellers, adjustedRoutes);
+        if (feasibility.hasOverflow && feasibility.overflowData) {
+            setCapacityOverflowData(feasibility.overflowData);
+            setShowCapacityModal(true);
+            return;
+        }
+
+        const result = await runOptimizationForSellers(sellers, adjustedRoutes, true);
         if (result && result.length === 0) {
             alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
             return;
@@ -2926,6 +3198,7 @@ export const AjusteRota: React.FC = () => {
                 });
 
                 for (const [day, visits] of groupedByDay.entries()) {
+                    if (day === 'SEM ATENDIMENTO') continue;
                     const sortedVisits = visits; // Mantém a ordem sequencial
                     const lineColor = isSingleSellerView ? (DAY_COLORS[day]?.hex || sellerBaseColor) : sellerBaseColor;
                     
@@ -3467,6 +3740,274 @@ export const AjusteRota: React.FC = () => {
         navigator.clipboard.writeText(text);
         setCopiedItinerary(true);
         setTimeout(() => setCopiedItinerary(false), 3000);
+    };
+
+    const renderTableHeaders = () => (
+        <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 uppercase text-[9px] sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
+            <tr className="bg-slate-100 dark:bg-slate-800">
+                <th 
+                    onClick={() => handleSort('Cod_Cliente')}
+                    className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
+                    title="Clique para ordenar por Código"
+                >
+                    <div className="flex items-center space-x-1">
+                        <span>Código/PDV</span>
+                        <span className={sortField === 'Cod_Cliente' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
+                            {sortField === 'Cod_Cliente' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                        </span>
+                    </div>
+                </th>
+                <th 
+                    onClick={() => handleSort('Razao_Social')}
+                    className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
+                    title="Clique para ordenar por Razão Social"
+                >
+                    <div className="flex items-center space-x-1">
+                        <span>Razão Social</span>
+                        <span className={sortField === 'Razao_Social' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
+                            {sortField === 'Razao_Social' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                        </span>
+                    </div>
+                </th>
+                <th 
+                    onClick={() => handleSort('Endereco')}
+                    className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
+                    title="Clique para ordenar por Endereço"
+                >
+                    <div className="flex items-center space-x-1">
+                        <span>Endereço / Cidade</span>
+                        <span className={sortField === 'Endereco' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
+                            {sortField === 'Endereco' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                        </span>
+                    </div>
+                </th>
+                <th 
+                    onClick={() => handleSort('Nome_Vendedor')}
+                    className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
+                    title="Clique para ordenar por Colaborador"
+                >
+                    <div className="flex items-center space-x-1">
+                        <span>Colaborador Atual</span>
+                        <span className={sortField === 'Nome_Vendedor' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
+                            {sortField === 'Nome_Vendedor' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                        </span>
+                    </div>
+                </th>
+                <th 
+                    onClick={() => handleSort('Dia_Semana')}
+                    className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
+                    title="Clique para ordenar por Dia de Visita"
+                >
+                    <div className="flex items-center space-x-1">
+                        <span>Dia de Visita</span>
+                        <span className={sortField === 'Dia_Semana' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
+                            {sortField === 'Dia_Semana' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                        </span>
+                    </div>
+                </th>
+                <th 
+                    onClick={() => handleSort('Periodicidade')}
+                    className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
+                    title="Clique para ordenar por Periodicidade"
+                >
+                    <div className="flex items-center space-x-1">
+                        <span>Periodicidade</span>
+                        <span className={sortField === 'Periodicidade' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
+                            {sortField === 'Periodicidade' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                        </span>
+                    </div>
+                </th>
+                <th className="p-3 text-center bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">Ações</th>
+            </tr>
+        </thead>
+    );
+
+    const renderRouteRow = (v: VisitaPrevista, i: number) => {
+        const dayCfg = DAY_COLORS[v.Dia_Semana] || { hex: '#4f46e5', label: 'DIA', bg: 'bg-indigo-600' };
+        const isHighlighted = v.Cod_Cliente === highlightedClientCode;
+        const visitSeq = visitOrderMap.get(`${v.Cod_Vend}-${v.Dia_Semana}-${v.Cod_Cliente}`);
+        const isUnallocated = v.Dia_Semana === 'SEM ATENDIMENTO';
+
+        return (
+            <tr 
+                key={`${v.Cod_Cliente}-${i}`} 
+                id={`row-pdv-${v.Cod_Cliente}`}
+                onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('select') || target.closest('button') || target.closest('input')) {
+                        return;
+                    }
+                    handleFocusClientOnMap(v);
+                }}
+                title="Clique na linha para focar este cliente no mapa"
+                className={`transition-all duration-300 cursor-pointer ${
+                    isHighlighted 
+                        ? 'bg-indigo-100/90 dark:bg-indigo-950/90 ring-2 ring-indigo-500 ring-inset shadow-md font-black' 
+                        : isUnallocated
+                            ? 'bg-red-50/40 dark:bg-red-950/20 hover:bg-red-100/60 dark:hover:bg-red-900/30'
+                            : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/60'
+                }`}
+            >
+                <td className="p-3 text-slate-900 dark:text-white font-mono">
+                    <div className="flex items-center gap-1.5">
+                        {visitSeq && !isUnallocated && (
+                            <span 
+                                className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0" 
+                                title={`Ordem da Parada: ${visitSeq.order}ª parada de ${visitSeq.total} no roteiro de ${v.Dia_Semana}`}
+                            >
+                                #{visitSeq.order}
+                            </span>
+                        )}
+                        {isUnallocated && (
+                            <span 
+                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 shrink-0"
+                                title="Cliente sem atendimento por exceder o limite de horas/capacidade da jornada"
+                            >
+                                ⚠️ Fora
+                            </span>
+                        )}
+                        {isHighlighted && (
+                            <span className="w-2 h-2 rounded-full bg-indigo-600 animate-ping shrink-0" title="PDV em foco pelo mapa" />
+                        )}
+                        <span>{v.Cod_Cliente}</span>
+                        {isHighlighted && (
+                            <span className="text-[8px] bg-indigo-600 text-white font-black px-1.5 py-0.2 rounded-full uppercase tracking-tighter shrink-0 animate-pulse">
+                                Foco
+                            </span>
+                        )}
+                    </div>
+                </td>
+                <td className="p-3 truncate max-w-[180px] text-slate-800 dark:text-slate-200" title={v.Razao_Social}>{v.Razao_Social}</td>
+                <td 
+                    className="p-3 text-slate-500 dark:text-slate-400 max-w-[240px]" 
+                    title={`${v.Endereco || ''}${v.Bairro ? `, ${v.Bairro}` : ''}${v.Cidade ? ` - ${v.Cidade}` : ''}`}
+                >
+                    <div className="truncate text-slate-700 dark:text-slate-200 font-medium">{v.Endereco || '-'}</div>
+                    {v.Cidade && (
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate flex items-center gap-1 font-normal mt-0.5">
+                            <span className="text-[11px] text-indigo-500 shrink-0">📍</span>
+                            <span className="truncate">{v.Bairro ? `${v.Bairro} • ` : ''}{v.Cidade}</span>
+                        </div>
+                    )}
+                    {(() => {
+                        const rColab = getColabBySectorOrName(v.Cod_Vend, v.Nome_Vendedor);
+                        const rCentroid = sellerCentroidsMap.get(v.Cod_Vend);
+                        const rAnom = checkCoordinateAnomaly(v, rColab?.LatitudeBase, rColab?.LongitudeBase, rCentroid);
+                        if (rAnom.isAnomalous && rAnom.distKm > 80) {
+                            return (
+                                <div className="mt-1">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); handleOpenCoordinateModal(v); }}
+                                        className="inline-flex items-center gap-1 text-[9px] font-black bg-red-100 hover:bg-red-200 dark:bg-red-900/60 dark:hover:bg-red-900 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 px-2 py-0.5 rounded-full cursor-pointer transition shadow-2xs"
+                                        title={`Coordenadas suspeitas (~${rAnom.distKm} km da base). Clique para ajustar.`}
+                                    >
+                                        <span>⚠️ GPS Distante (~{rAnom.distKm} km)</span>
+                                        <span className="underline ml-0.5">Corrigir</span>
+                                    </button>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
+                </td>
+                <td className="p-3">
+                    {teamType === 'vendedores' ? (
+                        <div className="flex items-center space-x-1.5">
+                            <span className="text-slate-800 dark:text-slate-200 font-bold truncate max-w-[160px]" title={formatSellerDisplayName(v.Cod_Vend, v.Nome_Vendedor)}>{formatSellerDisplayName(v.Cod_Vend, v.Nome_Vendedor)}</span>
+                            <span className="text-[8px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold px-1 py-0.5 rounded shrink-0">Carteira</span>
+                        </div>
+                    ) : (
+                        <select
+                            value={v.Cod_Vend}
+                            onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana, v.Periodicidade)}
+                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 outline-none w-full"
+                        >
+                            {teamColaboradores.map(col => (
+                                <option key={col.ID_Colaborador} value={col.CodigoSetor}>{formatSellerDisplayName(col.CodigoSetor, col.Nome)}</option>
+                            ))}
+                        </select>
+                    )}
+                </td>
+                <td className="p-3">
+                    <div className="flex items-center space-x-1.5">
+                        <span 
+                            className="w-2 h-2 rounded-full shrink-0" 
+                            style={{ backgroundColor: dayCfg.hex }}
+                            title={v.Dia_Semana}
+                        />
+                        <select
+                            value={v.Dia_Semana}
+                            onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value, v.Periodicidade)}
+                            className={`border rounded p-1 text-[10px] font-bold outline-none w-full ${
+                                isUnallocated 
+                                    ? 'bg-red-50 dark:bg-red-950/60 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300' 
+                                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                            }`}
+                        >
+                            {WEEKDAYS.map(day => (
+                                <option key={day} value={day}>{day}</option>
+                            ))}
+                            <option value="SEM ATENDIMENTO">⚠️ SEM ATENDIMENTO</option>
+                        </select>
+                    </div>
+                </td>
+                <td className="p-3">
+                    {parsePeriodicidade(v.Periodicidade).tipo === 'SEMANAL' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
+                            Semanal
+                        </span>
+                    ) : (
+                        <select
+                            value={(v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? '2 4' : '1 3'}
+                            onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, v.Dia_Semana, e.target.value === '2 4' ? '2 4' : '1 3')}
+                            className="bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 rounded p-1 text-[10px] font-bold outline-none"
+                            title="Ajustar Quinzena (1 3 vs 2 4)"
+                        >
+                            <option value="1 3">Quinzenal (1, 3)</option>
+                            <option value="2 4">Quinzenal (2, 4)</option>
+                        </select>
+                    )}
+                </td>
+                <td className="p-3 text-center">
+                    <div className="flex items-center justify-center space-x-1.5">
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenCoordinateModal(v);
+                            }}
+                            className="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 transition p-1 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded-lg cursor-pointer"
+                            title="Ajustar coordenadas GPS do cliente"
+                        >
+                            <LocationMarkerIcon className="w-4 h-4"/>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleFocusClientOnMap(v);
+                            }}
+                            className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition p-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg cursor-pointer"
+                            title="Focar e abrir cliente no mapa"
+                        >
+                            <LocationMarkerIcon className="w-4 h-4"/>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleExcludeVisit(v.Cod_Cliente);
+                            }}
+                            className="text-rose-500 hover:text-rose-700 transition p-1 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg cursor-pointer"
+                            title="Excluir Visita"
+                        >
+                            <TrashIcon className="w-4.5 h-4.5"/>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        );
     };
 
     return (
@@ -4632,13 +5173,69 @@ export const AjusteRota: React.FC = () => {
                             <div className="space-y-2.5 mb-3">
                                 {/* FAIXA 1: TÍTULO E AÇÕES PRINCIPAIS */}
                                 <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-                                    <div className="flex items-center space-x-2">
-                                        <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center shrink-0">
-                                            <ClipboardListIcon className="w-4 h-4 mr-1.5 text-indigo-600"/> Grade de Ajuste Fino
-                                        </h3>
-                                        <span className="text-[10px] font-black bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-200/60 dark:border-indigo-800">
-                                            {scopedAdjustedRoutes.length} visitas
-                                        </span>
+                                    <div className="flex flex-wrap items-center gap-2.5">
+                                        <div className="flex items-center space-x-2">
+                                            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center shrink-0">
+                                                <ClipboardListIcon className="w-4 h-4 mr-1.5 text-indigo-600"/> Grade de Ajuste Fino
+                                            </h3>
+                                            <span className="text-[10px] font-black bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-200/60 dark:border-indigo-800">
+                                                {scopedAdjustedRoutes.length} visitas
+                                            </span>
+                                        </div>
+
+                                        {/* Alternador de Modo de Visualização (Sanfona por Dia vs Lista Contínua) */}
+                                        <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                                            <button
+                                                type="button"
+                                                onClick={() => setTableViewMode('accordion')}
+                                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                                    tableViewMode === 'accordion'
+                                                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs font-black'
+                                                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                                                }`}
+                                                title="Visualizar agrupado por dia em formato de sanfona com resumos de tempo, km e paradas"
+                                            >
+                                                <span>📂</span>
+                                                <span>Sanfona por Dia</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setTableViewMode('flat')}
+                                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                                    tableViewMode === 'flat'
+                                                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs font-black'
+                                                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                                                }`}
+                                                title="Visualizar em tabela contínua tradicional"
+                                            >
+                                                <span>📋</span>
+                                                <span>Lista Contínua</span>
+                                            </button>
+                                        </div>
+
+                                        {tableViewMode === 'accordion' && (
+                                            <div className="flex items-center gap-1 text-[10px]">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const allOpen: Record<string, boolean> = {};
+                                                        visibleDays.forEach(d => { allOpen[d] = true; });
+                                                        setOpenDaysMap(allOpen);
+                                                    }}
+                                                    className="font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                                >
+                                                    Expandir Todos
+                                                </button>
+                                                <span className="text-slate-300 dark:text-slate-700">•</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setOpenDaysMap({})}
+                                                    className="font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                                >
+                                                    Recolher Todos
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* BOTÕES DE AÇÃO COM WRAP SUAVE E ALINHAMENTO IMPECÁVEL */}
@@ -4739,6 +5336,22 @@ export const AjusteRota: React.FC = () => {
                                             );
                                         })}
 
+                                        {operationalSummary.unallocatedCount > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleToggleDayFilter('SEM ATENDIMENTO')}
+                                                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
+                                                    selectedDaysFilter.includes('SEM ATENDIMENTO')
+                                                        ? 'bg-red-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-red-400 font-black animate-pulse'
+                                                        : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100'
+                                                }`}
+                                                title={`Clientes que excederam o limite diário configurado (${operationalSummary.unallocatedCount} PDVs sem atendimento).`}
+                                            >
+                                                <span>⚠️ Sem Atend:</span>
+                                                <span className="font-black">{operationalSummary.unallocatedCount}</span>
+                                            </button>
+                                        )}
+
                                         {selectedDaysFilter.length > 0 && (
                                             <button
                                                 type="button"
@@ -4812,287 +5425,173 @@ export const AjusteRota: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-auto custom-scrollbar border border-slate-100 dark:border-slate-800 rounded-xl">
-                                <table className="w-full text-left text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                                    <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 uppercase text-[9px] sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
-                                        <tr className="bg-slate-100 dark:bg-slate-800">
-                                            <th 
-                                                onClick={() => handleSort('Cod_Cliente')}
-                                                className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
-                                                title="Clique para ordenar por Código"
+                            {tableViewMode === 'accordion' ? (
+                                /* VISÃO AGRUPADA POR DIA EM SANFONA */
+                                <div className="flex-1 overflow-auto custom-scrollbar space-y-3 pr-1">
+                                    {visibleDays.map(day => {
+                                        const dayRoutes = sortedRoutes.filter(r => r.Dia_Semana === day);
+                                        const isOpen = openDaysMap[day] !== false;
+                                        const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: day, bg: 'bg-indigo-600' };
+                                        const dayMetrics = operationalSummary.dayMap[day];
+                                        const isUnallocated = day === 'SEM ATENDIMENTO';
+
+                                        return (
+                                            <div 
+                                                key={day} 
+                                                className={`border rounded-2xl overflow-hidden shadow-2xs transition-all ${
+                                                    isUnallocated 
+                                                        ? 'border-red-300 dark:border-red-800/80 bg-red-50/20 dark:bg-red-950/10' 
+                                                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
+                                                }`}
                                             >
-                                                <div className="flex items-center space-x-1">
-                                                    <span>Código/PDV</span>
-                                                    <span className={sortField === 'Cod_Cliente' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
-                                                        {sortField === 'Cod_Cliente' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
-                                                    </span>
-                                                </div>
-                                            </th>
-                                            <th 
-                                                onClick={() => handleSort('Razao_Social')}
-                                                className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
-                                                title="Clique para ordenar por Razão Social"
-                                            >
-                                                <div className="flex items-center space-x-1">
-                                                    <span>Razão Social</span>
-                                                    <span className={sortField === 'Razao_Social' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
-                                                        {sortField === 'Razao_Social' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
-                                                    </span>
-                                                </div>
-                                            </th>
-                                            <th 
-                                                onClick={() => handleSort('Endereco')}
-                                                className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
-                                                title="Clique para ordenar por Endereço"
-                                            >
-                                                <div className="flex items-center space-x-1">
-                                                    <span>Endereço / Cidade</span>
-                                                    <span className={sortField === 'Endereco' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
-                                                        {sortField === 'Endereco' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
-                                                    </span>
-                                                </div>
-                                            </th>
-                                            <th 
-                                                onClick={() => handleSort('Nome_Vendedor')}
-                                                className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
-                                                title="Clique para ordenar por Colaborador"
-                                            >
-                                                <div className="flex items-center space-x-1">
-                                                    <span>Colaborador Atual</span>
-                                                    <span className={sortField === 'Nome_Vendedor' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
-                                                        {sortField === 'Nome_Vendedor' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
-                                                    </span>
-                                                </div>
-                                            </th>
-                                            <th 
-                                                onClick={() => handleSort('Dia_Semana')}
-                                                className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
-                                                title="Clique para ordenar por Dia de Visita"
-                                            >
-                                                <div className="flex items-center space-x-1">
-                                                    <span>Dia de Visita</span>
-                                                    <span className={sortField === 'Dia_Semana' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
-                                                        {sortField === 'Dia_Semana' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
-                                                    </span>
-                                                </div>
-                                            </th>
-                                            <th 
-                                                onClick={() => handleSort('Periodicidade')}
-                                                className="p-3 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 transition"
-                                                title="Clique para ordenar por Periodicidade"
-                                            >
-                                                <div className="flex items-center space-x-1">
-                                                    <span>Periodicidade</span>
-                                                    <span className={sortField === 'Periodicidade' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500'}>
-                                                        {sortField === 'Periodicidade' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
-                                                    </span>
-                                                </div>
-                                            </th>
-                                            <th className="p-3 text-center bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
-                                        {sortedRoutes.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={7} className="p-8 text-center text-slate-400 dark:text-slate-500">
-                                                    <p className="font-bold text-xs">Nenhum PDV encontrado para os filtros de dia da semana ou quinzena selecionados.</p>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => { setSelectedDaysFilter([]); setSelectedQuinzenaFilter('ALL'); }}
-                                                        className="mt-2 text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-bold underline cursor-pointer"
-                                                    >
-                                                        Limpar todos os filtros de dias e quinzenas
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            sortedRoutes
-                                                .slice(0, visibleRoutesLimit) // Limita renderização mantendo expansão para Scroll Spy
-                                                .map((v, i) => {
-                                                    const dayCfg = DAY_COLORS[v.Dia_Semana] || { hex: '#4f46e5', label: 'DIA', bg: 'bg-indigo-600' };
-                                                    const isHighlighted = v.Cod_Cliente === highlightedClientCode;
-                                                    const visitSeq = visitOrderMap.get(`${v.Cod_Vend}-${v.Dia_Semana}-${v.Cod_Cliente}`);
-                                                    return (
-                                                        <tr 
-                                                            key={`${v.Cod_Cliente}-${i}`} 
-                                                            id={`row-pdv-${v.Cod_Cliente}`}
-                                                            onClick={(e) => {
-                                                                const target = e.target as HTMLElement;
-                                                                if (target.closest('select') || target.closest('button') || target.closest('input')) {
-                                                                    return;
-                                                                }
-                                                                handleFocusClientOnMap(v);
-                                                            }}
-                                                            title="Clique na linha para focar este cliente no mapa"
-                                                            className={`transition-all duration-300 cursor-pointer ${
-                                                                isHighlighted 
-                                                                    ? 'bg-indigo-100/90 dark:bg-indigo-950/90 ring-2 ring-indigo-500 ring-inset shadow-md font-black' 
-                                                                    : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/60'
-                                                            }`}
+                                                {/* Cabeçalho da Sanfona do Dia */}
+                                                <div 
+                                                    onClick={() => setOpenDaysMap(prev => ({ ...prev, [day]: !prev[day] }))}
+                                                    className={`flex flex-wrap items-center justify-between gap-3 p-3 cursor-pointer transition-all select-none ${
+                                                        isOpen 
+                                                            ? (isUnallocated 
+                                                                ? 'bg-red-50 dark:bg-red-950/40 border-b border-red-200 dark:border-red-800/60' 
+                                                                : 'bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/80')
+                                                            : (isUnallocated 
+                                                                ? 'bg-red-50/40 hover:bg-red-50 dark:bg-red-950/20 dark:hover:bg-red-950/40' 
+                                                                : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50')
+                                                    }`}
+                                                >
+                                                    {/* Lado Esquerdo: Chevron, Nome do Dia, Quantidade e Ciclos */}
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className={`p-1 rounded-lg transition-transform duration-200 ${isOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                                                            <ChevronDownIcon className="w-4 h-4" />
+                                                        </div>
+                                                        <span 
+                                                            className="px-2.5 py-1 rounded-lg text-xs font-black text-white shadow-2xs tracking-wide uppercase"
+                                                            style={{ backgroundColor: dayCfg.hex }}
                                                         >
-                                                            <td className="p-3 text-slate-900 dark:text-white font-mono">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    {visitSeq && (
-                                                                        <span 
-                                                                            className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0" 
-                                                                            title={`Ordem da Parada: ${visitSeq.order}ª parada de ${visitSeq.total} no roteiro de ${v.Dia_Semana}`}
-                                                                        >
-                                                                            #{visitSeq.order}
-                                                                        </span>
-                                                                    )}
-                                                                    {isHighlighted && (
-                                                                        <span className="w-2 h-2 rounded-full bg-indigo-600 animate-ping shrink-0" title="PDV em foco pelo mapa" />
-                                                                    )}
-                                                                    <span>{v.Cod_Cliente}</span>
-                                                                    {isHighlighted && (
-                                                                        <span className="text-[8px] bg-indigo-600 text-white font-black px-1.5 py-0.2 rounded-full uppercase tracking-tighter shrink-0 animate-pulse">
-                                                                            Foco
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                            <td className="p-3 truncate max-w-[180px] text-slate-800 dark:text-slate-200" title={v.Razao_Social}>{v.Razao_Social}</td>
-                                                            <td 
-                                                                className="p-3 text-slate-500 dark:text-slate-400 max-w-[240px]" 
-                                                                title={`${v.Endereco || ''}${v.Bairro ? `, ${v.Bairro}` : ''}${v.Cidade ? ` - ${v.Cidade}` : ''}`}
-                                                            >
-                                                                <div className="truncate text-slate-700 dark:text-slate-200 font-medium">{v.Endereco || '-'}</div>
-                                                                {v.Cidade && (
-                                                                    <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate flex items-center gap-1 font-normal mt-0.5">
-                                                                        <span className="text-[11px] text-indigo-500 shrink-0">📍</span>
-                                                                        <span className="truncate">{v.Bairro ? `${v.Bairro} • ` : ''}{v.Cidade}</span>
-                                                                    </div>
-                                                                )}
-                                                                {(() => {
-                                                                    const rColab = getColabBySectorOrName(v.Cod_Vend, v.Nome_Vendedor);
-                                                                    const rCentroid = sellerCentroidsMap.get(v.Cod_Vend);
-                                                                    const rAnom = checkCoordinateAnomaly(v, rColab?.LatitudeBase, rColab?.LongitudeBase, rCentroid);
-                                                                    if (rAnom.isAnomalous && rAnom.distKm > 80) {
-                                                                        return (
-                                                                            <div className="mt-1">
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={(e) => { e.stopPropagation(); handleOpenCoordinateModal(v); }}
-                                                                                    className="inline-flex items-center gap-1 text-[9px] font-black bg-red-100 hover:bg-red-200 dark:bg-red-900/60 dark:hover:bg-red-900 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 px-2 py-0.5 rounded-full cursor-pointer transition shadow-2xs"
-                                                                                    title={`Coordenadas suspeitas (~${rAnom.distKm} km da base). Clique para ajustar.`}
-                                                                                >
-                                                                                    <span>⚠️ GPS Distante (~{rAnom.distKm} km)</span>
-                                                                                    <span className="underline ml-0.5">Corrigir</span>
-                                                                                </button>
-                                                                            </div>
-                                                                        );
-                                                                    }
-                                                                    return null;
-                                                                })()}
-                                                            </td>
-                                                            <td className="p-3">
-                                                                {teamType === 'vendedores' ? (
-                                                                    <div className="flex items-center space-x-1.5">
-                                                                        <span className="text-slate-800 dark:text-slate-200 font-bold truncate max-w-[160px]" title={formatSellerDisplayName(v.Cod_Vend, v.Nome_Vendedor)}>{formatSellerDisplayName(v.Cod_Vend, v.Nome_Vendedor)}</span>
-                                                                        <span className="text-[8px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold px-1 py-0.5 rounded shrink-0">Carteira</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <select
-                                                                        value={v.Cod_Vend}
-                                                                        onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana, v.Periodicidade)}
-                                                                        className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 outline-none w-full"
-                                                                    >
-                                                                        {teamColaboradores.map(col => (
-                                                                            <option key={col.ID_Colaborador} value={col.CodigoSetor}>{formatSellerDisplayName(col.CodigoSetor, col.Nome)}</option>
-                                                                        ))}
-                                                                    </select>
-                                                                )}
-                                                            </td>
-                                                            <td className="p-3">
-                                                                <div className="flex items-center space-x-1.5">
-                                                                    <span 
-                                                                        className="w-2 h-2 rounded-full shrink-0" 
-                                                                        style={{ backgroundColor: dayCfg.hex }}
-                                                                        title={v.Dia_Semana}
-                                                                    />
-                                                                    <select
-                                                                        value={v.Dia_Semana}
-                                                                        onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value, v.Periodicidade)}
-                                                                        className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 outline-none w-full"
-                                                                    >
-                                                                        {WEEKDAYS.map(day => (
-                                                                            <option key={day} value={day}>{day}</option>
-                                                                        ))}
-                                                                    </select>
-                                                                </div>
-                                                            </td>
-                                                            <td className="p-3">
-                                                                {parsePeriodicidade(v.Periodicidade).tipo === 'SEMANAL' ? (
-                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
-                                                                        Semanal
+                                                            {day}
+                                                        </span>
+                                                        <span className={`text-xs font-black ${isUnallocated ? 'text-red-700 dark:text-red-300' : 'text-slate-800 dark:text-slate-200'}`}>
+                                                            {dayRoutes.length} {dayRoutes.length === 1 ? 'visita' : 'visitas'}
+                                                        </span>
+                                                        {!isUnallocated && dayRoutes.length > 0 && (
+                                                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200/80 dark:border-slate-700 shadow-2xs">
+                                                                Sem 1/3: <strong className="text-amber-700 dark:text-amber-400 font-black">{dayMetrics?.pdvs13 ?? 0}</strong> • Sem 2/4: <strong className="text-fuchsia-700 dark:text-fuchsia-400 font-black">{dayMetrics?.pdvs24 ?? 0}</strong>
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Lado Direito: Resumo de KM, Tempo e Sequência */}
+                                                    <div className="flex flex-wrap items-center gap-3.5 text-[11px]">
+                                                        {!isUnallocated && dayMetrics ? (
+                                                            <>
+                                                                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300" title="Tempo total diário estimado (visitas nos canais + deslocamento viário OSRM)">
+                                                                    <ClockIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                                                                    <span className="text-slate-400 dark:text-slate-500 font-normal">Tempo:</span>
+                                                                    <span className="font-black">
+                                                                        {dayMetrics.time13 === dayMetrics.time24 
+                                                                            ? formatDuration(dayMetrics.time13) 
+                                                                            : `${formatDuration(dayMetrics.time13)} (1/3) • ${formatDuration(dayMetrics.time24)} (2/4)`
+                                                                        }
                                                                     </span>
-                                                                ) : (
-                                                                    <select
-                                                                        value={(v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? '2 4' : '1 3'}
-                                                                        onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, v.Dia_Semana, e.target.value === '2 4' ? '2 4' : '1 3')}
-                                                                        className="bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 rounded p-1 text-[10px] font-bold outline-none"
-                                                                        title="Ajustar Quinzena (1 3 vs 2 4)"
-                                                                    >
-                                                                        <option value="1 3">Quinzenal (1, 3)</option>
-                                                                        <option value="2 4">Quinzenal (2, 4)</option>
-                                                                    </select>
-                                                                )}
-                                                            </td>
-                                                            <td className="p-3 text-center">
-                                                                <div className="flex items-center justify-center space-x-1.5">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleOpenCoordinateModal(v);
-                                                                        }}
-                                                                        className="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 transition p-1 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded-lg cursor-pointer"
-                                                                        title="Ajustar coordenadas GPS do cliente"
-                                                                    >
-                                                                        <LocationMarkerIcon className="w-4 h-4"/>
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleFocusClientOnMap(v);
-                                                                        }}
-                                                                        className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition p-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg cursor-pointer"
-                                                                        title="Focar e abrir cliente no mapa"
-                                                                    >
-                                                                        <LocationMarkerIcon className="w-4 h-4"/>
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleExcludeVisit(v.Cod_Cliente);
-                                                                        }}
-                                                                        className="text-rose-500 hover:text-rose-700 transition p-1 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg cursor-pointer"
-                                                                        title="Excluir Visita"
-                                                                    >
-                                                                        <TrashIcon className="w-4.5 h-4.5"/>
-                                                                    </button>
                                                                 </div>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })
-                                        )}
-                                    </tbody>
-                                </table>
-                                {sortedRoutes.length > 0 && (
-                                    <div className="p-2.5 text-center text-slate-400 dark:text-slate-500 text-[10px] bg-slate-50 dark:bg-slate-800/60 font-medium flex items-center justify-between px-4 border-t border-slate-100 dark:border-slate-800">
-                                        <span>
-                                            Exibindo {Math.min(visibleRoutesLimit, sortedRoutes.length)} de {sortedRoutes.length} PDVs filtrados
-                                            {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
-                                        </span>
-                                        <span className="font-bold text-slate-500 dark:text-slate-400">
-                                            Total no Escopo: {scopedAdjustedRoutes.length} PDVs
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
+
+                                                                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300" title="KM estimado do circuito (ida da base, visitas sequenciadas e retorno)">
+                                                                    <LocationMarkerIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                                    <span className="text-slate-400 dark:text-slate-500 font-normal">KM:</span>
+                                                                    <span className="font-black">
+                                                                        {dayMetrics.km13 === dayMetrics.km24 
+                                                                            ? `${dayMetrics.km13.toFixed(1)} km` 
+                                                                            : `${dayMetrics.km13.toFixed(1)} km (1/3) • ${dayMetrics.km24.toFixed(1)} km (2/4)`
+                                                                        }
+                                                                    </span>
+                                                                </div>
+
+                                                                {dayRoutes.length > 0 && (
+                                                                    <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                                                                        <span className="text-slate-400 dark:text-slate-500 font-normal">Sequência:</span>
+                                                                        <span className="font-black text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200/60 dark:border-indigo-800 text-[10px]">
+                                                                            #1 a #{dayRoutes.length}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        ) : isUnallocated ? (
+                                                            <span className="text-[10px] font-bold text-red-700 dark:text-red-300 bg-red-100/80 dark:bg-red-950/70 px-2 py-0.5 rounded border border-red-300 dark:border-red-800">
+                                                                ⚠️ Excedente de Capacidade / Jornada — Necessita Reatribuição Manual
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+
+                                                {/* Conteúdo Expansível da Sanfona */}
+                                                {isOpen && (
+                                                    <div className="overflow-x-auto">
+                                                        {dayRoutes.length === 0 ? (
+                                                            <div className="p-5 text-center text-slate-400 dark:text-slate-500 text-xs italic bg-slate-50/40 dark:bg-slate-800/20">
+                                                                Nenhuma visita agendada para {day}.
+                                                            </div>
+                                                        ) : (
+                                                            <table className="w-full text-left text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                                                                {renderTableHeaders()}
+                                                                <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+                                                                    {dayRoutes.map((v, i) => renderRouteRow(v, i))}
+                                                                </tbody>
+                                                            </table>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                    {sortedRoutes.length > 0 && (
+                                        <div className="p-2.5 text-center text-slate-400 dark:text-slate-500 text-[10px] bg-slate-50 dark:bg-slate-800/60 font-medium flex items-center justify-between px-4 border border-slate-100 dark:border-slate-800 rounded-xl">
+                                            <span>
+                                                Exibindo {sortedRoutes.length} PDVs organizados por dia
+                                                {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
+                                            </span>
+                                            <span className="font-bold text-slate-500 dark:text-slate-400">
+                                                Total no Escopo: {scopedAdjustedRoutes.length} PDVs
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                /* VISÃO EM LISTA CONTÍNUA TRADICIONAL */
+                                <div className="flex-1 overflow-auto custom-scrollbar border border-slate-100 dark:border-slate-800 rounded-xl">
+                                    <table className="w-full text-left text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                                        {renderTableHeaders()}
+                                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+                                            {sortedRoutes.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={7} className="p-8 text-center text-slate-400 dark:text-slate-500">
+                                                        <p className="font-bold text-xs">Nenhum PDV encontrado para os filtros de dia da semana ou quinzena selecionados.</p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setSelectedDaysFilter([]); setSelectedQuinzenaFilter('ALL'); }}
+                                                            className="mt-2 text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-bold underline cursor-pointer"
+                                                        >
+                                                            Limpar todos os filtros de dias e quinzenas
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                sortedRoutes
+                                                    .slice(0, visibleRoutesLimit)
+                                                    .map((v, i) => renderRouteRow(v, i))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                    {sortedRoutes.length > 0 && (
+                                        <div className="p-2.5 text-center text-slate-400 dark:text-slate-500 text-[10px] bg-slate-50 dark:bg-slate-800/60 font-medium flex items-center justify-between px-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span>
+                                                Exibindo {Math.min(visibleRoutesLimit, sortedRoutes.length)} de {sortedRoutes.length} PDVs filtrados
+                                                {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
+                                            </span>
+                                            <span className="font-bold text-slate-500 dark:text-slate-400">
+                                                Total no Escopo: {scopedAdjustedRoutes.length} PDVs
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -6605,6 +7104,142 @@ export const AjusteRota: React.FC = () => {
                                     className="px-4 py-2 rounded-xl text-xs font-black text-white bg-amber-600 hover:bg-amber-700 shadow-md transition flex items-center space-x-1.5 cursor-pointer"
                                 >
                                     <span>💾 Salvar e Recalcular Rota</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE TRATAMENTO DE CAPACIDADE EXCEDIDA / TEMPO LIMITE NA OTIMIZAÇÃO */}
+            {showCapacityModal && capacityOverflowData && (
+                <div className="fixed inset-0 z-[2000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 lg:p-6 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+                        {/* Header */}
+                        <div className="p-5 border-b border-amber-100 dark:border-amber-950/40 flex items-center justify-between bg-amber-50/60 dark:bg-amber-950/30">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0">
+                                    <ExclamationIcon className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        Atenção: Capacidade de Atendimento Excedida
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                        A demanda de visitas supera os parâmetros de jornada e limite diário configurados.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowCapacityModal(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Conteúdo */}
+                        <div className="p-6 overflow-y-auto custom-scrollbar space-y-4 flex-1 text-slate-700 dark:text-slate-300">
+                            {/* Card de Métricas de Estouro */}
+                            <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                                    <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-amber-100 dark:border-amber-900/30 shadow-xs">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Jornada Configurada</div>
+                                        <div className="text-lg font-black text-slate-800 dark:text-white mt-0.5">
+                                            {capacityOverflowData.configuredHours}h <span className="text-xs font-normal text-slate-400">/ dia</span>
+                                        </div>
+                                    </div>
+                                    <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-amber-100 dark:border-amber-900/30 shadow-xs">
+                                        <div className="text-xs text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">Jornada Necessária</div>
+                                        <div className="text-lg font-black text-amber-600 dark:text-amber-400 mt-0.5">
+                                            ~{capacityOverflowData.neededHoursPerDay.toFixed(1)}h <span className="text-xs font-normal text-slate-400">/ dia</span>
+                                        </div>
+                                    </div>
+                                    <div className="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-red-100 dark:border-red-900/30 shadow-xs">
+                                        <div className="text-xs text-red-600 dark:text-red-400 font-bold uppercase tracking-wider">Clientes Excedentes</div>
+                                        <div className="text-lg font-black text-red-600 dark:text-red-400 mt-0.5">
+                                            {capacityOverflowData.overflowCount} PDVs
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Detalhamento por Vendedor / Setor */}
+                            <div className="space-y-2">
+                                <div className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                    Vendedores com Demanda Superior à Capacidade:
+                                </div>
+                                <div className="max-h-40 overflow-y-auto custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl">
+                                    {capacityOverflowData.sellersSummary.map(s => (
+                                        <div key={s.sellerId} className="p-2.5 px-3 flex items-center justify-between text-xs bg-slate-50/50 dark:bg-slate-800/30">
+                                            <div>
+                                                <span className="font-bold text-slate-800 dark:text-white">{s.sellerName}</span>
+                                                <span className="text-slate-400 ml-1.5">(#{s.sellerId})</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-slate-500 dark:text-slate-400">
+                                                    Total: <strong>{s.totalClients}</strong> clientes | Capacidade: <strong>{s.capacity}</strong>
+                                                </span>
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+                                                    +{s.overflow} excedentes
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Explicação da Escolha */}
+                            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 text-xs leading-relaxed space-y-1">
+                                <p className="font-bold text-slate-800 dark:text-slate-200">
+                                    Como deseja proceder com a roteirização?
+                                </p>
+                                <p className="text-slate-600 dark:text-slate-400">
+                                    • <strong className="text-indigo-600 dark:text-indigo-400">Flexibilizar Tempo:</strong> Otimiza a carteira completa acomodando 100% dos clientes nos dias disponíveis, mantendo microrregiões contíguas e aumentando suavemente a jornada.
+                                </p>
+                                <p className="text-slate-600 dark:text-slate-400">
+                                    • <strong className="text-red-600 dark:text-red-400">Respeitar Limite Estrito:</strong> Preenche cada dia estritamente até a capacidade máxima de {capacityOverflowData.configuredHours}h. Os clientes que excederem o limite ficarão com status <strong>"SEM ATENDIMENTO"</strong> agrupados para tratamento manual posterior.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Footer de Ações */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowCapacityModal(false)}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer order-last sm:order-first"
+                            >
+                                Cancelar
+                            </button>
+
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const sellers = capacityOverflowData.sellers;
+                                        setShowCapacityModal(false);
+                                        const result = await runOptimizationForSellers(sellers, adjustedRoutes, false);
+                                        const unallocatedCount = result ? result.filter(r => r.Dia_Semana === 'SEM ATENDIMENTO').length : 0;
+                                        alert(`Otimização Concluída com Limite Estrito!\n\n• Limite rigoroso de ${capacityOverflowData.configuredHours}h respeitado.\n• Clientes atendidos: ${result ? result.length - unallocatedCount : 0}\n• Clientes SEM ATENDIMENTO (excedentes): ${unallocatedCount}\n\nOs clientes sem atendimento estão destacados na tabela com a tag "SEM ATENDIMENTO" para reatribuição manual.`);
+                                    }}
+                                    className="px-4 py-2.5 rounded-xl text-xs font-black text-red-700 dark:text-red-300 bg-red-100 hover:bg-red-200 dark:bg-red-950/70 dark:hover:bg-red-900/60 border border-red-300 dark:border-red-800 transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
+                                >
+                                    <span>🚫 Respeitar Limite Estrito (Deixar Excedentes)</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const sellers = capacityOverflowData.sellers;
+                                        setShowCapacityModal(false);
+                                        const result = await runOptimizationForSellers(sellers, adjustedRoutes, true);
+                                        alert(`Otimização Concluída Flexibilizando Tempo!\n\n• 100% dos clientes foram atendidos (${result ? result.length : 0} visitas).\n• Jornada distribuída equilibradamente entre os dias ativos.\n• Microrregiões contíguas e circuitos fechados OSRM gerados com sucesso.`);
+                                    }}
+                                    className="px-4 py-2.5 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition flex items-center justify-center space-x-1.5 cursor-pointer"
+                                >
+                                    <span>⏰ Flexibilizar Tempo (Atender Todos)</span>
                                 </button>
                             </div>
                         </div>
