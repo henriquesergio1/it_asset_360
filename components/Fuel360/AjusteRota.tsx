@@ -2508,7 +2508,7 @@ export const AjusteRota: React.FC = () => {
 
     // Pré-checagem de viabilidade de capacidade e jornada semanal
     const checkCapacityFeasibility = (sellers: number[], baseRoutes: VisitaPrevista[]) => {
-        if (!optLimitHours && !optLimitKm) {
+        if (!optLimitHours && !optLimitKm && !optLimitClients) {
             return { hasOverflow: false, totalOverflow: 0, overflowData: null };
         }
 
@@ -2543,6 +2543,26 @@ export const AjusteRota: React.FC = () => {
             const uniqueClients = Array.from(uniqueClientsMap.values());
             if (uniqueClients.length === 0) return;
 
+            const validCoordsVisits = sellerVisits.filter(v => v.Lat && v.Long);
+            let baseLat = colab?.LatitudeBase || 0;
+            let baseLng = colab?.LongitudeBase || 0;
+            if ((!baseLat || !baseLng) && validCoordsVisits.length > 0) {
+                baseLat = validCoordsVisits.reduce((acc, v) => acc + (v.Lat || 0), 0) / validCoordsVisits.length;
+                baseLng = validCoordsVisits.reduce((acc, v) => acc + (v.Long || 0), 0) / validCoordsVisits.length;
+            }
+
+            // Distância média dos clientes à base do vendedor
+            let avgDistFromBaseKm = 15;
+            if (validCoordsVisits.length > 0 && baseLat && baseLng) {
+                const sumDist = validCoordsVisits.reduce((acc, v) => acc + calcDist(baseLat, baseLng, v.Lat!, v.Long!), 0);
+                avgDistFromBaseKm = Math.max(5, sumDist / validCoordsVisits.length);
+            }
+
+            // Estimativa de deslocamento viário diário (ida e volta da base a ~50 km/h + deslocamento local médio ~12m/cliente)
+            const roundTripKm = (avgDistFromBaseKm * 2) * 1.18;
+            const baseRoundTripMins = Math.round((roundTripKm / 50) * 60);
+            const interStopTravelMins = 12;
+
             let semanalCount = 0;
             let quinzenalCount = 0;
             uniqueClients.forEach(c => {
@@ -2563,32 +2583,33 @@ export const AjusteRota: React.FC = () => {
                 }
                 if (optLimitHours) {
                     const hoursForDay = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
-                    const estimatedTravelMins = 60;
-                    const availableMins = Math.max(30, (hoursForDay * 60) - estimatedTravelMins);
+                    const dayBudgetMins = hoursForDay * 60;
+                    const availableForStopsMins = Math.max(30, dayBudgetMins - baseRoundTripMins);
                     const avgServiceMins = uniqueClients.length 
                         ? (uniqueClients.reduce((acc, c) => acc + getClientServiceTime(c), 0) / uniqueClients.length) 
                         : (channelServiceTimes['PADRAO'] || 15);
-                    const maxClientsByHours = Math.max(1, Math.floor(availableMins / Math.max(5, avgServiceMins)));
+                    const timePerClientMins = Math.max(10, avgServiceMins + interStopTravelMins);
+                    const maxClientsByHours = Math.max(1, Math.floor(availableForStopsMins / timePerClientMins));
                     cap = Math.min(cap, maxClientsByHours);
                 }
                 sellerWeeklyCap += cap;
             });
 
-            const sellerOverflow = (optLimitClients || optLimitHours) && sellerWeeklyCap !== Infinity
+            const sellerOverflow = (optLimitClients || optLimitHours || optLimitKm) && sellerWeeklyCap !== Infinity
                 ? Math.max(0, visitsPerCycle - sellerWeeklyCap)
                 : 0;
             if (sellerOverflow > 0) {
                 totalOverflow += sellerOverflow;
             }
 
-            // Horas diárias necessárias para cobrir todos os clientes
+            // Horas diárias necessárias para cobrir todos os clientes com deslocamento viário real
             const avgServiceMins = uniqueClients.length 
                 ? (uniqueClients.reduce((acc, c) => acc + getClientServiceTime(c), 0) / uniqueClients.length) 
                 : (channelServiceTimes['PADRAO'] || 15);
-            const totalServiceMinsNeeded = visitsPerCycle * avgServiceMins;
+            const totalServiceMinsNeeded = visitsPerCycle * (avgServiceMins + interStopTravelMins);
             const effectiveDays = activeDays.reduce((acc, d) => acc + ((d === 'SÁBADO' && optSatHalfPeriod) ? 0.5 : 1), 0);
-            const totalTravelMinsNeeded = effectiveDays * 60;
-            const neededHoursForThisSeller = Math.round(((totalServiceMinsNeeded + totalTravelMinsNeeded) / 60 / Math.max(1, effectiveDays)) * 10) / 10;
+            const totalBaseTravelMinsNeeded = effectiveDays * baseRoundTripMins;
+            const neededHoursForThisSeller = Math.round(((totalServiceMinsNeeded + totalBaseTravelMinsNeeded) / 60 / Math.max(1, effectiveDays)) * 10) / 10;
             if (neededHoursForThisSeller > maxNeededHours) {
                 maxNeededHours = neededHoursForThisSeller;
             }
@@ -2761,6 +2782,15 @@ export const AjusteRota: React.FC = () => {
                 quinzenais24: typeof uniqueClients;
             }
 
+            // Distância média dos clientes à base do vendedor para estimativa viária realista
+            let avgDistFromBaseKm = 15;
+            if (validCoords.length > 0 && baseLat && baseLng) {
+                const sumDist = validCoords.reduce((acc, c) => acc + calcDist(baseLat, baseLng, c.lat, c.lng), 0);
+                avgDistFromBaseKm = Math.max(5, sumDist / validCoords.length);
+            }
+            const baseRoundTripMins = Math.round(((avgDistFromBaseKm * 2 * 1.18) / 50) * 60);
+            const interStopTravelMins = 12;
+
             const dayBuckets: DayBucket[] = activeDays.map(day => {
                 const w = getDayWeight(day);
                 let cap = Infinity;
@@ -2769,12 +2799,13 @@ export const AjusteRota: React.FC = () => {
                 }
                 if (optLimitHours) {
                     const hoursForDay = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
-                    const estimatedTravelMins = 60;
-                    const availableMins = Math.max(30, (hoursForDay * 60) - estimatedTravelMins);
+                    const dayBudgetMins = hoursForDay * 60;
+                    const availableForStopsMins = Math.max(30, dayBudgetMins - baseRoundTripMins);
                     const avgServiceMins = uniqueClients.length 
                         ? (uniqueClients.reduce((acc, c) => acc + getClientServiceTime(c.sampleVisit), 0) / uniqueClients.length) 
                         : (channelServiceTimes['PADRAO'] || 15);
-                    const maxClientsByHours = Math.max(1, Math.floor(availableMins / Math.max(5, avgServiceMins)));
+                    const timePerClientMins = Math.max(10, avgServiceMins + interStopTravelMins);
+                    const maxClientsByHours = Math.max(1, Math.floor(availableForStopsMins / timePerClientMins));
                     cap = Math.min(cap, maxClientsByHours);
                 }
                 return {
@@ -2813,7 +2844,8 @@ export const AjusteRota: React.FC = () => {
                     const cumTarget = isLast ? totalTargetVisits13 : Math.round(totalTargetVisits13 * (cumWeight13 / totalWeight));
                     const targetForThisBucket = Math.max(0, cumTarget - accVisits13);
                     const neededQ13 = Math.max(0, targetForThisBucket - bucket.semanais.length);
-                    const maxAllowed = optLimitKm ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
+                    const hasCapLimit = optLimitKm || optLimitHours || optLimitClients;
+                    const maxAllowed = hasCapLimit ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
                     const quota = isLast ? remQ13.length : Math.max(0, Math.min(remQ13.length, Math.min(maxAllowed, neededQ13)));
                     bucket.quinzenais13 = remQ13.splice(0, quota);
                     accVisits13 += (bucket.semanais.length + bucket.quinzenais13.length);
@@ -2836,7 +2868,8 @@ export const AjusteRota: React.FC = () => {
                     const cumTarget = isLast ? totalTargetVisits24 : Math.round(totalTargetVisits24 * (cumWeight24 / totalWeight));
                     const targetForThisBucket = Math.max(0, cumTarget - accVisits24);
                     const neededQ24 = Math.max(0, targetForThisBucket - bucket.semanais.length);
-                    const maxAllowed = optLimitKm ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
+                    const hasCapLimit = optLimitKm || optLimitHours || optLimitClients;
+                    const maxAllowed = hasCapLimit ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
                     const quota = isLast ? remQ24.length : Math.max(0, Math.min(remQ24.length, Math.min(maxAllowed, neededQ24)));
                     bucket.quinzenais24 = remQ24.splice(0, quota);
                     accVisits24 += (bucket.semanais.length + bucket.quinzenais24.length);
@@ -3028,11 +3061,37 @@ export const AjusteRota: React.FC = () => {
             }
 
             for (const bucket of dayBuckets) {
-                const rawClients13 = [...bucket.semanais, ...bucket.quinzenais13];
-                const optimizedClients13 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients13);
+                let rawClients13 = [...bucket.semanais, ...bucket.quinzenais13];
+                let optimizedClients13 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients13);
 
-                const rawClients24 = [...bucket.semanais, ...bucket.quinzenais24];
-                const optimizedClients24 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients24);
+                let rawClients24 = [...bucket.semanais, ...bucket.quinzenais24];
+                let optimizedClients24 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients24);
+
+                // Salvaguarda Estrita de Horas: Em modo não flexibilizado com limite de horas,
+                // se a rota viária real + serviços exceder a jornada configurada,
+                // remove as últimas paradas excedentes do dia e encaminha para unallocatedClients
+                if (!allowOverflow && optLimitHours) {
+                    const hoursForDay = (bucket.day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
+                    const maxMins = hoursForDay * 60;
+
+                    while (optimizedClients13.length > 1) {
+                        const coords = optimizedClients13.filter(c => c.lat && c.lng).map(c => ({ lat: c.lat, lng: c.lng }));
+                        const metrics = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, coords);
+                        const serviceMins = optimizedClients13.reduce((acc, c) => acc + getClientServiceTime(c.sampleVisit), 0);
+                        if (metrics.travelMinutes + serviceMins <= maxMins) break;
+                        const removed = optimizedClients13.pop();
+                        if (removed) unallocatedClients.push(removed);
+                    }
+
+                    while (optimizedClients24.length > 1) {
+                        const coords = optimizedClients24.filter(c => c.lat && c.lng).map(c => ({ lat: c.lat, lng: c.lng }));
+                        const metrics = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, coords);
+                        const serviceMins = optimizedClients24.reduce((acc, c) => acc + getClientServiceTime(c.sampleVisit), 0);
+                        if (metrics.travelMinutes + serviceMins <= maxMins) break;
+                        const removed = optimizedClients24.pop();
+                        if (removed) unallocatedClients.push(removed);
+                    }
+                }
 
                 const addedInDay = new Set<number>();
 

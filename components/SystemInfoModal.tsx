@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.158.0',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Cálculo Viário Real e Respeito Estrito ao Limite de Horas Diárias',
+    changes: [
+      'Dimensionamento Viário Geográfico Real: Substituição do deslocamento fixo de 60 minutos pelo cálculo dinâmico baseado na distância real da base aos clientes (ida e volta) e tráfego inter-paradas.',
+      'Detecção Precisa de Sobrecarga de Jornada: Identificação fidedigna de carteiras dispersas (como rotas litorâneas) cuja demanda excede a jornada configurada de 8h/dia.',
+      'Correção da Trava de Quotas Diárias: A capacidade por dia agora respeita ativamente Limitar Horas, Limitar Clientes e Limitar KM.',
+      'Poda e Tratamento de Excedentes: No modo de limite estrito, clientes que excedem a jornada diária máxima são direcionados de forma determinística para "SEM ATENDIMENTO".'
+    ]
+  },
+  {
     version: '3.157.0',
     date: 'Hoje',
     title: 'Fuel360: Otimização Avançada de Rotas (Or-Opt, Inserção Econômica e Refinamento de Fronteiras)',
