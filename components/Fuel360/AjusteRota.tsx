@@ -5371,41 +5371,113 @@ export const AjusteRota: React.FC = () => {
 
                         {/* Legenda Explicativa de Rotas e Heatmap no Mapa */}
                         {scopedAdjustedRoutes.length > 0 && (isSingleSellerView || showHeatmap) && (
-                            <div className="absolute bottom-2 right-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg z-[1000] text-[9px] space-y-1 max-w-[320px]">
+                            <div className="absolute bottom-2 right-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg z-[1000] text-[9px] space-y-1 max-w-[340px]">
                                 {isSingleSellerView && (
                                     <>
                                         <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200/80 dark:border-slate-800 pb-1">
                                             <span className="flex items-center gap-1">
                                                 <GlobeIcon className="w-3 h-3 text-indigo-600"/> Legenda do Roteiro
                                             </span>
-                                            <span className="text-[8px] text-indigo-600 dark:text-indigo-400 font-semibold uppercase">Cores & Ciclos</span>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-[8px] text-indigo-600 dark:text-indigo-400 font-semibold uppercase">Filtrar</span>
+                                                {(selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL') && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedDaysFilter([]);
+                                                            setSelectedQuinzenaFilter('ALL');
+                                                        }}
+                                                        className="text-[8px] font-black text-red-600 dark:text-red-400 hover:underline cursor-pointer flex items-center gap-0.5 ml-0.5"
+                                                        title="Limpar todos os filtros da legenda"
+                                                    >
+                                                        ✕ Limpar
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex flex-wrap gap-1">
                                             {WEEKDAYS.map(day => {
                                                 const cfg = DAY_COLORS[day];
                                                 if (!cfg) return null;
+                                                const isSelected = selectedDaysFilter.includes(day);
+                                                const hasAnySelected = selectedDaysFilter.length > 0;
                                                 return (
-                                                    <span key={day} className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
-                                                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cfg.hex }}/>
+                                                    <button
+                                                        key={day}
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleToggleDayFilter(day);
+                                                        }}
+                                                        className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-[8.5px] font-bold transition-all cursor-pointer select-none active:scale-95 border ${
+                                                            isSelected 
+                                                                ? `${cfg.bg} text-white border-transparent shadow-2xs ring-1 ring-offset-1 ring-slate-400 font-black` 
+                                                                : hasAnySelected
+                                                                    ? 'bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/60 text-slate-400 opacity-50 hover:opacity-100 hover:text-slate-700 dark:hover:text-slate-200'
+                                                                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                        }`}
+                                                        title={`Clique para filtrar rotas de ${day}`}
+                                                    >
+                                                        <span className={`w-2 h-2 rounded-full shrink-0 ${isSelected ? 'bg-white' : ''}`} style={{ backgroundColor: isSelected ? undefined : cfg.hex }}/>
                                                         <span>{cfg.label}</span>
-                                                    </span>
+                                                    </button>
                                                 );
                                             })}
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-2 pt-0.5 text-slate-600 dark:text-slate-400 font-medium text-[8.5px]">
-                                            <span className="flex items-center space-x-1">
+                                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-slate-600 dark:text-slate-400 font-medium text-[8.5px]">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedQuinzenaFilter('ALL');
+                                                }}
+                                                className={`flex items-center space-x-1 px-1.5 py-0.5 rounded transition-all cursor-pointer active:scale-95 border ${
+                                                    selectedQuinzenaFilter === 'ALL'
+                                                        ? 'bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white font-bold ring-1 ring-slate-400/50'
+                                                        : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 opacity-70 hover:opacity-100'
+                                                }`}
+                                                title="Exibir todas as periodicidades (Semanais e Quinzenais)"
+                                            >
                                                 <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border border-white shrink-0"/>
                                                 <span>Semanal</span>
-                                            </span>
-                                            <span className="flex items-center space-x-1">
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedQuinzenaFilter(prev => prev === '1_3' ? 'ALL' : '1_3');
+                                                }}
+                                                className={`flex items-center space-x-1 px-1.5 py-0.5 rounded transition-all cursor-pointer active:scale-95 border ${
+                                                    selectedQuinzenaFilter === '1_3'
+                                                        ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 font-black border-amber-400 dark:border-amber-700 shadow-2xs ring-1 ring-amber-400'
+                                                        : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 opacity-70 hover:opacity-100'
+                                                }`}
+                                                title="Filtrar rotas atendidas nas Semanas 1 e 3"
+                                            >
                                                 <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-amber-500 shrink-0"/>
                                                 <span>Quinz. 1/3</span>
-                                            </span>
-                                            <span className="flex items-center space-x-1">
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedQuinzenaFilter(prev => prev === '2_4' ? 'ALL' : '2_4');
+                                                }}
+                                                className={`flex items-center space-x-1 px-1.5 py-0.5 rounded transition-all cursor-pointer active:scale-95 border ${
+                                                    selectedQuinzenaFilter === '2_4'
+                                                        ? 'bg-fuchsia-100 dark:bg-fuchsia-950/80 text-fuchsia-900 dark:text-fuchsia-200 font-black border-fuchsia-400 dark:border-fuchsia-700 shadow-2xs ring-1 ring-fuchsia-400'
+                                                        : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 opacity-70 hover:opacity-100'
+                                                }`}
+                                                title="Filtrar rotas atendidas nas Semanas 2 e 4"
+                                            >
                                                 <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-fuchsia-500 border-dashed shrink-0"/>
                                                 <span>Quinz. 2/4</span>
-                                            </span>
-                                            <span className="flex items-center space-x-1 text-red-600 font-bold">
+                                            </button>
+
+                                            <span className="flex items-center space-x-1 text-red-600 font-bold px-1 py-0.5" title="Base de Origem e Destino do Roteiro">
                                                 <span>🏠</span>
                                                 <span>Base</span>
                                             </span>

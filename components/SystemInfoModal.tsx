@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.155.0',
+    date: 'Hoje',
+    title: 'Fuel360: Filtros Interativos Diretamente na Legenda do Roteiro no Mapa',
+    changes: [
+      'Dias da Semana Clicáveis na Legenda: Os botões de dias da semana (SEG, TER, QUA, QUI, SEX, SÁB) na legenda flutuante do mapa agora filtram os clientes e rotas em tempo real com 1 clique.',
+      'Ciclos e Periodicidades Clicáveis: Suporte para alternar entre "Quinz. 1/3" (Semanas 1 e 3), "Quinz. 2/4" (Semanas 2 e 4) e "Todas / Semanal" diretamente pelo mapa.',
+      'Experiência Otimizada em Tela Cheia: Possibilidade de explorar, alternar e limpar filtros rapidamente sem precisar sair da visualização do mapa em tela cheia.',
+      'Feedback Visual de Seleção: Destaque cromático vibrante nos dias/ciclos ativos e atenuação elegante nos itens não selecionados.'
+    ]
+  },
+  {
     version: '3.154.0',
     date: 'Hoje',
     title: 'Fuel360: Padronização Visual dos Cabeçalhos da Sanfona e Semanas Fechadas por Padrão',
