@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.147.0',
+    date: 'Hoje',
+    title: 'Fuel360: Identificação Padronizada de Colaboradores e Contraste no Tema Escuro',
+    changes: [
+      'Prefixo de Código de Setor: Exibição padronizada como "[Código] - [Nome]" em todos os pontos do sistema (painel lateral de rotas, mapa, grade de ajuste fino, popups e seletores).',
+      'Correção Visual Tema Escuro: Ajuste de contraste e fundo do cabeçalho da Grade de Ajuste Fino, eliminando faixas brancas indesejadas no modo dark.'
+    ]
+  },
+  {
     version: '3.146.0',
     date: 'Hoje',
     title: 'Fuel360: Inativação/Exclusão de Canais, Alertas de Pendências e Remoção de Padrões',

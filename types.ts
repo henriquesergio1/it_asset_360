@@ -590,6 +590,7 @@ export interface RhCollaborator {
   _notes?: string;
   _adminUser?: string;
   _reason?: string;
+  _action?: string;
 }
 
 export interface RhDependent {

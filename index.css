@@ -110,9 +110,21 @@
     border-bottom: 1px solid #d9d9d9 !important;
   }
 
+  html.dark table th {
+    background-color: #1e293b;
+    color: #e2e8f0;
+    font-weight: 600;
+    border-bottom: 1px solid #334155 !important;
+  }
+
   html:not(.dark) table td {
     border-bottom: 1px solid #f0f0f0 !important;
     color: rgba(0, 0, 0, 0.88);
+  }
+
+  html.dark table td {
+    border-bottom: 1px solid #1e293b !important;
+    color: #e2e8f0;
   }
 
   html:not(.dark) table tbody tr:hover {
