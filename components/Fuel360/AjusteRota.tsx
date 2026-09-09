@@ -1051,8 +1051,22 @@ export const AjusteRota: React.FC = () => {
     const [optLimitClients, setOptLimitClients] = useState(false);
     const [optMaxKm, setOptMaxKm] = useState(60);
     const [optLimitKm, setOptLimitKm] = useState(false);
-    const [optMaxHours, setOptMaxHours] = useState(8);
-    const [optLimitHours, setOptLimitHours] = useState(false);
+    const [optMaxHours, setOptMaxHours] = useState<number>(() => {
+        const saved = localStorage.getItem('fuel_opt_max_hours');
+        return saved ? Number(saved) : 8;
+    });
+    const [optLimitHours, setOptLimitHours] = useState<boolean>(() => {
+        return localStorage.getItem('fuel_opt_limit_hours') === 'true';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_max_hours', String(optMaxHours));
+    }, [optMaxHours]);
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_limit_hours', String(optLimitHours));
+    }, [optLimitHours]);
+
     const [optServiceTimePerClient, setOptServiceTimePerClient] = useState(15); // min por visita
     const [optDays, setOptDays] = useState<string[]>(['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
     const [optSatHalfPeriod, setOptSatHalfPeriod] = useState(true);
@@ -2020,12 +2034,13 @@ export const AjusteRota: React.FC = () => {
 
     // Lista de dias com jornada excedente / sobrecarregada (>= 60min acima da jornada configurada)
     const overloadedDays = useMemo(() => {
+        if (!optLimitHours) return [];
         return WEEKDAYS.filter(day => {
             const dayMetrics = operationalSummary.dayMap[day];
             if (!dayMetrics) return false;
             const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) 
-                ? (optLimitHours ? optMaxHours : 8) / 2 
-                : (optLimitHours ? optMaxHours : 8);
+                ? optMaxHours / 2 
+                : optMaxHours;
             const dayLimitMin = dayLimitHours * 60;
             const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
             return maxDayTime > dayLimitMin && (maxDayTime - dayLimitMin) >= 60;
@@ -2034,12 +2049,13 @@ export const AjusteRota: React.FC = () => {
 
     // Lista de dias em atenção de jornada (< 60min acima da jornada configurada)
     const attentionDays = useMemo(() => {
+        if (!optLimitHours) return [];
         return WEEKDAYS.filter(day => {
             const dayMetrics = operationalSummary.dayMap[day];
             if (!dayMetrics) return false;
             const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) 
-                ? (optLimitHours ? optMaxHours : 8) / 2 
-                : (optLimitHours ? optMaxHours : 8);
+                ? optMaxHours / 2 
+                : optMaxHours;
             const dayLimitMin = dayLimitHours * 60;
             const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
             const excess = maxDayTime - dayLimitMin;
@@ -2049,13 +2065,13 @@ export const AjusteRota: React.FC = () => {
 
     // Dados consolidados para o modal de reequilíbrio de carga
     const rebalanceData = useMemo(() => {
-        if (!rebalanceDay) return null;
+        if (!rebalanceDay || !optLimitHours) return null;
 
         const sourceDay = rebalanceDay;
         const sourceMetrics = operationalSummary.dayMap[sourceDay];
         const sourceLimitHours = (sourceDay === 'SÁBADO' && optSatHalfPeriod) 
-            ? (optLimitHours ? optMaxHours : 8) / 2 
-            : (optLimitHours ? optMaxHours : 8);
+            ? optMaxHours / 2 
+            : optMaxHours;
         const sourceLimitMin = sourceLimitHours * 60;
         const sourceTime13 = sourceMetrics?.time13 || 0;
         const sourceTime24 = sourceMetrics?.time24 || 0;
@@ -2076,8 +2092,8 @@ export const AjusteRota: React.FC = () => {
         const otherDays = WEEKDAYS.filter(d => d !== sourceDay).map(day => {
             const m = operationalSummary.dayMap[day];
             const limitHours = (day === 'SÁBADO' && optSatHalfPeriod) 
-                ? (optLimitHours ? optMaxHours : 8) / 2 
-                : (optLimitHours ? optMaxHours : 8);
+                ? optMaxHours / 2 
+                : optMaxHours;
             const limitMin = limitHours * 60;
             const time13 = m?.time13 || 0;
             const time24 = m?.time24 || 0;
@@ -3824,7 +3840,8 @@ export const AjusteRota: React.FC = () => {
                     if (optLimitKm && circuit.totalKm > optMaxKm) {
                         sellerHasExceededDay = true;
                     }
-                    if (optLimitHours && dayEstimatedTotalHours > optMaxHours) {
+                    const maxDayAllowedHours = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
+                    if (optLimitHours && dayEstimatedTotalHours > maxDayAllowedHours) {
                         sellerHasExceededHours = true;
                     }
                 });
@@ -6122,50 +6139,52 @@ export const AjusteRota: React.FC = () => {
                                             </button>
                                         )}
 
-                                        {/* FILTRO RÁPIDO PARA DIAS SOBRECARREGADOS */}
-                                        {overloadedDays.length > 0 ? (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const isFilterActive = overloadedDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === overloadedDays.length;
-                                                    if (isFilterActive) {
-                                                        setSelectedDaysFilter([]);
-                                                    } else {
-                                                        setSelectedDaysFilter(overloadedDays);
-                                                    }
-                                                }}
-                                                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
-                                                    overloadedDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === overloadedDays.length
-                                                        ? 'bg-red-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-red-400 font-black animate-pulse'
-                                                        : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                                }`}
-                                                title={`Isolar com 1 clique apenas os dias com sobrecarga de jornada (${overloadedDays.join(', ')}).`}
-                                            >
-                                                <span>🚨 Sobrecarga:</span>
-                                                <span className="font-black">{overloadedDays.length}</span>
-                                            </button>
-                                        ) : (
-                                            attentionDays.length > 0 && (
+                                        {/* FILTRO RÁPIDO PARA DIAS SOBRECARREGADOS (CONDICIONADO A LIMITAR HORAS / DIA) */}
+                                        {optLimitHours && (
+                                            overloadedDays.length > 0 ? (
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        const isFilterActive = attentionDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === attentionDays.length;
+                                                        const isFilterActive = overloadedDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === overloadedDays.length;
                                                         if (isFilterActive) {
                                                             setSelectedDaysFilter([]);
                                                         } else {
-                                                            setSelectedDaysFilter(attentionDays);
+                                                            setSelectedDaysFilter(overloadedDays);
                                                         }
                                                     }}
                                                     className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
-                                                        attentionDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === attentionDays.length
-                                                            ? 'bg-amber-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-amber-400 font-black'
-                                                            : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                                                        overloadedDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === overloadedDays.length
+                                                            ? 'bg-red-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-red-400 font-black animate-pulse'
+                                                            : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40'
                                                     }`}
-                                                    title={`Isolar com 1 clique os dias em atenção de jornada (${attentionDays.join(', ')}).`}
+                                                    title={`Isolar com 1 clique apenas os dias com sobrecarga de jornada (${overloadedDays.join(', ')}).`}
                                                 >
-                                                    <span>⚠️ Atenção:</span>
-                                                    <span className="font-black">{attentionDays.length}</span>
+                                                    <span>🚨 Sobrecarga:</span>
+                                                    <span className="font-black">{overloadedDays.length}</span>
                                                 </button>
+                                            ) : (
+                                                attentionDays.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const isFilterActive = attentionDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === attentionDays.length;
+                                                            if (isFilterActive) {
+                                                                setSelectedDaysFilter([]);
+                                                            } else {
+                                                                setSelectedDaysFilter(attentionDays);
+                                                            }
+                                                        }}
+                                                        className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
+                                                            attentionDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === attentionDays.length
+                                                                ? 'bg-amber-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-amber-400 font-black'
+                                                                : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                                                        }`}
+                                                        title={`Isolar com 1 clique os dias em atenção de jornada (${attentionDays.join(', ')}).`}
+                                                    >
+                                                        <span>⚠️ Atenção:</span>
+                                                        <span className="font-black">{attentionDays.length}</span>
+                                                    </button>
+                                                )
                                             )
                                         )}
 
@@ -6251,8 +6270,8 @@ export const AjusteRota: React.FC = () => {
                                         const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: day, bg: 'bg-indigo-600' };
                                         const dayMetrics = operationalSummary.dayMap[day];
                                         const isUnallocated = day === 'SEM ATENDIMENTO';
-                                        const dayOverload = !isUnallocated && dayMetrics ? (() => {
-                                            const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) ? (optLimitHours ? optMaxHours : 8) / 2 : (optLimitHours ? optMaxHours : 8);
+                                        const dayOverload = (!isUnallocated && dayMetrics && optLimitHours) ? (() => {
+                                            const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
                                             const dayLimitMin = dayLimitHours * 60;
                                             const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
                                             const excessMin = maxDayTime - dayLimitMin;
@@ -6590,7 +6609,7 @@ export const AjusteRota: React.FC = () => {
                                     {optimizeProgress.completedSummary.mode === 'flexibilize' && (
                                         <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center space-x-2 text-amber-700 dark:text-amber-400 font-medium">
                                             <span className="shrink-0">⚠️</span>
-                                            <span><strong>Jornada Flexibilizada:</strong> Dias com carga acima de {optimizeProgress.completedSummary.hoursLimit || 8}h possuem tags coloridas de sobrecarga para fácil visualização na grade.</span>
+                                            <span><strong>Jornada Flexibilizada:</strong> Dias com carga acima de {optimizeProgress.completedSummary.hoursLimit || optMaxHours}h possuem tags coloridas de sobrecarga para fácil visualização na grade.</span>
                                         </div>
                                     )}
 

@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.165.0',
+    date: 'Hoje',
+    title: 'Fuel360: Parametrização Dinâmica do Alerta de Sobrecarga de Horas no Roteirizador',
+    changes: [
+      'Alerta de Sobrecarga Parametrizado: O cálculo de sobrecarga de jornada e indicadores de excesso de tempo (+Xh Ym) agora respeitam estritamente o valor configurado em "Limitar Horas / Dia" (ex: 8h, 9h ou qualquer jornada desejada), sem limites fixos.',
+      'Exibição Condicional ao Parâmetro: As tags de Sobrecarga, Atenção e o botão de filtro rápido na barra de ferramentas só são exibidos quando a opção "Limitar Horas / Dia" estiver ativada, mantendo a grade limpa quando não houver limite diário.',
+      'Recálculo Instantâneo e Persistência: Alterações no limite de horas refletem em tempo real na grade e no diagnóstico de reequilíbrio de carga, com salvamento automático das preferências no navegador.'
+    ]
+  },
+  {
     version: '3.164.0',
     date: 'Hoje',
     title: 'RH e Layout: Busca Responsiva no RH e Menu Lateral Inteligente com Auto-Retração e Hover',
