@@ -1533,8 +1533,8 @@ export const RhCollaboratorManager: React.FC = () => {
       )}
 
       {/* Filter Toolbar (Top Style similar to IT Module) */}
-      <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col md:flex-row items-center gap-4">
-        <div className="relative flex-1 w-full">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3">
+        <div className="relative flex-1 min-w-[280px] w-full">
           <Search className="absolute left-3.5 top-3 text-slate-400" size={16} />
           <input
             type="text"
@@ -1545,7 +1545,7 @@ export const RhCollaboratorManager: React.FC = () => {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto">
           {/* Status Filter */}
           <select
             value={filterStatus}

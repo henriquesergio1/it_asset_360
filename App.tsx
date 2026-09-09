@@ -85,6 +85,8 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem('sidebar_collapsed') === 'true';
   });
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const isEffectiveCollapsed = isSidebarCollapsed && !isSidebarHovered;
   const [isSystemInfoOpen, setIsSystemInfoOpen] = useState(false);
   
   const { logout, user, isAdmin } = useAuth();
@@ -155,6 +157,18 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
     localStorage.setItem('sidebar_collapsed', String(isSidebarCollapsed));
   }, [isSidebarCollapsed]);
 
+  // Auto-retração do menu ao detectar telas menores (< 1280px)
+  useEffect(() => {
+    const handleScreenResize = () => {
+      if (window.innerWidth < 1280) {
+        setIsSidebarCollapsed(true);
+      }
+    };
+    handleScreenResize();
+    window.addEventListener('resize', handleScreenResize);
+    return () => window.removeEventListener('resize', handleScreenResize);
+  }, []);
+
   useEffect(() => {
     if (currentModule === 'RH' && !hasRhAccess) {
       if (hasTiAccess) { setCurrentModule('TI'); localStorage.setItem('current_module', 'TI'); }
@@ -171,11 +185,21 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   return (
     <div data-module={currentModule} className="flex h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white overflow-hidden">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64 bg-white dark:bg-slate-800 shadow-2xl transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col border-r border-slate-200 dark:border-slate-700`}>
+      {isSidebarCollapsed && isSidebarHovered && (
+        <div className="hidden lg:block w-20 shrink-0" />
+      )}
+      <aside 
+        onMouseEnter={() => { if (isSidebarCollapsed) setIsSidebarHovered(true); }}
+        onMouseLeave={() => setIsSidebarHovered(false)}
+        className={`fixed inset-y-0 left-0 z-50 ${isEffectiveCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64 bg-white dark:bg-slate-800 shadow-2xl transform transition-all duration-300 ease-in-out ${isSidebarCollapsed && isSidebarHovered ? 'lg:absolute' : 'lg:relative'} lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col border-r border-slate-200 dark:border-slate-700`}
+      >
         
         {/* Toggle Button (Desktop Only) */}
         <button 
-          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+          onClick={() => {
+            setIsSidebarCollapsed(!isSidebarCollapsed);
+            setIsSidebarHovered(false);
+          }} 
           className={`hidden lg:flex absolute -right-3 top-24 text-white rounded-full p-1 border-2 border-white transition-all z-[60] shadow-lg active:scale-90 ${
             currentModule === 'TI' ? 'bg-blue-600 hover:bg-blue-700' :
             currentModule === 'RH' ? 'bg-amber-500 hover:bg-amber-600' :
@@ -186,20 +210,20 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         </button>
 
         {/* Logo Section */}
-        <div className={`border-b border-slate-200 dark:border-slate-700 shrink-0 relative transition-all duration-300 ${isSidebarCollapsed ? 'p-4' : 'p-8'}`}>
+        <div className={`border-b border-slate-200 dark:border-slate-700 shrink-0 relative transition-all duration-300 ${isEffectiveCollapsed ? 'p-4' : 'p-8'}`}>
           <div className="flex flex-col items-center text-center space-y-4">
-            <div className={`shadow-xl transition-all duration-300 ${isSidebarCollapsed ? 'p-3 rounded-xl' : 'p-4 rounded-2xl'} ${
+            <div className={`shadow-xl transition-all duration-300 ${isEffectiveCollapsed ? 'p-3 rounded-xl' : 'p-4 rounded-2xl'} ${
               currentModule === 'TI' ? 'bg-blue-600 shadow-blue-900/20' :
               currentModule === 'RH' ? 'bg-amber-500 shadow-amber-900/20' :
               'bg-emerald-600 shadow-emerald-900/20'
             }`}>
               {settings.logoUrl ? (
-                  <img src={settings.logoUrl} alt="Logo" className={`${isSidebarCollapsed ? 'h-8' : 'h-14'} w-auto object-contain transition-all duration-300`} />
+                  <img src={settings.logoUrl} alt="Logo" className={`${isEffectiveCollapsed ? 'h-8' : 'h-14'} w-auto object-contain transition-all duration-300`} />
               ) : (
-                  <Cpu className={`text-slate-900 dark:text-white transition-all duration-300 ${isSidebarCollapsed ? 'h-6 w-6' : 'h-10 w-10'}`} />
+                  <Cpu className={`text-slate-900 dark:text-white transition-all duration-300 ${isEffectiveCollapsed ? 'h-6 w-6' : 'h-10 w-10'}`} />
               )}
             </div>
-            {!isSidebarCollapsed && (
+            {!isEffectiveCollapsed && (
               <div className="w-full overflow-hidden">
                 <h1 className="text-sm font-bold text-slate-900 dark:text-white leading-tight break-words px-1 tracking-tight">
                   {settings.appName}
@@ -214,7 +238,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         </div>
 
         {/* Module Switcher (Enterprise UI) */}
-        {!isSidebarCollapsed && (
+        {!isEffectiveCollapsed && (
           <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 shrink-0">
             <span className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1.5 text-center">Módulo Ativo</span>
             <div className="flex bg-slate-200 dark:bg-slate-900 p-1 rounded-xl gap-1">
@@ -246,7 +270,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </div>
         )}
 
-        {isSidebarCollapsed && (
+        {isEffectiveCollapsed && (
           <div className="p-2 border-b border-slate-200 dark:border-slate-700 shrink-0 flex justify-center">
             <button
               onClick={() => {
@@ -269,63 +293,63 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         <nav className="mt-4 flex-1 overflow-y-auto custom-scrollbar">
           {currentModule === 'TI' ? (
             <>
-              {hasPermission(user, 'dashboard_leitura') && <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} module="TI" />}
-              {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} module="TI" />}
-              {hasPermission(user, 'colaboradores_leitura') && <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} module="TI" />}
-              {hasPermission(user, 'chips_leitura') && <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} module="TI" />}
-              {hasPermission(user, 'licencas_leitura') && <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} module="TI" />}
-              {hasPermission(user, 'consumiveis_leitura') && <SidebarLink to="/consumables" icon={Package} label="Consumíveis" collapsed={isSidebarCollapsed} module="TI" />}
-              {hasPermission(user, 'tarefas_leitura') && <SidebarLink to="/tasks" icon={CheckSquare} label="Gestão de Tarefas" collapsed={isSidebarCollapsed} module="TI" />}
-              {hasPermission(user, 'relatorios_leitura') && <SidebarLink to="/reports" icon={FileText} label="Relatórios" collapsed={isSidebarCollapsed} module="TI" />}
-              {hasPermission(user, 'entrega_leitura') && <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} module="TI" />}
+              {hasPermission(user, 'dashboard_leitura') && <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isEffectiveCollapsed} module="TI" />}
+              {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isEffectiveCollapsed} module="TI" />}
+              {hasPermission(user, 'colaboradores_leitura') && <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isEffectiveCollapsed} module="TI" />}
+              {hasPermission(user, 'chips_leitura') && <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isEffectiveCollapsed} module="TI" />}
+              {hasPermission(user, 'licencas_leitura') && <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isEffectiveCollapsed} module="TI" />}
+              {hasPermission(user, 'consumiveis_leitura') && <SidebarLink to="/consumables" icon={Package} label="Consumíveis" collapsed={isEffectiveCollapsed} module="TI" />}
+              {hasPermission(user, 'tarefas_leitura') && <SidebarLink to="/tasks" icon={CheckSquare} label="Gestão de Tarefas" collapsed={isEffectiveCollapsed} module="TI" />}
+              {hasPermission(user, 'relatorios_leitura') && <SidebarLink to="/reports" icon={FileText} label="Relatórios" collapsed={isEffectiveCollapsed} module="TI" />}
+              {hasPermission(user, 'entrega_leitura') && <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isEffectiveCollapsed} module="TI" />}
             </>
           ) : currentModule === 'RH' ? (
             <>
-              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_dashboard') || hasPermission(user, 'rh_dashboard_leitura')) && <SidebarLink to="/rh/dashboard" icon={LayoutDashboard} label="Dashboard R.H." collapsed={isSidebarCollapsed} module="RH" />}
-              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'rh_colaboradores_leitura')) && <SidebarLink to="/rh/collaborators" icon={Users} label="Colaboradores R.H." collapsed={isSidebarCollapsed} module="RH" />}
-              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_comodato') || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'rh_comodato_leitura')) && <SidebarLink to="/rh/comodato" icon={FileText} label="Termos de Comodato" collapsed={isSidebarCollapsed} module="RH" />}
-              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_ocorrencias') || hasPermission(user, 'rh_atestados') || hasPermission(user, 'rh_ocorrencias_leitura')) && <SidebarLink to="/rh/occurrences" icon={Calendar} label="Faltas e Ocorrências" collapsed={isSidebarCollapsed} module="RH" />}
-              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_estoque') || hasPermission(user, 'rh_ativos') || hasPermission(user, 'rh_estoque_leitura')) && <SidebarLink to="/rh/assets" icon={Package} label="Ativos e Consumíveis" collapsed={isSidebarCollapsed} module="RH" />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_dashboard') || hasPermission(user, 'rh_dashboard_leitura')) && <SidebarLink to="/rh/dashboard" icon={LayoutDashboard} label="Dashboard R.H." collapsed={isEffectiveCollapsed} module="RH" />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'rh_colaboradores_leitura')) && <SidebarLink to="/rh/collaborators" icon={Users} label="Colaboradores R.H." collapsed={isEffectiveCollapsed} module="RH" />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_comodato') || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'rh_comodato_leitura')) && <SidebarLink to="/rh/comodato" icon={FileText} label="Termos de Comodato" collapsed={isEffectiveCollapsed} module="RH" />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_ocorrencias') || hasPermission(user, 'rh_atestados') || hasPermission(user, 'rh_ocorrencias_leitura')) && <SidebarLink to="/rh/occurrences" icon={Calendar} label="Faltas e Ocorrências" collapsed={isEffectiveCollapsed} module="RH" />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_estoque') || hasPermission(user, 'rh_ativos') || hasPermission(user, 'rh_estoque_leitura')) && <SidebarLink to="/rh/assets" icon={Package} label="Ativos e Consumíveis" collapsed={isEffectiveCollapsed} module="RH" />}
             </>
           ) : (
             <>
-              <SidebarLink to="/fuel360/calculo" icon={Calculator} label="Cálculo Reembolso" collapsed={isSidebarCollapsed} module="FUEL" />
-              <SidebarLink to="/fuel360/roteirizador" icon={MapPin} label="Roteirizador" collapsed={isSidebarCollapsed} module="FUEL" />
-              <SidebarLink to="/fuel360/ajuste-rota" icon={Navigation} label="Ajuste de Rota" collapsed={isSidebarCollapsed} module="FUEL" />
-              <SidebarLink to="/fuel360/comparativo" icon={TrendingUp} label="Previsto x Realizado" collapsed={isSidebarCollapsed} module="FUEL" />
-              <SidebarLink to="/fuel360/simulacoes" icon={ClipboardList} label="Simulações e Cálculos" collapsed={isSidebarCollapsed} module="FUEL" />
-              <SidebarLink to="/fuel360/equipe" icon={Users} label="Equipe & Setores" collapsed={isSidebarCollapsed} module="FUEL" />
-              <SidebarLink to="/fuel360/ausencias" icon={Calendar} label="Ausências" collapsed={isSidebarCollapsed} module="FUEL" />
-              <SidebarLink to="/fuel360/relatorios" icon={BarChart3} label="Relatórios BI" collapsed={isSidebarCollapsed} module="FUEL" />
-              <SidebarLink to="/fuel360/config" icon={Sliders} label="Parâmetros KM/L" collapsed={isSidebarCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/calculo" icon={Calculator} label="Cálculo Reembolso" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/roteirizador" icon={MapPin} label="Roteirizador" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/ajuste-rota" icon={Navigation} label="Ajuste de Rota" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/comparativo" icon={TrendingUp} label="Previsto x Realizado" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/simulacoes" icon={ClipboardList} label="Simulações e Cálculos" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/equipe" icon={Users} label="Equipe & Setores" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/ausencias" icon={Calendar} label="Ausências" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/relatorios" icon={BarChart3} label="Relatórios BI" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/config" icon={Sliders} label="Parâmetros KM/L" collapsed={isEffectiveCollapsed} module="FUEL" />
             </>
           )}
           
           {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'sistema_leitura')) && (
-            <div className={`pt-4 mt-4 border-t border-slate-200 dark:border-slate-700 ${isSidebarCollapsed ? 'px-0' : ''}`}>
-               {!isSidebarCollapsed && <p className="px-6 text-[11px] text-slate-500 dark:text-slate-400/80 font-bold uppercase mb-2 animate-fade-in">Administrativo</p>}
-               <SidebarLink to="/admin" icon={ShieldCheck} label="Administração" collapsed={isSidebarCollapsed} />
+            <div className={`pt-4 mt-4 border-t border-slate-200 dark:border-slate-700 ${isEffectiveCollapsed ? 'px-0' : ''}`}>
+               {!isEffectiveCollapsed && <p className="px-6 text-[11px] text-slate-500 dark:text-slate-400/80 font-bold uppercase mb-2 animate-fade-in">Administrativo</p>}
+               <SidebarLink to="/admin" icon={ShieldCheck} label="Administração" collapsed={isEffectiveCollapsed} />
             </div>
           )}
         </nav>
 
         {/* Footer Info & Logout */}
-        <div className={`border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 shrink-0 transition-all duration-300 ${isSidebarCollapsed ? 'p-4' : 'p-6'}`}>
+        <div className={`border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 shrink-0 transition-all duration-300 ${isEffectiveCollapsed ? 'p-4' : 'p-6'}`}>
           <div 
             onClick={() => setIsSystemInfoOpen(true)}
-            className={`flex items-center gap-2 text-[11px] text-blue-600 dark:text-sky-400/80 hover:text-blue-800 dark:hover:text-sky-300 mb-4 w-full overflow-hidden whitespace-nowrap cursor-pointer transition-colors ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            className={`flex items-center gap-2 text-[11px] text-blue-600 dark:text-sky-400/80 hover:text-blue-800 dark:hover:text-sky-300 mb-4 w-full overflow-hidden whitespace-nowrap cursor-pointer transition-colors ${isEffectiveCollapsed ? 'justify-center' : ''}`}
             title="Visualizar Informações do Sistema"
           >
              <span className="shrink-0"><Info size={14}/></span>
-             {!isSidebarCollapsed && <span>Versão {APP_VERSION}</span>}
+             {!isEffectiveCollapsed && <span>Versão {APP_VERSION}</span>}
           </div>
           <button 
             onClick={logout} 
-            className={`flex items-center space-x-3 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white cursor-pointer transition-colors w-full pt-4 border-t border-slate-200 dark:border-slate-700 ${isSidebarCollapsed ? 'justify-center space-x-0' : ''}`}
-            title={isSidebarCollapsed ? "Sair do Sistema" : undefined}
+            className={`flex items-center space-x-3 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white cursor-pointer transition-colors w-full pt-4 border-t border-slate-200 dark:border-slate-700 ${isEffectiveCollapsed ? 'justify-center space-x-0' : ''}`}
+            title={isEffectiveCollapsed ? "Sair do Sistema" : undefined}
           >
             <LogOut size={20} className="shrink-0" />
-            {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap">Sair do Sistema</span>}
+            {!isEffectiveCollapsed && <span className="overflow-hidden whitespace-nowrap">Sair do Sistema</span>}
           </button>
         </div>
       </aside>

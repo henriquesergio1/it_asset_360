@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.164.0',
+    date: 'Hoje',
+    title: 'RH e Layout: Busca Responsiva no RH e Menu Lateral Inteligente com Auto-Retração e Hover',
+    changes: [
+      'Busca Sempre Espaçosa no RH: Reestruturação responsiva da barra de filtros em telas menores/médias (< 1280px), garantindo linha própria com largura confortável (mínimo 280px) sem esmagamento do campo de digitação.',
+      'Auto-Retração Inteligente do Menu: O menu lateral se recolhe automaticamente em telas menores (< 1280px) para maximizar o espaço útil de trabalho.',
+      'Expansão Dinâmica por Hover: Ao passar o mouse sobre o menu recolhido, ele se expande em gaveta flutuante (overlay) sem causar solavancos ou empurrões no layout da página.'
+    ]
+  },
+  {
     version: '3.163.0',
     date: 'Hoje',
     title: 'T.I.: Coluna "Data de Admissão" no Seletor e Ordenação da Grade',
