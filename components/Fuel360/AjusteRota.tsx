@@ -1018,6 +1018,14 @@ export const AjusteRota: React.FC = () => {
         total: number;
         percentage: number;
         currentSellerName: string;
+        completedSummary?: {
+            title: string;
+            escopoDesc: string;
+            totalClients: number;
+            unallocatedCount?: number;
+            mode?: 'simulate' | 'strict' | 'flexibilize';
+            hoursLimit?: number;
+        } | null;
     } | null>(null);
 
     // Comparativo Antes x Depois
@@ -2531,7 +2539,7 @@ export const AjusteRota: React.FC = () => {
             const sellerVisits = baseRoutes.filter(r => r.Cod_Vend === sellerId);
             if (sellerVisits.length === 0) return;
 
-            const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
+            const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor) || colaboradores.find(c => Number(c.CodigoSetor) === sellerId || Number(c.ID_Colaborador) === sellerId);
             const sellerName = colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`);
 
             const uniqueClientsMap = new Map<number, VisitaPrevista>();
@@ -2646,7 +2654,17 @@ export const AjusteRota: React.FC = () => {
     };
 
     // Motor de Roteirização Avançado: Clusterização Espacial por Dia + TSP Circuito Fechado 2-Opt (Base -> Clientes -> Base)
-    const runOptimizationForSellers = async (sellers: number[], baseRoutes: VisitaPrevista[], allowOverflow: boolean = true) => {
+    const runOptimizationForSellers = async (
+        sellers: number[], 
+        baseRoutes: VisitaPrevista[], 
+        allowOverflow: boolean = true,
+        summaryMeta?: {
+            title: string;
+            escopoDesc: string;
+            mode?: 'simulate' | 'strict' | 'flexibilize';
+            hoursLimit?: number;
+        }
+    ) => {
         if (sellers.length === 0) return [];
 
         setLoading(true);
@@ -3179,14 +3197,6 @@ export const AjusteRota: React.FC = () => {
             }
         }
 
-        setOptimizeProgress({
-            current: sellers.length,
-            total: sellers.length,
-            percentage: 100,
-            currentSellerName: 'Roteirização concluída com sucesso!'
-        });
-        await new Promise(r => setTimeout(r, 100));
-
         if (result.length > 0) {
             setAdjustedRoutes(prev => {
                 const otherRoutes = prev.filter(r => !sellers.includes(r.Cod_Vend));
@@ -3196,7 +3206,26 @@ export const AjusteRota: React.FC = () => {
 
         setSelectedUnallocatedClients(new Set());
         setLoading(false);
-        setOptimizeProgress(null);
+
+        if (summaryMeta) {
+            const unallocatedCount = result.filter(r => r.Dia_Semana === 'SEM ATENDIMENTO').length;
+            setOptimizeProgress({
+                current: sellers.length,
+                total: sellers.length,
+                percentage: 100,
+                currentSellerName: 'Roteirização concluída com sucesso!',
+                completedSummary: {
+                    title: summaryMeta.title,
+                    escopoDesc: summaryMeta.escopoDesc,
+                    totalClients: result.length,
+                    unallocatedCount,
+                    mode: summaryMeta.mode,
+                    hoursLimit: summaryMeta.hoursLimit
+                }
+            });
+        } else {
+            setOptimizeProgress(null);
+        }
         return result;
     };
 
@@ -3220,16 +3249,19 @@ export const AjusteRota: React.FC = () => {
             return;
         }
 
-        const result = await runOptimizationForSellers(sellers, adjustedRoutes, true);
+        const escopoDesc = scopeMode === 'vendedor' 
+            ? 'do vendedor selecionado' 
+            : (scopeMode === 'equipe' ? 'da equipe de supervisão selecionada' : 'geral');
+
+        const result = await runOptimizationForSellers(sellers, adjustedRoutes, true, {
+            title: 'Otimização e Roteirização Concluída',
+            escopoDesc: `Escopo: ${escopoDesc}`,
+            mode: 'simulate'
+        });
         if (result && result.length === 0) {
             alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
             return;
         }
-
-        const escopoDesc = scopeMode === 'vendedor' 
-            ? 'do vendedor selecionado' 
-            : (scopeMode === 'equipe' ? 'da equipe de supervisão selecionada' : 'geral');
-        alert(`Otimização e Roteirização Concluída (${escopoDesc})!\n\n• Circuito fechado diário: Base ➜ Clientes ➜ Retorno à Base.\n• Algoritmo TSP 2-Opt aplicado: eliminação de cruzamentos e menor percurso.\n• Zoneamento por microrregiões contíguas preservado.\n• Carteiras mantidas 100% blindadas por colaborador.\n• Total de PDVs/clientes roteirizados: ${result ? result.length : 0}`);
     };
 
     // SIMULAÇÃO DE EXTINÇÃO E REDISTRIBUIÇÃO DE SETORES COM BALANCEAMENTO EQUILIBRADO
@@ -3393,7 +3425,11 @@ export const AjusteRota: React.FC = () => {
         // Se autoOptimizeAfterDistribute estiver ativo, reotimiza os setores receptores com a nova carga
         if (autoOptimizeAfterDistribute) {
             setTimeout(async () => {
-                await runOptimizationForSellers(receptors.map(r => r.id), newAdjustedRoutes);
+                await runOptimizationForSellers(receptors.map(r => r.id), newAdjustedRoutes, true, {
+                    title: 'Redistribuição e Roteirização Concluída',
+                    escopoDesc: 'Setores receptores reotimizados com sucesso',
+                    mode: 'simulate'
+                });
             }, 100);
         }
     };
@@ -5967,6 +6003,23 @@ export const AjusteRota: React.FC = () => {
                                         const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: day, bg: 'bg-indigo-600' };
                                         const dayMetrics = operationalSummary.dayMap[day];
                                         const isUnallocated = day === 'SEM ATENDIMENTO';
+                                        const dayOverload = !isUnallocated && dayMetrics ? (() => {
+                                            const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) ? (optLimitHours ? optMaxHours : 8) / 2 : (optLimitHours ? optMaxHours : 8);
+                                            const dayLimitMin = dayLimitHours * 60;
+                                            const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
+                                            const excessMin = maxDayTime - dayLimitMin;
+                                            if (excessMin <= 0) return null;
+                                            const excessH = Math.floor(excessMin / 60);
+                                            const remM = Math.round(excessMin % 60);
+                                            return {
+                                                excessMin,
+                                                excessH,
+                                                remM,
+                                                dayLimitHours,
+                                                maxDayTime,
+                                                isSevere: excessMin >= 60
+                                            };
+                                        })() : null;
 
                                         return (
                                             <div 
@@ -6018,6 +6071,19 @@ export const AjusteRota: React.FC = () => {
                                                                 Sem 1/3: <strong className="text-amber-700 dark:text-amber-400 font-black">{dayMetrics?.pdvs13 ?? 0} vis</strong> • Sem 2/4: <strong className="text-fuchsia-700 dark:text-fuchsia-400 font-black">{dayMetrics?.pdvs24 ?? 0} vis</strong>
                                                             </span>
                                                         )}
+                                                        {dayOverload && (
+                                                            <span 
+                                                                className={`text-[10px] font-black px-2 py-0.5 rounded-md border shadow-2xs shrink-0 whitespace-nowrap inline-flex items-center gap-1 ${
+                                                                    dayOverload.isSevere 
+                                                                        ? 'bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 border-red-300 dark:border-red-800' 
+                                                                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                                                }`}
+                                                                title={`Jornada estimada (${formatDuration(dayOverload.maxDayTime)}) acima da meta de ${dayOverload.dayLimitHours}h em +${dayOverload.excessH > 0 ? `${dayOverload.excessH}h ` : ''}${dayOverload.remM}m.`}
+                                                            >
+                                                                <span>{dayOverload.isSevere ? '🚨' : '⚠️'}</span>
+                                                                <span>{dayOverload.isSevere ? 'Sobrecarga' : 'Atenção'}</span>
+                                                            </span>
+                                                        )}
                                                     </div>
 
                                                     {/* Lado Direito: Resumo de KM, Tempo e Sequência */}
@@ -6033,6 +6099,23 @@ export const AjusteRota: React.FC = () => {
                                                                             : `${formatDuration(dayMetrics.time13)} (1/3) • ${formatDuration(dayMetrics.time24)} (2/4)`
                                                                         }
                                                                     </span>
+                                                                    {dayOverload && (
+                                                                        dayOverload.isSevere ? (
+                                                                            <span 
+                                                                                className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 border border-red-300 dark:border-red-800 inline-flex items-center gap-0.5 shrink-0 shadow-2xs"
+                                                                                title={`🚨 Sobrecarga: jornada de ${formatDuration(dayOverload.maxDayTime)} ultrapassa o limite de ${dayOverload.dayLimitHours}h em +${dayOverload.excessH}h${dayOverload.remM > 0 ? ` ${dayOverload.remM}m` : ''} neste dia.`}
+                                                                            >
+                                                                                <span>🚨</span> +{dayOverload.excessH}h{dayOverload.remM > 0 ? ` ${dayOverload.remM}m` : ''}
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span 
+                                                                                className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800 inline-flex items-center gap-0.5 shrink-0 shadow-2xs"
+                                                                                title={`⚠️ Atenção: jornada de ${formatDuration(dayOverload.maxDayTime)} ultrapassa o limite de ${dayOverload.dayLimitHours}h em +${dayOverload.excessMin}m.`}
+                                                                            >
+                                                                                <span>⚠️</span> +{dayOverload.excessMin}m
+                                                                            </span>
+                                                                        )
+                                                                    )}
                                                                 </div>
 
                                                                 <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 whitespace-nowrap" title="KM estimado do circuito (ida da base, visitas sequenciadas e retorno)">
@@ -6164,48 +6247,146 @@ export const AjusteRota: React.FC = () => {
             </div>
 
             {/* MODAL OVERLAY DE PROGRESSO DA OTIMIZAÇÃO COM BARRA E PERCENTUAL */}
+            {/* MODAL OVERLAY DE PROGRESSO DA OTIMIZAÇÃO COM BARRA E RESUMO ELEGANTE */}
             {optimizeProgress && (
                 <div className="fixed inset-0 z-[2000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black">
-                                <RefreshIcon className="w-5 h-5 animate-spin"/>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-base font-black text-slate-900 dark:text-white truncate">
-                                    Otimizando Roteiro
-                                </h3>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    Algoritmo de balanceamento e roteirização inteligente
-                                </p>
-                            </div>
-                            <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">
-                                {optimizeProgress.percentage}%
-                            </span>
-                        </div>
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+                        {optimizeProgress.completedSummary ? (
+                            <div className="space-y-4">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center space-x-3.5">
+                                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black shadow-xs shrink-0">
+                                            <CheckCircleIcon className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-base font-black text-slate-900 dark:text-white">
+                                                {optimizeProgress.completedSummary.title}
+                                            </h3>
+                                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                                {optimizeProgress.completedSummary.escopoDesc}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setOptimizeProgress(null)}
+                                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                        title="Fechar"
+                                    >
+                                        <span className="text-base font-bold">✕</span>
+                                    </button>
+                                </div>
 
-                        {/* Barra de Progresso com Transição Suave */}
-                        <div className="space-y-1.5">
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
-                                <div 
-                                    className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full transition-all duration-150 ease-out shadow-xs"
-                                    style={{ width: `${Math.min(100, Math.max(0, optimizeProgress.percentage))}%` }}
-                                ></div>
-                            </div>
-                            <div className="flex justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                <span className="truncate max-w-[70%]">{optimizeProgress.currentSellerName}</span>
-                                <span>{optimizeProgress.current} de {optimizeProgress.total}</span>
-                            </div>
-                        </div>
+                                {/* Cards de Indicadores Rápidos */}
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+                                        <div className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Total de PDVs</div>
+                                        <div className="text-xl font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                                            {optimizeProgress.completedSummary.totalClients} PDVs
+                                        </div>
+                                    </div>
+                                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+                                        <div className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Status da Alocação</div>
+                                        <div className="text-xl font-black mt-0.5">
+                                            {optimizeProgress.completedSummary.unallocatedCount && optimizeProgress.completedSummary.unallocatedCount > 0 ? (
+                                                <span className="text-red-600 dark:text-red-400 text-sm flex items-center gap-1 font-bold">
+                                                    {optimizeProgress.completedSummary.unallocatedCount} Excedentes
+                                                </span>
+                                            ) : (
+                                                <span className="text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-1 font-bold">
+                                                    100% Cobertos
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
 
-                        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3 border border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
-                            <div className="flex items-center text-emerald-600 dark:text-emerald-400 font-semibold">
-                                <span className="mr-1.5">🔒</span> Carteira blindada por vendedor (sem transferências)
+                                {/* Destaques das Regras e Algoritmo */}
+                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300 space-y-1.5">
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-indigo-600 dark:text-indigo-400 font-bold shrink-0">📍</span>
+                                        <span><strong>Circuito Fechado Diário:</strong> Base ➜ Clientes ➜ Retorno à Base.</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-indigo-600 dark:text-indigo-400 font-bold shrink-0">⚡</span>
+                                        <span><strong>Algoritmo TSP 2-Opt:</strong> Eliminação de cruzamentos viários e menor percurso.</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-indigo-600 dark:text-indigo-400 font-bold shrink-0">🗺️</span>
+                                        <span><strong>Zoneamento Contíguo:</strong> Microrregiões agrupadas com densidade geográfica.</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-indigo-600 dark:text-indigo-400 font-bold shrink-0">🔒</span>
+                                        <span><strong>Carteiras Blindadas:</strong> 100% de integridade por colaborador.</span>
+                                    </div>
+
+                                    {optimizeProgress.completedSummary.mode === 'flexibilize' && (
+                                        <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center space-x-2 text-amber-700 dark:text-amber-400 font-medium">
+                                            <span className="shrink-0">⚠️</span>
+                                            <span><strong>Jornada Flexibilizada:</strong> Dias com carga acima de {optimizeProgress.completedSummary.hoursLimit || 8}h possuem tags coloridas de sobrecarga para fácil visualização na grade.</span>
+                                        </div>
+                                    )}
+
+                                    {optimizeProgress.completedSummary.unallocatedCount && optimizeProgress.completedSummary.unallocatedCount > 0 ? (
+                                        <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center space-x-2 text-red-600 dark:text-red-400 font-medium">
+                                            <span className="shrink-0">🚫</span>
+                                            <span><strong>{optimizeProgress.completedSummary.unallocatedCount} PDVs Excedentes:</strong> Estão destacados na sanfona &quot;SEM ATENDIMENTO&quot; para reatribuição manual.</span>
+                                        </div>
+                                    ) : null}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setOptimizeProgress(null)}
+                                    className="w-full py-2.5 rounded-2xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] shadow-md shadow-indigo-600/20 transition flex items-center justify-center space-x-2 cursor-pointer"
+                                >
+                                    <span>Concluir e Ver Grade de Rotas</span>
+                                    <span>➔</span>
+                                </button>
                             </div>
-                            <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
-                                <span className="mr-1.5">⚖️</span> Equalização de quinzenas e teto diário
-                            </div>
-                        </div>
+                        ) : (
+                            <>
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black">
+                                        <RefreshIcon className="w-5 h-5 animate-spin"/>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-base font-black text-slate-900 dark:text-white truncate">
+                                            Otimizando Roteiro
+                                        </h3>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                            Algoritmo de balanceamento e roteirização inteligente
+                                        </p>
+                                    </div>
+                                    <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">
+                                        {optimizeProgress.percentage}%
+                                    </span>
+                                </div>
+
+                                {/* Barra de Progresso com Transição Suave */}
+                                <div className="space-y-1.5">
+                                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
+                                        <div 
+                                            className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full transition-all duration-150 ease-out shadow-xs"
+                                            style={{ width: `${Math.min(100, Math.max(0, optimizeProgress.percentage))}%` }}
+                                        ></div>
+                                    </div>
+                                    <div className="flex justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                        <span className="truncate max-w-[70%]">{optimizeProgress.currentSellerName}</span>
+                                        <span>{optimizeProgress.current} de {optimizeProgress.total}</span>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3 border border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                                    <div className="flex items-center text-emerald-600 dark:text-emerald-400 font-semibold">
+                                        <span className="mr-1.5">🔒</span> Carteira blindada por vendedor (sem transferências)
+                                    </div>
+                                    <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
+                                        <span className="mr-1.5">⚖️</span> Equalização de quinzenas e teto diário
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
@@ -7786,9 +7967,12 @@ export const AjusteRota: React.FC = () => {
                                     onClick={async () => {
                                         const sellers = capacityOverflowData.sellers;
                                         setShowCapacityModal(false);
-                                        const result = await runOptimizationForSellers(sellers, adjustedRoutes, false);
-                                        const unallocatedCount = result ? result.filter(r => r.Dia_Semana === 'SEM ATENDIMENTO').length : 0;
-                                        alert(`Otimização Concluída com Limite Estrito!\n\n• Limite rigoroso de ${capacityOverflowData.configuredHours}h respeitado.\n• Clientes atendidos: ${result ? result.length - unallocatedCount : 0}\n• Clientes SEM ATENDIMENTO (excedentes): ${unallocatedCount}\n\nOs clientes sem atendimento estão destacados na tabela com a tag "SEM ATENDIMENTO" para reatribuição manual.`);
+                                        await runOptimizationForSellers(sellers, adjustedRoutes, false, {
+                                            title: 'Otimização Concluída com Limite Estrito',
+                                            escopoDesc: `Limite rigoroso de ${capacityOverflowData.configuredHours}h respeitado`,
+                                            mode: 'strict',
+                                            hoursLimit: capacityOverflowData.configuredHours
+                                        });
                                     }}
                                     className="px-4 py-2.5 rounded-xl text-xs font-black text-red-700 dark:text-red-300 bg-red-100 hover:bg-red-200 dark:bg-red-950/70 dark:hover:bg-red-900/60 border border-red-300 dark:border-red-800 transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
                                 >
@@ -7800,8 +7984,12 @@ export const AjusteRota: React.FC = () => {
                                     onClick={async () => {
                                         const sellers = capacityOverflowData.sellers;
                                         setShowCapacityModal(false);
-                                        const result = await runOptimizationForSellers(sellers, adjustedRoutes, true);
-                                        alert(`Otimização Concluída Flexibilizando Tempo!\n\n• 100% dos clientes foram atendidos (${result ? result.length : 0} PDVs).\n• Jornada distribuída equilibradamente entre os dias ativos.\n• Microrregiões contíguas e circuitos fechados OSRM gerados com sucesso.`);
+                                        await runOptimizationForSellers(sellers, adjustedRoutes, true, {
+                                            title: 'Otimização Concluída Flexibilizando Tempo',
+                                            escopoDesc: 'Todos os clientes atendidos com flexibilização de jornada',
+                                            mode: 'flexibilize',
+                                            hoursLimit: capacityOverflowData.configuredHours
+                                        });
                                     }}
                                     className="px-4 py-2.5 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition flex items-center justify-center space-x-1.5 cursor-pointer"
                                 >

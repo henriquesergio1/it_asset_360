@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.159.0',
+    date: 'Hoje',
+    title: 'Fuel360: Indicador de Sobrecarga por Dia e Resumo Elegante Integrado no Modal',
+    changes: [
+      'Indicador de Sobrecarga Diária na Grade: Tags visuais dinâmicas (Atenção em âmbar e Sobrecarga em vermelho) nos dias em que a jornada real ultrapassar a carga configurada (ex: 8h) ao flexibilizar tempo.',
+      'Fim dos Alerts Nativos do Navegador: O resumo detalhado da conclusão da otimização agora é exibido diretamente dentro do card/modal elegante com métricas e visual Tailwind.',
+      'Detecção Fidedigna da Base do Colaborador: Unificação da localização da base operacional por setor, ID e nome em todos os pontos de cálculo de viabilidade.'
+    ]
+  },
+  {
     version: '3.158.0',
     date: 'Hoje',
     title: 'Fuel360: Correção de Cálculo Viário Real e Respeito Estrito ao Limite de Horas Diárias',
