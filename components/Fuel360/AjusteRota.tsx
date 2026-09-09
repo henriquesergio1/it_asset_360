@@ -1024,6 +1024,12 @@ export const AjusteRota: React.FC = () => {
         'SEM ATENDIMENTO': true
     });
 
+    // Seleção Múltipla e Transferência em Massa de Clientes Sem Atendimento
+    const [selectedUnallocatedClients, setSelectedUnallocatedClients] = useState<Set<number>>(new Set());
+    const [massTargetDay, setMassTargetDay] = useState<string>('');
+    const [massTargetSellerId, setMassTargetSellerId] = useState<string>('');
+    const [massTargetPeriodicidade, setMassTargetPeriodicidade] = useState<string>('');
+
     // Carregar canais de atendimento gravados no banco de dados corporativo
     const loadChannelServiceTimes = useCallback(async () => {
         try {
@@ -2962,6 +2968,7 @@ export const AjusteRota: React.FC = () => {
             });
         }
 
+        setSelectedUnallocatedClients(new Set());
         setLoading(false);
         setOptimizeProgress(null);
         return result;
@@ -3422,6 +3429,199 @@ export const AjusteRota: React.FC = () => {
         }));
     };
 
+    // Alternar seleção de cliente sem atendimento
+    const handleToggleSelectUnallocated = (clientCode: number) => {
+        setSelectedUnallocatedClients(prev => {
+            const next = new Set(prev);
+            if (next.has(clientCode)) {
+                next.delete(clientCode);
+            } else {
+                next.add(clientCode);
+            }
+            return next;
+        });
+    };
+
+    // Selecionar todos os clientes sem atendimento da lista
+    const handleSelectAllUnallocated = (unallocatedList: VisitaPrevista[]) => {
+        setSelectedUnallocatedClients(new Set(unallocatedList.map(c => c.Cod_Cliente)));
+    };
+
+    // Limpar seleção de clientes sem atendimento
+    const handleClearSelectionUnallocated = () => {
+        setSelectedUnallocatedClients(new Set());
+    };
+
+    // Aplicar transferência em massa de clientes sem atendimento
+    const handleApplyMassTransferUnallocated = () => {
+        if (selectedUnallocatedClients.size === 0) {
+            alert("Selecione ao menos um cliente sem atendimento para transferir.");
+            return;
+        }
+
+        const hasDayChange = Boolean(massTargetDay && massTargetDay.trim());
+        const hasSellerChange = Boolean(massTargetSellerId && massTargetSellerId.trim());
+        const hasPeriodicidadeChange = Boolean(massTargetPeriodicidade && massTargetPeriodicidade.trim());
+
+        if (!hasDayChange && !hasSellerChange && !hasPeriodicidadeChange) {
+            alert("Selecione um novo Dia de Visita, novo Vendedor ou nova Periodicidade para aplicar a transferência em massa.");
+            return;
+        }
+
+        const targetSellerNum = hasSellerChange ? Number(massTargetSellerId) : null;
+        const targetColab = targetSellerNum !== null ? getColabBySectorOrName(targetSellerNum) : null;
+        const count = selectedUnallocatedClients.size;
+
+        setAdjustedRoutes(prev => prev.map(v => {
+            if (selectedUnallocatedClients.has(v.Cod_Cliente)) {
+                const finalSellerId = targetSellerNum !== null ? targetSellerNum : v.Cod_Vend;
+                const finalSellerName = targetSellerNum !== null ? (targetColab?.Nome || v.Nome_Vendedor) : v.Nome_Vendedor;
+                const finalDay = hasDayChange ? massTargetDay : v.Dia_Semana;
+                const finalPeriodicidade = hasPeriodicidadeChange ? massTargetPeriodicidade : v.Periodicidade;
+
+                return {
+                    ...v,
+                    Cod_Vend: finalSellerId,
+                    Nome_Vendedor: finalSellerName,
+                    Dia_Semana: finalDay,
+                    Periodicidade: finalPeriodicidade
+                };
+            }
+            return v;
+        }));
+
+        setSelectedUnallocatedClients(new Set());
+        setMassTargetDay('');
+        setMassTargetSellerId('');
+        setMassTargetPeriodicidade('');
+
+        const targetDescParts: string[] = [];
+        if (hasDayChange) targetDescParts.push(`Dia: ${massTargetDay}`);
+        if (hasSellerChange) targetDescParts.push(`Colaborador: ${formatSellerDisplayName(targetSellerNum!, targetColab?.Nome || '')}`);
+        if (hasPeriodicidadeChange) targetDescParts.push(`Periodicidade: ${massTargetPeriodicidade}`);
+
+        alert(`✅ Transferência em Massa Concluída com Sucesso!\n\n• Total de clientes reatribuídos: ${count}\n• Parâmetros aplicados: ${targetDescParts.join(' | ')}\n\nOs itinerários, circuitos viários OSRM e totalizadores foram recalculados instantaneamente.`);
+    };
+
+    // Barra Contextual de Transferência em Massa de Clientes Excedentes
+    const renderMassTransferToolbar = (unallocatedList: VisitaPrevista[]) => {
+        if (unallocatedList.length === 0) return null;
+        const selectedCount = selectedUnallocatedClients.size;
+        const allSelected = unallocatedList.length > 0 && unallocatedList.every(c => selectedUnallocatedClients.has(c.Cod_Cliente));
+
+        return (
+            <div className="p-3 bg-red-50/90 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl space-y-2.5 shadow-xs mb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-red-600 text-white text-xs font-black shadow-xs">
+                            ⚡
+                        </span>
+                        <div>
+                            <span className="text-xs font-black text-red-900 dark:text-red-200">
+                                Transferência em Massa de Clientes Excedentes
+                            </span>
+                            <span className="ml-2 text-[11px] font-bold text-red-700 dark:text-red-300">
+                                ({selectedCount} de {unallocatedList.length} selecionados)
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (allSelected) {
+                                    handleClearSelectionUnallocated();
+                                } else {
+                                    handleSelectAllUnallocated(unallocatedList);
+                                }
+                            }}
+                            className="px-2.5 py-1 text-[10px] font-black rounded-lg bg-white dark:bg-slate-800 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900/40 transition cursor-pointer shadow-2xs"
+                        >
+                            {allSelected ? '⬜ Desmarcar Todos' : `☑️ Selecionar Todos (${unallocatedList.length})`}
+                        </button>
+                        {selectedCount > 0 && (
+                            <button
+                                type="button"
+                                onClick={handleClearSelectionUnallocated}
+                                className="px-2 py-1 text-[10px] font-bold rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer"
+                            >
+                                Limpar
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {selectedCount > 0 && (
+                    <div className="p-2.5 bg-white/90 dark:bg-slate-900/90 border border-red-200/80 dark:border-red-900/50 rounded-xl flex flex-wrap items-center gap-2.5 shadow-2xs animate-in fade-in duration-200">
+                        {/* Seletor de Novo Dia */}
+                        <div className="flex items-center gap-1.5 flex-1 min-w-[170px]">
+                            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0">
+                                Novo Dia:
+                            </span>
+                            <select
+                                value={massTargetDay}
+                                onChange={(e) => setMassTargetDay(e.target.value)}
+                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-[11px] font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer focus:ring-1 focus:ring-red-500"
+                            >
+                                <option value="">(Manter Dia Atual)</option>
+                                {WEEKDAYS.map(day => (
+                                    <option key={day} value={day}>{day}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Seletor de Novo Colaborador */}
+                        <div className="flex items-center gap-1.5 flex-1 min-w-[190px]">
+                            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0">
+                                Novo Vendedor:
+                            </span>
+                            <select
+                                value={massTargetSellerId}
+                                onChange={(e) => setMassTargetSellerId(e.target.value)}
+                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-[11px] font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer focus:ring-1 focus:ring-red-500"
+                            >
+                                <option value="">(Manter Vendedor Atual)</option>
+                                {teamColaboradores.map(c => (
+                                    <option key={c.ID_Colaborador} value={c.CodigoSetor}>
+                                        {formatSellerDisplayName(c.CodigoSetor, c.Nome)}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Seletor de Periodicidade */}
+                        <div className="flex items-center gap-1.5 min-w-[150px]">
+                            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0">
+                                Periodicidade:
+                            </span>
+                            <select
+                                value={massTargetPeriodicidade}
+                                onChange={(e) => setMassTargetPeriodicidade(e.target.value)}
+                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-[11px] font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer focus:ring-1 focus:ring-red-500"
+                            >
+                                <option value="">(Manter Atual)</option>
+                                <option value="Semanal">Semanal</option>
+                                <option value="1 3">Quinzenal (1, 3)</option>
+                                <option value="2 4">Quinzenal (2, 4)</option>
+                            </select>
+                        </div>
+
+                        {/* Botão de Aplicação */}
+                        <button
+                            type="button"
+                            onClick={handleApplyMassTransferUnallocated}
+                            className="px-3.5 py-1.5 rounded-xl text-xs font-black text-white bg-red-600 hover:bg-red-700 active:scale-95 shadow-md shadow-red-600/20 transition flex items-center space-x-1.5 cursor-pointer shrink-0"
+                            title={`Transferir ${selectedCount} cliente(s) selecionado(s)`}
+                        >
+                            <span>🚀 Transferir Selecionados ({selectedCount})</span>
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     // Excluir visita do roteiro de ajuste
     const handleExcludeVisit = (clientCode: number) => {
         if (!confirm("Deseja remover esta visita do ajuste de rota?")) return;
@@ -3837,19 +4037,36 @@ export const AjusteRota: React.FC = () => {
                     if (target.closest('select') || target.closest('button') || target.closest('input')) {
                         return;
                     }
+                    if (isUnallocated) {
+                        handleToggleSelectUnallocated(v.Cod_Cliente);
+                    }
                     handleFocusClientOnMap(v);
                 }}
-                title="Clique na linha para focar este cliente no mapa"
+                title={isUnallocated ? "Clique na linha para selecionar/desmarcar ou focar no mapa" : "Clique na linha para focar este cliente no mapa"}
                 className={`transition-all duration-300 cursor-pointer ${
                     isHighlighted 
                         ? 'bg-indigo-100/90 dark:bg-indigo-950/90 ring-2 ring-indigo-500 ring-inset shadow-md font-black' 
                         : isUnallocated
-                            ? 'bg-red-50/40 dark:bg-red-950/20 hover:bg-red-100/60 dark:hover:bg-red-900/30'
+                            ? (selectedUnallocatedClients.has(v.Cod_Cliente)
+                                ? 'bg-red-100/90 dark:bg-red-950/90 ring-2 ring-red-500 ring-inset shadow-xs font-black'
+                                : 'bg-red-50/40 dark:bg-red-950/20 hover:bg-red-100/60 dark:hover:bg-red-900/30')
                             : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/60'
                 }`}
             >
                 <td className="p-3 text-slate-900 dark:text-white font-mono">
                     <div className="flex items-center gap-1.5">
+                        {isUnallocated && (
+                            <input
+                                type="checkbox"
+                                checked={selectedUnallocatedClients.has(v.Cod_Cliente)}
+                                onChange={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleSelectUnallocated(v.Cod_Cliente);
+                                }}
+                                title={selectedUnallocatedClients.has(v.Cod_Cliente) ? "Desmarcar cliente" : "Selecionar cliente para transferência em massa"}
+                                className="w-4 h-4 rounded text-red-600 focus:ring-red-500 border-red-300 dark:border-red-700 cursor-pointer shrink-0"
+                            />
+                        )}
                         {visitSeq && !isUnallocated && (
                             <span 
                                 className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0" 
@@ -5514,16 +5731,35 @@ export const AjusteRota: React.FC = () => {
                                                                 )}
                                                             </>
                                                         ) : isUnallocated ? (
-                                                            <span className="text-[10px] font-bold text-red-700 dark:text-red-300 bg-red-100/80 dark:bg-red-950/70 px-2 py-0.5 rounded border border-red-300 dark:border-red-800">
-                                                                ⚠️ Excedente de Capacidade / Jornada — Necessita Reatribuição Manual
-                                                            </span>
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span className="text-[10px] font-bold text-red-700 dark:text-red-300 bg-red-100/80 dark:bg-red-950/70 px-2 py-0.5 rounded border border-red-300 dark:border-red-800">
+                                                                    ⚠️ Excedente de Capacidade / Jornada — Necessita Reatribuição Manual
+                                                                </span>
+                                                                {dayRoutes.length > 0 && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            if (dayRoutes.every(c => selectedUnallocatedClients.has(c.Cod_Cliente))) {
+                                                                                handleClearSelectionUnallocated();
+                                                                            } else {
+                                                                                handleSelectAllUnallocated(dayRoutes);
+                                                                            }
+                                                                        }}
+                                                                        className="px-2 py-0.5 text-[9px] font-black rounded bg-red-600 hover:bg-red-700 text-white transition cursor-pointer shadow-2xs"
+                                                                    >
+                                                                        {dayRoutes.every(c => selectedUnallocatedClients.has(c.Cod_Cliente)) ? 'Desmarcar Todos' : `Selecionar Todos (${dayRoutes.length})`}
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         ) : null}
                                                     </div>
                                                 </div>
 
                                                 {/* Conteúdo Expansível da Sanfona */}
                                                 {isOpen && (
-                                                    <div className="overflow-x-auto">
+                                                    <div className="overflow-x-auto p-1">
+                                                        {isUnallocated && renderMassTransferToolbar(dayRoutes)}
                                                         {dayRoutes.length === 0 ? (
                                                             <div className="p-5 text-center text-slate-400 dark:text-slate-500 text-xs italic bg-slate-50/40 dark:bg-slate-800/20">
                                                                 Nenhuma visita agendada para {day}.
@@ -5556,6 +5792,11 @@ export const AjusteRota: React.FC = () => {
                             ) : (
                                 /* VISÃO EM LISTA CONTÍNUA TRADICIONAL */
                                 <div className="flex-1 overflow-auto custom-scrollbar border border-slate-100 dark:border-slate-800 rounded-xl">
+                                    {sortedRoutes.some(r => r.Dia_Semana === 'SEM ATENDIMENTO') && (
+                                        <div className="p-2 pb-0">
+                                            {renderMassTransferToolbar(sortedRoutes.filter(r => r.Dia_Semana === 'SEM ATENDIMENTO'))}
+                                        </div>
+                                    )}
                                     <table className="w-full text-left text-[11px] font-bold text-slate-700 dark:text-slate-300">
                                         {renderTableHeaders()}
                                         <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">

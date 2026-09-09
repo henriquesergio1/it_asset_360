@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.151.0',
+    date: 'Hoje',
+    title: 'Fuel360: Transferência em Massa de Clientes Sem Atendimento',
+    changes: [
+      'Seleção Múltipla de Clientes Excedentes: Checkboxes dedicados em cada cliente com status "SEM ATENDIMENTO", além de botões rápidos para selecionar todos os excedentes ou limpar a seleção em 1 clique.',
+      'Barra de Ação de Transferência em Massa: Painel contextual destacado ao selecionar um ou mais clientes, com seletores de novo dia de visita, novo colaborador/vendedor e periodicidade.',
+      'Reatribuição Simultânea em Lote: Execução instantânea da transferência de todos os clientes selecionados com recálculo automático dos itinerários, circuitos OSRM e métricas operacionais.',
+      'Compatibilidade em Ambas as Visões: Suporte integral tanto na grade agrupada em Sanfona por Dia quanto na visualização clássica em Lista Contínua.'
+    ]
+  },
+  {
     version: '3.150.0',
     date: 'Hoje',
     title: 'Fuel360: Tratamento de Capacidade Excedida e Grade em Sanfona por Dia e Ciclo',
