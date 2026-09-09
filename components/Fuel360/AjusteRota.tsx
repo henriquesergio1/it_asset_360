@@ -723,14 +723,15 @@ const SearchableSellerSelect: React.FC<{
     }, [sellers, searchTerm]);
 
     const selectedSellerObj = sellers.find(s => String(s.id) === value);
+    const isAllSelected = !value || value === 'ALL';
     const displayText = selectedSellerObj
         ? (selectedSellerObj.name.startsWith(`${selectedSellerObj.id} - `)
             ? selectedSellerObj.name
             : `${selectedSellerObj.id} - ${selectedSellerObj.name}`)
-        : 'Selecione um Vendedor...';
+        : `Todos os Vendedores (${sellers.length})`;
 
     return (
-        <div className="relative inline-block text-left" ref={containerRef}>
+        <div className="relative inline-flex items-center space-x-1" ref={containerRef}>
             <button
                 type="button"
                 onClick={() => setIsOpen(prev => !prev)}
@@ -742,8 +743,22 @@ const SearchableSellerSelect: React.FC<{
                 <ChevronDownIcon className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
+            {!isAllSelected && (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onChange('');
+                    }}
+                    title="Desmarcar vendedor e exibir todos"
+                    className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-200 dark:hover:bg-slate-700/60 rounded-xl transition cursor-pointer"
+                >
+                    <XCircleIcon className="w-4 h-4" />
+                </button>
+            )}
+
             {isOpen && (
-                <div className="absolute left-0 mt-1.5 w-72 max-w-[90vw] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
+                <div className="absolute left-0 top-full mt-1.5 w-72 max-w-[90vw] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
                     {/* Campo de Busca */}
                     <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/60">
                         <div className="relative flex items-center">
@@ -770,7 +785,33 @@ const SearchableSellerSelect: React.FC<{
 
                     {/* Lista de Colaboradores */}
                     <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/50">
-                        {filteredSellers.length === 0 ? (
+                        {/* Opção Todos os Vendedores */}
+                        {(!searchTerm.trim() || 'todos os vendedores'.includes(searchTerm.toLowerCase().trim())) && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onChange('');
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition cursor-pointer ${
+                                    isAllSelected
+                                        ? 'bg-indigo-50 dark:bg-indigo-950/60 font-bold text-indigo-700 dark:text-indigo-300'
+                                        : 'hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 font-medium'
+                                }`}
+                            >
+                                <div className="flex items-center space-x-2 truncate">
+                                    <span className="px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/60 text-[10px] text-indigo-700 dark:text-indigo-300 font-black shrink-0">
+                                        TODOS
+                                    </span>
+                                    <span className="truncate font-bold">Todos os Vendedores ({sellers.length})</span>
+                                </div>
+                                {isAllSelected && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shrink-0 ml-2" />
+                                )}
+                            </button>
+                        )}
+
+                        {filteredSellers.length === 0 && searchTerm.trim() && !'todos os vendedores'.includes(searchTerm.toLowerCase().trim()) ? (
                             <div className="p-4 text-center text-xs text-slate-400 dark:text-slate-500">
                                 Nenhum colaborador encontrado para "{searchTerm}"
                             </div>
@@ -3290,9 +3331,6 @@ export const AjusteRota: React.FC = () => {
                                 onClick={() => {
                                     setScopeMode('vendedor');
                                     setSelectedPromoter('ALL');
-                                    if (!selectedSeller && availableSellers.length > 0) {
-                                        setSelectedSeller(String(availableSellers[0].id));
-                                    }
                                 }}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${scopeMode === 'vendedor' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                             >
@@ -3773,24 +3811,35 @@ export const AjusteRota: React.FC = () => {
                             </div>
                             <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
                                 <div 
-                                    className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition ${selectedPromoter === 'ALL' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200'}`}
-                                    onClick={() => setSelectedPromoter('ALL')}
+                                    className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition ${selectedPromoter === 'ALL' && (!selectedSeller || selectedSeller === 'ALL') ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200'}`}
+                                    onClick={() => {
+                                        setSelectedPromoter('ALL');
+                                        if (scopeMode === 'vendedor') {
+                                            setSelectedSeller('');
+                                        }
+                                    }}
                                 >
-                                    Todos no Escopo ({Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).length})
+                                    Todos no Escopo ({Array.from(new Set((scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).map(r => r.Cod_Vend))).length})
                                 </div>
-                                {Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).map(sellerId => {
-                                    const sellerVisits = scopedAdjustedRoutes.filter(v => v.Cod_Vend === sellerId);
+                                {Array.from(new Set((scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).map(r => r.Cod_Vend))).map(sellerId => {
+                                    const sellerVisits = (scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).filter(v => v.Cod_Vend === sellerId);
                                     const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
                                     const count = sellerVisits.length;
                                     const color = promoterColorMap.get(String(sellerId)) || '#64748b';
-                                    const qStats = getSellerQuinzenaStats(sellerId, scopedAdjustedRoutes);
+                                    const qStats = getSellerQuinzenaStats(sellerId, (scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes));
                                     const displayName = formatSellerDisplayName(sellerId, colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`));
+                                    const isItemActive = selectedPromoter === String(sellerId) || (scopeMode === 'vendedor' && selectedSeller === String(sellerId));
 
                                     return (
                                         <div 
                                             key={sellerId}
-                                            className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between gap-1.5 ${selectedPromoter === String(sellerId) ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : (qStats.isImbalanced ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200 hover:border-amber-400' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200')}`}
-                                            onClick={() => setSelectedPromoter(String(sellerId))}
+                                            className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between gap-1.5 ${isItemActive ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : (qStats.isImbalanced ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200 hover:border-amber-400' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200')}`}
+                                            onClick={() => {
+                                                setSelectedPromoter(String(sellerId));
+                                                if (scopeMode === 'vendedor') {
+                                                    setSelectedSeller(String(sellerId));
+                                                }
+                                            }}
                                         >
                                             <div className="flex items-center space-x-2 truncate min-w-0">
                                                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }}></span>

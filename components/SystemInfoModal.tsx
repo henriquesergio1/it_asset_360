@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.147.1',
+    date: 'Hoje',
+    title: 'Fuel360: Desmarcar Vendedor e Seleção de Todos os Colaboradores',
+    changes: [
+      'Opção Todos os Vendedores: Inclusão da opção no topo do dropdown de busca para restaurar a visualização de todos os colaboradores simultaneamente.',
+      'Botão de Limpeza Rápida (✕): Botão interativo no seletor para desmarcar o vendedor ativo com um clique.',
+      'Navegação Contínua no Painel Lateral: Mantida a lista completa de colaboradores acessível mesmo com um vendedor focado, permitindo alternar rapidamente ou restaurar "Todos no Escopo".'
+    ]
+  },
+  {
     version: '3.147.0',
     date: 'Hoje',
     title: 'Fuel360: Identificação Padronizada de Colaboradores e Contraste no Tema Escuro',
