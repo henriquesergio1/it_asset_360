@@ -1013,17 +1013,9 @@ export const AjusteRota: React.FC = () => {
         }>;
     } | null>(null);
 
-    // Controle de Exibição da Grade de Ajuste Fino em Sanfona por Dia
+    // Controle de Exibição da Grade de Ajuste Fino em Sanfona por Dia (inicia fechado por padrão)
     const [tableViewMode, setTableViewMode] = useState<'accordion' | 'flat'>('accordion');
-    const [openDaysMap, setOpenDaysMap] = useState<Record<string, boolean>>({
-        'SEGUNDA-FEIRA': true,
-        'TERÇA-FEIRA': true,
-        'QUARTA-FEIRA': true,
-        'QUINTA-FEIRA': true,
-        'SEXTA-FEIRA': true,
-        'SÁBADO': true,
-        'SEM ATENDIMENTO': true
-    });
+    const [openDaysMap, setOpenDaysMap] = useState<Record<string, boolean>>({});
 
     // Seleção Múltipla e Transferência em Massa de Clientes Sem Atendimento
     const [selectedUnallocatedClients, setSelectedUnallocatedClients] = useState<Set<number>>(new Set());
@@ -5706,7 +5698,7 @@ export const AjusteRota: React.FC = () => {
                                 <div className="flex-1 overflow-auto custom-scrollbar space-y-3 pr-1">
                                     {visibleDays.map(day => {
                                         const dayRoutes = sortedRoutes.filter(r => r.Dia_Semana === day);
-                                        const isOpen = openDaysMap[day] !== false;
+                                        const isOpen = Boolean(openDaysMap[day]);
                                         const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: day, bg: 'bg-indigo-600' };
                                         const dayMetrics = operationalSummary.dayMap[day];
                                         const isUnallocated = day === 'SEM ATENDIMENTO';
@@ -5723,7 +5715,7 @@ export const AjusteRota: React.FC = () => {
                                                 {/* Cabeçalho da Sanfona do Dia */}
                                                 <div 
                                                     onClick={() => setOpenDaysMap(prev => ({ ...prev, [day]: !prev[day] }))}
-                                                    className={`flex flex-wrap items-center justify-between gap-3 p-3 cursor-pointer transition-all select-none ${
+                                                    className={`flex items-center justify-between gap-2.5 sm:gap-4 p-2.5 sm:p-3 cursor-pointer transition-all select-none overflow-x-auto custom-scrollbar ${
                                                         isOpen 
                                                             ? (isUnallocated 
                                                                 ? 'bg-red-50 dark:bg-red-950/40 border-b border-red-200 dark:border-red-800/60' 
@@ -5734,37 +5726,40 @@ export const AjusteRota: React.FC = () => {
                                                     }`}
                                                 >
                                                     {/* Lado Esquerdo: Chevron, Nome do Dia, Quantidade e Ciclos */}
-                                                    <div className="flex items-center gap-2.5">
+                                                    <div className="flex items-center gap-2 shrink-0">
                                                         <div className={`p-1 rounded-lg transition-transform duration-200 ${isOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
                                                             <ChevronDownIcon className="w-4 h-4" />
                                                         </div>
                                                         <span 
-                                                            className="px-2.5 py-1 rounded-lg text-xs font-black text-white shadow-2xs tracking-wide uppercase"
+                                                            className="px-2 py-0.5 rounded-lg text-xs font-black text-white shadow-2xs tracking-wide uppercase shrink-0"
                                                             style={{ backgroundColor: dayCfg.hex }}
                                                         >
                                                             {day}
                                                         </span>
-                                                        <span className={`text-xs font-black ${isUnallocated ? 'text-red-700 dark:text-red-300' : 'text-slate-800 dark:text-slate-200'}`}>
+                                                        <span 
+                                                            className={`text-xs font-black shrink-0 ${isUnallocated ? 'text-red-700 dark:text-red-300' : 'text-slate-800 dark:text-slate-200'}`}
+                                                            title={isUnallocated ? `${dayRoutes.length} PDVs excedentes sem atendimento` : `Carteira: ${dayRoutes.length} PDVs cadastrados para ${day}`}
+                                                        >
                                                             {isUnallocated 
                                                                 ? `${dayRoutes.length} ${dayRoutes.length === 1 ? 'PDV excedente' : 'PDVs excedentes'}`
-                                                                : `${dayRoutes.length} ${dayRoutes.length === 1 ? 'PDV na Carteira' : 'PDVs na Carteira'}`
+                                                                : `${dayRoutes.length} ${dayRoutes.length === 1 ? 'PDV' : 'PDVs'}`
                                                             }
                                                         </span>
                                                         {!isUnallocated && dayRoutes.length > 0 && (
                                                             <span 
-                                                                className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200/80 dark:border-slate-700 shadow-2xs"
+                                                                className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200/80 dark:border-slate-700 shadow-2xs shrink-0 whitespace-nowrap"
                                                                 title={`Atendimentos reais por ciclo semanal neste dia:\n• Semanas 1 e 3: ${dayMetrics?.pdvs13 ?? 0} visitas\n• Semanas 2 e 4: ${dayMetrics?.pdvs24 ?? 0} visitas`}
                                                             >
-                                                                Sem 1/3: <strong className="text-amber-700 dark:text-amber-400 font-black">{dayMetrics?.pdvs13 ?? 0} visitas</strong> • Sem 2/4: <strong className="text-fuchsia-700 dark:text-fuchsia-400 font-black">{dayMetrics?.pdvs24 ?? 0} visitas</strong>
+                                                                Sem 1/3: <strong className="text-amber-700 dark:text-amber-400 font-black">{dayMetrics?.pdvs13 ?? 0} vis</strong> • Sem 2/4: <strong className="text-fuchsia-700 dark:text-fuchsia-400 font-black">{dayMetrics?.pdvs24 ?? 0} vis</strong>
                                                             </span>
                                                         )}
                                                     </div>
 
                                                     {/* Lado Direito: Resumo de KM, Tempo e Sequência */}
-                                                    <div className="flex flex-wrap items-center gap-3.5 text-[11px]">
+                                                    <div className="flex items-center gap-2.5 sm:gap-3.5 text-[11px] shrink-0">
                                                         {!isUnallocated && dayMetrics ? (
                                                             <>
-                                                                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300" title="Tempo total diário estimado (visitas nos canais + deslocamento viário OSRM)">
+                                                                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 whitespace-nowrap" title="Tempo total diário estimado (visitas nos canais + deslocamento viário OSRM)">
                                                                     <ClockIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
                                                                     <span className="text-slate-400 dark:text-slate-500 font-normal">Tempo:</span>
                                                                     <span className="font-black">
@@ -5775,7 +5770,7 @@ export const AjusteRota: React.FC = () => {
                                                                     </span>
                                                                 </div>
 
-                                                                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300" title="KM estimado do circuito (ida da base, visitas sequenciadas e retorno)">
+                                                                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 whitespace-nowrap" title="KM estimado do circuito (ida da base, visitas sequenciadas e retorno)">
                                                                     <LocationMarkerIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                                                     <span className="text-slate-400 dark:text-slate-500 font-normal">KM:</span>
                                                                     <span className="font-black">
@@ -5787,7 +5782,7 @@ export const AjusteRota: React.FC = () => {
                                                                 </div>
 
                                                                 {dayRoutes.length > 0 && (
-                                                                    <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                                                                    <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                                                         <span className="text-slate-400 dark:text-slate-500 font-normal">Sequência:</span>
                                                                         <span className="font-black text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200/60 dark:border-indigo-800 text-[10px]">
                                                                             #1 a #{dayRoutes.length}

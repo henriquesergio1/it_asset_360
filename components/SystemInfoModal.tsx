@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.154.0',
+    date: 'Hoje',
+    title: 'Fuel360: Padronização Visual dos Cabeçalhos da Sanfona e Semanas Fechadas por Padrão',
+    changes: [
+      'Alinhamento e Altura Padronizados em Linha Única: Eliminação da quebra assimétrica de linha nos cabeçalhos da sanfona por dia. Todos os dias agora exibem a mesma estrutura em linha única uniforme, sem saltos ou variações de altura.',
+      'Semanas Fechadas por Padrão ao Iniciar: Ao carregar ou alternar para o modo Sanfona por Dia, todas as semanas/dias iniciam fechados por padrão, conferindo uma visão limpa e panorâmica da rota.',
+      'Rótulos e Badges Mais Concisos: Contadores e métricas compactadas ("PDVs" e "vis") com tooltips explicativos completos ao passar o mouse.'
+    ]
+  },
+  {
     version: '3.153.0',
     date: 'Hoje',
     title: 'Fuel360: Distinção Precisa entre PDVs na Carteira e Visitas por Ciclo e Mês',
