@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.145.2
+// Servidor express unificado com API e SPA React - v3.146.0
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -2229,18 +2229,24 @@ async function ensureFuelTablesExist(pool) {
                     ID_Canal INT IDENTITY(1,1) PRIMARY KEY,
                     Canal NVARCHAR(150) NOT NULL UNIQUE,
                     TempoMinutos INT NOT NULL DEFAULT 15,
+                    Ativo BIT NOT NULL DEFAULT 1,
                     DataAtualizacao DATETIME DEFAULT GETDATE(),
                     UsuarioAtualizacao NVARCHAR(255) NULL
                 );
-                INSERT INTO FuelCanaisAtendimento (Canal, TempoMinutos, UsuarioAtualizacao) VALUES 
-                ('PADRAO', 15, 'Sistema'),
-                ('VAREJO', 15, 'Sistema'),
-                ('SUPERMERCADO', 30, 'Sistema'),
-                ('HIPERMERCADO', 45, 'Sistema'),
-                ('ATACADO', 35, 'Sistema'),
-                ('FARMA', 15, 'Sistema'),
-                ('KEY ACCOUNT', 45, 'Sistema');
+                INSERT INTO FuelCanaisAtendimento (Canal, TempoMinutos, Ativo, UsuarioAtualizacao) VALUES 
+                ('PADRAO', 15, 1, 'Sistema'),
+                ('VAREJO', 15, 1, 'Sistema'),
+                ('SUPERMERCADO', 30, 1, 'Sistema'),
+                ('HIPERMERCADO', 45, 1, 'Sistema'),
+                ('ATACADO', 35, 1, 'Sistema'),
+                ('FARMA', 15, 1, 'Sistema'),
+                ('KEY ACCOUNT', 45, 1, 'Sistema');
             `);
+        } else {
+            const colCheck = await pool.request().query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelCanaisAtendimento' AND COLUMN_NAME = 'Ativo'");
+            if (colCheck.recordset.length === 0) {
+                await pool.request().query("ALTER TABLE FuelCanaisAtendimento ADD Ativo BIT NOT NULL DEFAULT 1");
+            }
         }
     } catch (err) {
         console.error('AVISO ao verificar/criar tabelas Fuel360:', err.message);
@@ -2731,7 +2737,7 @@ app.get('/api/fuel360/canais-atendimento', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
-        const result = await pool.request().query("SELECT ID_Canal, Canal, TempoMinutos, DataAtualizacao, UsuarioAtualizacao FROM FuelCanaisAtendimento ORDER BY Canal ASC");
+        const result = await pool.request().query("SELECT ID_Canal, Canal, TempoMinutos, ISNULL(Ativo, 1) as Ativo, DataAtualizacao, UsuarioAtualizacao FROM FuelCanaisAtendimento ORDER BY Canal ASC");
         const auditRes = await pool.request().query("SELECT TOP 1 UsuarioAtualizacao as usuario, DataAtualizacao as dataHora FROM FuelCanaisAtendimento WHERE DataAtualizacao IS NOT NULL ORDER BY DataAtualizacao DESC");
         const lastAudit = auditRes.recordset && auditRes.recordset.length > 0 ? auditRes.recordset[0] : null;
         res.json({ success: true, canais: result.recordset || [], lastAudit });
@@ -2756,20 +2762,22 @@ app.post('/api/fuel360/canais-atendimento/batch', async (req, res) => {
         for (const item of canais) {
             const canalNome = String(item.Canal || '').trim().toUpperCase();
             const minutos = parseInt(item.TempoMinutos, 10);
+            const ativo = item.Ativo === false || item.Ativo === 0 ? 0 : 1;
             if (!canalNome || isNaN(minutos) || minutos <= 0) continue;
 
             await pool.request()
                 .input('Canal', sql.NVarChar(150), canalNome)
                 .input('TempoMinutos', sql.Int, minutos)
+                .input('Ativo', sql.Bit, ativo)
                 .input('Usuario', sql.NVarChar(255), userName)
                 .query(`
                     IF EXISTS (SELECT 1 FROM FuelCanaisAtendimento WHERE UPPER(Canal) = UPPER(@Canal))
                         UPDATE FuelCanaisAtendimento 
-                        SET TempoMinutos = @TempoMinutos, DataAtualizacao = GETDATE(), UsuarioAtualizacao = @Usuario 
+                        SET TempoMinutos = @TempoMinutos, Ativo = @Ativo, DataAtualizacao = GETDATE(), UsuarioAtualizacao = @Usuario 
                         WHERE UPPER(Canal) = UPPER(@Canal)
                     ELSE
-                        INSERT INTO FuelCanaisAtendimento (Canal, TempoMinutos, DataAtualizacao, UsuarioAtualizacao)
-                        VALUES (@Canal, @TempoMinutos, GETDATE(), @Usuario)
+                        INSERT INTO FuelCanaisAtendimento (Canal, TempoMinutos, Ativo, DataAtualizacao, UsuarioAtualizacao)
+                        VALUES (@Canal, @TempoMinutos, @Ativo, GETDATE(), @Usuario)
                 `);
         }
 
@@ -2780,11 +2788,37 @@ app.post('/api/fuel360/canais-atendimento/batch', async (req, res) => {
             .input('Detalhes', sql.NVarChar(sql.MAX), `Atualizados ${canais.length} canais de atendimento no banco corporativo por ${userName}.`)
             .query("INSERT INTO FuelLogsSistema (DataHora, Usuario, Acao, Detalhes) VALUES (GETDATE(), @Usuario, @Acao, @Detalhes)");
 
-        const updated = await pool.request().query("SELECT ID_Canal, Canal, TempoMinutos, DataAtualizacao, UsuarioAtualizacao FROM FuelCanaisAtendimento ORDER BY Canal ASC");
+        const updated = await pool.request().query("SELECT ID_Canal, Canal, TempoMinutos, ISNULL(Ativo, 1) as Ativo, DataAtualizacao, UsuarioAtualizacao FROM FuelCanaisAtendimento ORDER BY Canal ASC");
         const lastAudit = { usuario: userName, dataHora: new Date().toISOString() };
         res.json({ success: true, message: 'Canais de atendimento atualizados com sucesso.', canais: updated.recordset || [], lastAudit });
     } catch (err) {
         console.error('[Fuel360 ERROR] Falha ao salvar canais de atendimento:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.delete('/api/fuel360/canais-atendimento/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const checkCanal = await pool.request().input('ID', sql.Int, id).query("SELECT Canal FROM FuelCanaisAtendimento WHERE ID_Canal = @ID");
+        const canalName = checkCanal.recordset && checkCanal.recordset.length > 0 ? checkCanal.recordset[0].Canal : `ID ${id}`;
+        
+        await pool.request().input('ID', sql.Int, id).query("DELETE FROM FuelCanaisAtendimento WHERE ID_Canal = @ID");
+        
+        const userName = req.body?.usuario || req.user?.Nome || req.user?.Usuario || 'Operador Fuel';
+        await pool.request()
+            .input('Usuario', sql.NVarChar(255), userName)
+            .input('Acao', sql.NVarChar(255), 'REMOVER_CANAL_ATENDIMENTO')
+            .input('Detalhes', sql.NVarChar(sql.MAX), `Canal '${canalName}' removido do banco corporativo por ${userName}.`)
+            .query("INSERT INTO FuelLogsSistema (DataHora, Usuario, Acao, Detalhes) VALUES (GETDATE(), @Usuario, @Acao, @Detalhes)");
+
+        const updated = await pool.request().query("SELECT ID_Canal, Canal, TempoMinutos, ISNULL(Ativo, 1) as Ativo, DataAtualizacao, UsuarioAtualizacao FROM FuelCanaisAtendimento ORDER BY Canal ASC");
+        const lastAudit = { usuario: userName, dataHora: new Date().toISOString() };
+        res.json({ success: true, message: `Canal '${canalName}' removido com sucesso.`, canais: updated.recordset || [], lastAudit });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha ao excluir canal:', err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });

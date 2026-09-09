@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.146.0',
+    date: 'Hoje',
+    title: 'Fuel360: Inativação/Exclusão de Canais, Alertas de Pendências e Remoção de Padrões',
+    changes: [
+      'Remoção de Restaurar Padrões: Eliminado botão de fábrica do rodapé do modal, garantindo governança exclusiva sobre os tempos reais da operação.',
+      'Gestão de Ativo/Inativo e Exclusão: Botão interativo de status para cada canal e botão de exclusão definitiva (com log corporativo) para canais não utilizados.',
+      'Alertas de Consistência Operacional: Indicadores na barra lateral, banner no topo do modal e diálogo de confirmação ao salvar caso existam canais em uso com pendências (inativos ou sem tempo definido).'
+    ]
+  },
+  {
     version: '3.145.2',
     date: 'Hoje',
     title: 'Fuel360: Correção de Runtime (Importação de useCallback)',

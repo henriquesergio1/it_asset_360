@@ -865,7 +865,16 @@ export const AjusteRota: React.FC = () => {
         'FARMA': 15,
         'KEY ACCOUNT': 45
     });
-    const [dbChannelRecords, setDbChannelRecords] = useState<Array<{ ID_Canal: number; Canal: string; TempoMinutos: number; DataAtualizacao?: string }>>([]);
+    const [channelActiveStatus, setChannelActiveStatus] = useState<Record<string, boolean>>({
+        'PADRAO': true,
+        'VAREJO': true,
+        'SUPERMERCADO': true,
+        'HIPERMERCADO': true,
+        'ATACADO': true,
+        'FARMA': true,
+        'KEY ACCOUNT': true
+    });
+    const [dbChannelRecords, setDbChannelRecords] = useState<Array<{ ID_Canal: number; Canal: string; TempoMinutos: number; Ativo?: boolean; DataAtualizacao?: string }>>([]);
     const [showChannelTimesModal, setShowChannelTimesModal] = useState(false);
     const [savingChannelTimes, setSavingChannelTimes] = useState(false);
     const [channelSaveFeedback, setChannelSaveFeedback] = useState<string | null>(null);
@@ -884,13 +893,19 @@ export const AjusteRota: React.FC = () => {
                 }
                 if (Array.isArray(data.canais) && data.canais.length > 0) {
                     setDbChannelRecords(data.canais);
-                    const map: Record<string, number> = {};
+                    const timeMap: Record<string, number> = {};
+                    const activeMap: Record<string, boolean> = {};
                     data.canais.forEach((item: any) => {
-                        if (item.Canal && item.TempoMinutos) {
-                            map[String(item.Canal).trim().toUpperCase()] = Number(item.TempoMinutos);
+                        if (item.Canal) {
+                            const cName = String(item.Canal).trim().toUpperCase();
+                            if (item.TempoMinutos) {
+                                timeMap[cName] = Number(item.TempoMinutos);
+                            }
+                            activeMap[cName] = item.Ativo !== false && item.Ativo !== 0;
                         }
                     });
-                    setChannelServiceTimes(prev => ({ ...prev, ...map }));
+                    setChannelServiceTimes(prev => ({ ...prev, ...timeMap }));
+                    setChannelActiveStatus(prev => ({ ...prev, ...activeMap }));
                 }
             }
         } catch (e) {
@@ -910,15 +925,21 @@ export const AjusteRota: React.FC = () => {
         }
         const canalNorm = client.Canal_Remuneracao.trim().toUpperCase();
         if (channelServiceTimes[canalNorm] !== undefined) {
-            return Number(channelServiceTimes[canalNorm]);
+            if (channelActiveStatus[canalNorm] === false) {
+                return defaultMins;
+            }
+            return Number(channelServiceTimes[canalNorm]) || defaultMins;
         }
         for (const [key, val] of Object.entries(channelServiceTimes)) {
             if (canalNorm.includes(key) || key.includes(canalNorm)) {
-                return Number(val);
+                if (channelActiveStatus[key] === false) {
+                    return defaultMins;
+                }
+                return Number(val) || defaultMins;
             }
         }
         return defaultMins;
-    }, [channelServiceTimes, optServiceTimePerClient]);
+    }, [channelServiceTimes, channelActiveStatus, optServiceTimePerClient]);
 
     // Canais detectados na carteira atual de clientes carregada
     const detectedChannelsFromRoutes = useMemo(() => {
@@ -941,20 +962,85 @@ export const AjusteRota: React.FC = () => {
         return counts;
     }, [adjustedRoutes]);
 
+    // Alertas de canais em uso com pendências (sem tempo cadastrado, tempo zero ou inativo)
+    const channelsInUseWithAlerts = useMemo(() => {
+        const alerts: Array<{ canal: string; clientCount: number; reason: 'sem_tempo' | 'inativo' | 'nao_cadastrado'; label: string }> = [];
+        detectedChannelsFromRoutes.forEach(canal => {
+            const count = clientCountByChannel[canal] || 0;
+            if (count > 0) {
+                const isRegistered = channelServiceTimes[canal] !== undefined;
+                const isInactive = channelActiveStatus[canal] === false;
+                const mins = Number(channelServiceTimes[canal]) || 0;
+                if (!isRegistered) {
+                    alerts.push({ canal, clientCount: count, reason: 'nao_cadastrado', label: 'Não cadastrado' });
+                } else if (isInactive) {
+                    alerts.push({ canal, clientCount: count, reason: 'inativo', label: 'Inativo no sistema' });
+                } else if (mins <= 0) {
+                    alerts.push({ canal, clientCount: count, reason: 'sem_tempo', label: 'Sem tempo definido' });
+                }
+            }
+        });
+        return alerts;
+    }, [detectedChannelsFromRoutes, clientCountByChannel, channelServiceTimes, channelActiveStatus]);
+
     // Lista consolidada de canais para exibição no modal
     const allDisplayChannels = useMemo(() => {
         const set = new Set<string>(['PADRAO', ...Object.keys(channelServiceTimes), ...detectedChannelsFromRoutes]);
         return Array.from(set).filter(Boolean).sort();
     }, [channelServiceTimes, detectedChannelsFromRoutes]);
 
+    // Exclusão de canal corporativo não utilizado
+    const handleDeleteChannel = async (canalName: string) => {
+        const dbRecord = dbChannelRecords.find(r => r.Canal?.toUpperCase() === canalName.toUpperCase());
+        if (dbRecord?.ID_Canal) {
+            try {
+                const res = await fetch(`/api/fuel360/canais-atendimento/${dbRecord.ID_Canal}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario: authUser?.Nome || authUser?.Usuario || 'Operador Fuel' })
+                });
+                const data = await res.json();
+                if (data.success && data.lastAudit) {
+                    setLastAuditInfo(data.lastAudit);
+                }
+            } catch (e) {
+                console.error('[Fuel360] Erro ao excluir canal do banco:', e);
+            }
+        }
+        setChannelServiceTimes(prev => {
+            const copy = { ...prev };
+            delete copy[canalName];
+            return copy;
+        });
+        setChannelActiveStatus(prev => {
+            const copy = { ...prev };
+            delete copy[canalName];
+            return copy;
+        });
+        setDbChannelRecords(prev => prev.filter(r => r.Canal?.toUpperCase() !== canalName.toUpperCase()));
+    };
+
     // Salvar tempos de atendimento no Banco de Dados SQL Server
     const handleSaveChannelTimesToDatabase = async () => {
+        if (channelsInUseWithAlerts.length > 0) {
+            const listMsg = channelsInUseWithAlerts
+                .map(a => `• ${a.canal} (${a.clientCount} cliente${a.clientCount > 1 ? 's' : ''}): ${a.label}`)
+                .join('\n');
+            const confirmSave = window.confirm(
+                `⚠️ ATENÇÃO: Existem canais com clientes na rota atual que possuem pendências:\n\n${listMsg}\n\nEles utilizarão temporariamente o tempo padrão de contingência (${channelServiceTimes['PADRAO'] || 15} min).\n\nDeseja salvar as configurações mesmo assim?`
+            );
+            if (!confirmSave) {
+                return;
+            }
+        }
+
         setSavingChannelTimes(true);
         setChannelSaveFeedback(null);
         try {
             const listToSave = allDisplayChannels.map(canal => ({
                 Canal: canal.trim().toUpperCase(),
-                TempoMinutos: Number(channelServiceTimes[canal]) || channelServiceTimes['PADRAO'] || 15
+                TempoMinutos: Number(channelServiceTimes[canal]) || channelServiceTimes['PADRAO'] || 15,
+                Ativo: channelActiveStatus[canal] !== false
             }));
 
             const res = await fetch('/api/fuel360/canais-atendimento/batch', {
@@ -970,7 +1056,7 @@ export const AjusteRota: React.FC = () => {
                 if (data.lastAudit) {
                     setLastAuditInfo(data.lastAudit);
                 }
-                setChannelSaveFeedback('✅ Tempos gravados com sucesso no banco de dados corporativo!');
+                setChannelSaveFeedback('✅ Tempos e status gravados com sucesso no banco de dados corporativo!');
                 await loadChannelServiceTimes();
                 setTimeout(() => {
                     setChannelSaveFeedback(null);
@@ -3522,11 +3608,23 @@ export const AjusteRota: React.FC = () => {
                                     <button
                                         type="button"
                                         onClick={() => setShowChannelTimesModal(true)}
-                                        className="w-full flex items-center justify-center space-x-1.5 py-1.5 px-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-black transition cursor-pointer shadow-2xs"
-                                        title="Configurar permanência em minutos por Canal de Remuneração (salvo no SQL Server corporativo)"
+                                        className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg border text-[10px] font-black transition cursor-pointer shadow-2xs ${
+                                            channelsInUseWithAlerts.length > 0
+                                                ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200'
+                                                : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300'
+                                        }`}
+                                        title={channelsInUseWithAlerts.length > 0 ? `Atenção: ${channelsInUseWithAlerts.length} canal(is) em uso na rota possuem pendências!` : 'Configurar permanência em minutos por Canal de Remuneração (salvo no SQL Server corporativo)'}
                                     >
-                                        <ClockIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                                        <span>Tempos por Canal ({allDisplayChannels.length})</span>
+                                        <div className="flex items-center space-x-1.5">
+                                            <ClockIcon className={`w-3.5 h-3.5 ${channelsInUseWithAlerts.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                                            <span>Tempos por Canal ({allDisplayChannels.length})</span>
+                                        </div>
+                                        {channelsInUseWithAlerts.length > 0 && (
+                                            <span className="flex items-center gap-1 text-[8.5px] font-black text-amber-700 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-900/80 px-1.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-700 animate-pulse">
+                                                <ExclamationIcon className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                                                {channelsInUseWithAlerts.length} pendente{channelsInUseWithAlerts.length > 1 ? 's' : ''}
+                                            </span>
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -5607,6 +5705,28 @@ export const AjusteRota: React.FC = () => {
                                 💡 <strong>Cálculo no Otimizador e Relatórios:</strong> O tempo total diário da jornada resulta do somatório do <em>tempo de trânsito viário</em> (circuito OSRM) mais a <em>permanência média em cada PDV</em> conforme seu Canal de Remuneração.
                             </div>
 
+                            {/* Alerta de Canais em Uso com Pendências */}
+                            {channelsInUseWithAlerts.length > 0 && (
+                                <div className="p-3 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 rounded-2xl flex items-start space-x-2.5 text-xs text-amber-900 dark:text-amber-200 shadow-sm animate-pulse">
+                                    <ExclamationIcon className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                                    <div className="space-y-1">
+                                        <div className="font-bold flex items-center gap-1.5">
+                                            <span>Atenção: Existem canais com clientes na rota com pendências!</span>
+                                            <span className="text-[10px] bg-amber-200 dark:bg-amber-900 px-1.5 py-0.2 rounded font-black">
+                                                {channelsInUseWithAlerts.length} pendência{channelsInUseWithAlerts.length > 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                        <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+                                            Os seguintes canais possuem clientes na rota mas estão inativos ou sem tempo cadastrado:{' '}
+                                            <strong>
+                                                {channelsInUseWithAlerts.map(a => `${a.canal} (${a.label})`).join(', ')}
+                                            </strong>.
+                                            Até serem regularizados, seus clientes utilizarão o tempo padrão de contingência de {channelServiceTimes['PADRAO'] || 15} min.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Lista de Canais */}
                             <div className="space-y-2">
                                 <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
@@ -5618,14 +5738,26 @@ export const AjusteRota: React.FC = () => {
                                         const count = clientCountByChannel[canalName] || 0;
                                         const mins = channelServiceTimes[canalName] ?? 15;
                                         const isDetected = detectedChannelsFromRoutes.includes(canalName);
+                                        const isActive = channelActiveStatus[canalName] !== false;
+                                        const channelAlert = channelsInUseWithAlerts.find(a => a.canal === canalName);
 
                                         return (
                                             <div 
                                                 key={canalName}
-                                                className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 transition"
+                                                className={`flex items-center justify-between p-2.5 rounded-xl border transition ${
+                                                    channelAlert
+                                                        ? 'border-amber-300 dark:border-amber-700 bg-amber-50/40 dark:bg-amber-950/20'
+                                                        : isActive
+                                                            ? 'border-slate-200 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800'
+                                                            : 'border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-900/40 opacity-75'
+                                                }`}
                                             >
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase">
+                                                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                                                    <span className={`text-xs font-black uppercase ${
+                                                        !isActive 
+                                                            ? 'text-slate-400 dark:text-slate-500 line-through' 
+                                                            : 'text-slate-800 dark:text-slate-200'
+                                                    }`}>
                                                         {canalName}
                                                     </span>
                                                     {count > 0 && (
@@ -5638,24 +5770,77 @@ export const AjusteRota: React.FC = () => {
                                                             Detectado no ERP
                                                         </span>
                                                     )}
+                                                    {count === 0 && !isDetected && (
+                                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                                            Sem clientes na rota
+                                                        </span>
+                                                    )}
+                                                    {channelAlert && (
+                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-900/80 dark:text-amber-200 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                                                            <ExclamationIcon className="w-2.5 h-2.5 text-amber-600" />
+                                                            {channelAlert.label}
+                                                        </span>
+                                                    )}
                                                 </div>
 
-                                                <div className="flex items-center space-x-2">
-                                                    <input
-                                                        type="number"
-                                                        min={1}
-                                                        max={300}
-                                                        value={mins}
-                                                        onChange={(e) => {
-                                                            const val = Math.max(1, Number(e.target.value) || 1);
-                                                            setChannelServiceTimes(prev => ({
+                                                <div className="flex items-center space-x-2 shrink-0 ml-2">
+                                                    {/* Toggle Ativo/Inativo */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setChannelActiveStatus(prev => ({
                                                                 ...prev,
-                                                                [canalName]: val
+                                                                [canalName]: !isActive
                                                             }));
                                                         }}
-                                                        className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg py-1 px-2 text-xs font-black text-right outline-none text-slate-900 dark:text-white focus:border-indigo-500"
-                                                    />
-                                                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 w-6">min</span>
+                                                        className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer border flex items-center space-x-1 ${
+                                                            isActive
+                                                                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-800'
+                                                                : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:border-slate-700'
+                                                        }`}
+                                                        title={isActive ? 'Canal Ativo. Clique para inativar.' : 'Canal Inativo. Clique para ativar.'}
+                                                    >
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                                                        <span>{isActive ? 'Ativo' : 'Inativo'}</span>
+                                                    </button>
+
+                                                    {/* Minutos */}
+                                                    <div className="flex items-center space-x-1">
+                                                        <input
+                                                            type="number"
+                                                            min={1}
+                                                            max={300}
+                                                            value={mins}
+                                                            disabled={!isActive}
+                                                            onChange={(e) => {
+                                                                const val = Math.max(1, Number(e.target.value) || 1);
+                                                                setChannelServiceTimes(prev => ({
+                                                                    ...prev,
+                                                                    [canalName]: val
+                                                                }));
+                                                            }}
+                                                            className={`w-16 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg py-1 px-2 text-xs font-black text-right outline-none text-slate-900 dark:text-white focus:border-indigo-500 ${!isActive ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : ''}`}
+                                                        />
+                                                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 w-5">min</span>
+                                                    </div>
+
+                                                    {/* Botão Excluir Canal não utilizado */}
+                                                    {count === 0 && canalName !== 'PADRAO' ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (window.confirm(`Deseja realmente remover o canal '${canalName}'? Ele será excluído do banco corporativo.`)) {
+                                                                    handleDeleteChannel(canalName);
+                                                                }
+                                                            }}
+                                                            className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 dark:hover:text-rose-400 transition cursor-pointer"
+                                                            title={`Remover canal '${canalName}'`}
+                                                        >
+                                                            <TrashIcon className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    ) : (
+                                                        <div className="w-6"></div>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -5696,6 +5881,10 @@ export const AjusteRota: React.FC = () => {
                                                     ...prev,
                                                     [name]: newCustomChannelTime
                                                 }));
+                                                setChannelActiveStatus(prev => ({
+                                                    ...prev,
+                                                    [name]: true
+                                                }));
                                                 setNewCustomChannelName('');
                                                 setNewCustomChannelTime(15);
                                             }
@@ -5733,55 +5922,35 @@ export const AjusteRota: React.FC = () => {
                             </span>
                         </div>
 
-                        {/* Rodapé com Ações */}
-                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
+                        {/* Rodapé com Ações (Sem o botão Restaurar Padrões) */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-end space-x-2">
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setChannelServiceTimes({
-                                        'PADRAO': 15,
-                                        'VAREJO': 15,
-                                        'SUPERMERCADO': 30,
-                                        'HIPERMERCADO': 45,
-                                        'ATACADO': 35,
-                                        'FARMA': 15,
-                                        'KEY ACCOUNT': 45
-                                    });
+                                    setShowChannelTimesModal(false);
+                                    setChannelSaveFeedback(null);
                                 }}
-                                className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline cursor-pointer"
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
                             >
-                                Restaurar Padrões
+                                Cancelar
                             </button>
-
-                            <div className="flex items-center space-x-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowChannelTimesModal(false);
-                                        setChannelSaveFeedback(null);
-                                    }}
-                                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleSaveChannelTimesToDatabase}
-                                    disabled={savingChannelTimes}
-                                    className="px-4 py-2 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-md transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
-                                >
-                                    {savingChannelTimes ? (
-                                        <>
-                                            <SpinnerIcon className="w-3.5 h-3.5 animate-spin" />
-                                            <span>Salvando no Banco...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span>💾 Gravar no Banco de Dados</span>
-                                        </>
-                                    )}
-                                </button>
-                            </div>
+                            <button
+                                type="button"
+                                onClick={handleSaveChannelTimesToDatabase}
+                                disabled={savingChannelTimes}
+                                className="px-4 py-2 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-md transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                            >
+                                {savingChannelTimes ? (
+                                    <>
+                                        <SpinnerIcon className="w-3.5 h-3.5 animate-spin" />
+                                        <span>Salvando no Banco...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>💾 Gravar no Banco de Dados</span>
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>
