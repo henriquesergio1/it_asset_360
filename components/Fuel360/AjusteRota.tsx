@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
 import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable } from './services/apiService';
@@ -962,7 +962,7 @@ export const AjusteRota: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     canais: listToSave,
-                    usuario: authUser?.Nome || authUser?.Email || 'Operador Fuel'
+                    usuario: authUser?.Nome || authUser?.Usuario || 'Operador Fuel'
                 })
             });
             const data = await res.json();

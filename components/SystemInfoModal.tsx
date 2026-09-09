@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.145.2',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Runtime (Importação de useCallback)',
+    changes: [
+      'Correção Crítica de Runtime: Inclusão explícita de useCallback nos imports de React em AjusteRota.tsx, sanando o ReferenceError no carregamento do módulo Fuel360.',
+      'Ajuste de Tipagem de Auditoria: Adequação da propriedade de operador autenticado em conformidade com o contexto Usuario de AuthContext.'
+    ]
+  },
+  {
     version: '3.145.1',
     date: 'Hoje',
     title: 'Fuel360: Histórico de Auditoria no Modal de Tempos por Canal',
