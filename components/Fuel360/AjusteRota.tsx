@@ -1752,6 +1752,28 @@ export const AjusteRota: React.FC = () => {
         return days;
     }, [selectedDaysFilter, sortedRoutes]);
 
+    // Funções explícitas e determinísticas para expandir e recolher todas as sanfonas da grade
+    const handleExpandAllDays = () => {
+        setOpenDaysMap(prev => {
+            const allOpen: Record<string, boolean> = { ...prev };
+            visibleDays.forEach(d => { allOpen[d] = true; });
+            WEEKDAYS.forEach(d => { allOpen[d] = true; });
+            allOpen['SEM ATENDIMENTO'] = true;
+            return allOpen;
+        });
+    };
+
+    const handleCollapseAllDays = () => {
+        setOpenDaysMap(prev => {
+            const allClosed: Record<string, boolean> = {};
+            Object.keys(prev).forEach(k => { allClosed[k] = false; });
+            visibleDays.forEach(d => { allClosed[d] = false; });
+            WEEKDAYS.forEach(d => { allClosed[d] = false; });
+            allClosed['SEM ATENDIMENTO'] = false;
+            return allClosed;
+        });
+    };
+
     // Resumo Operacional Consolidado de KM, Tempo e Balanceamento Quinzena a Quinzena
     const operationalSummary = useMemo(() => {
         // Base de colaboradores do escopo
@@ -5557,20 +5579,18 @@ export const AjusteRota: React.FC = () => {
                                             <div className="flex items-center gap-1 text-[10px]">
                                                 <button
                                                     type="button"
-                                                    onClick={() => {
-                                                        const allOpen: Record<string, boolean> = {};
-                                                        visibleDays.forEach(d => { allOpen[d] = true; });
-                                                        setOpenDaysMap(allOpen);
-                                                    }}
-                                                    className="font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                                    onClick={handleExpandAllDays}
+                                                    className="font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 px-2 py-0.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer active:scale-95"
+                                                    title="Expandir todas as sanfonas de dias da semana"
                                                 >
                                                     Expandir Todos
                                                 </button>
                                                 <span className="text-slate-300 dark:text-slate-700">•</span>
                                                 <button
                                                     type="button"
-                                                    onClick={() => setOpenDaysMap({})}
-                                                    className="font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                                    onClick={handleCollapseAllDays}
+                                                    className="font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 px-2 py-0.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer active:scale-95"
+                                                    title="Recolher todas as sanfonas de dias da semana"
                                                 >
                                                     Recolher Todos
                                                 </button>
@@ -5786,7 +5806,7 @@ export const AjusteRota: React.FC = () => {
                                             >
                                                 {/* Cabeçalho da Sanfona do Dia */}
                                                 <div 
-                                                    onClick={() => setOpenDaysMap(prev => ({ ...prev, [day]: !prev[day] }))}
+                                                    onClick={() => setOpenDaysMap(prev => ({ ...prev, [day]: !Boolean(prev[day]) }))}
                                                     className={`flex items-center justify-between gap-2.5 sm:gap-4 p-2.5 sm:p-3 cursor-pointer transition-all select-none overflow-x-auto custom-scrollbar ${
                                                         isOpen 
                                                             ? (isUnallocated 

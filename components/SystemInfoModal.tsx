@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.156.0',
+    date: 'Hoje',
+    title: 'Fuel360: Correção Determinística do Botão Recolher Todos nas Sanfonas',
+    changes: [
+      'Fechamento Forçado e Determinístico: Criação de manipulador de estado explícito para o botão "Recolher Todos", iterando por todos os dias da semana e status pendentes com atribuição booleana false garantida.',
+      'Abertura e Alternância Consistentes: "Expandir Todos" e o clique individual de cada sanfona protegidos com cast booleano defensivo, eliminando qualquer estado indefinido que mantivesse as sanfonas abertas.',
+      'Feedback Tátil Aprimorado: Botões com animação ao clique e tooltips descritivos na barra superior da Grade de Ajuste Fino.'
+    ]
+  },
+  {
     version: '3.155.0',
     date: 'Hoje',
     title: 'Fuel360: Filtros Interativos Diretamente na Legenda do Roteiro no Mapa',
