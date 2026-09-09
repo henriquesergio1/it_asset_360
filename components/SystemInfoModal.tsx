@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.166.0',
+    date: 'Hoje',
+    title: 'Fuel360: Agrupamento Geográfico Estrito por Cidade/Microrregião no Roteirizador',
+    changes: [
+      'Agrupamento Geográfico Municipal Indivisível: O motor de otimização de rotas agora trata cidades satélites e municípios distantes (como São Francisco Xavier, Monteiro Lobato, Litoral, etc.) como blocos indivisíveis, concentrando 100% dos clientes daquela cidade em um único dia da semana.',
+      'Fim das Viagens Repetidas e Sobrecargas Artificiais: Eliminação definitiva de rotas que subiam ou desciam a serra para o mesmo município em múltiplos dias da semana (ex: terça e sexta), reduzindo drasticamente quilometragens e tempos excedentes.',
+      'Equalização Quinzenal Inteligente por Cidade: Clientes quinzenais de um mesmo município têm seus ciclos (Semana 1/3 vs Semana 2/4) equilibrados no mesmo dia da semana, preservando a coerência logística e a rotina operacional do colaborador.'
+    ]
+  },
+  {
     version: '3.165.0',
     date: 'Hoje',
     title: 'Fuel360: Parametrização Dinâmica do Alerta de Sobrecarga de Horas no Roteirizador',

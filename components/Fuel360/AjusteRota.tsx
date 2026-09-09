@@ -2961,7 +2961,7 @@ export const AjusteRota: React.FC = () => {
             const uniqueClients = Array.from(uniqueClientsMap.values());
             if (uniqueClients.length === 0) continue;
 
-            // 2. Clusterização Angular Contígua
+            // 2. Clusterização Geográfica Primária por Cidade / Microrregião
             const getDayWeight = (day: string) => (day === 'SÁBADO' && optSatHalfPeriod) ? 0.5 : 1.0;
             const totalWeight = activeDays.reduce((sum, d) => sum + getDayWeight(d), 0);
 
@@ -2973,40 +2973,95 @@ export const AjusteRota: React.FC = () => {
                 ? validCoords.reduce((acc, c) => acc + c.lng, 0) / validCoords.length 
                 : baseLng;
 
-            const sortedSpatially = [...uniqueClients].sort((a, b) => {
-                const angleA = (a.lat && a.lng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, a.lat, a.lng) : a.polarAngle;
-                const angleB = (b.lat && b.lng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, b.lat, b.lng) : b.polarAngle;
-                const diffAngle = angleA - angleB;
+            // Agrupa clientes por Cidade (unidade primária de roteirização geográfica)
+            const cityGroups = new Map<string, typeof uniqueClients>();
+            uniqueClients.forEach(c => {
+                const rawCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
+                const cityKey = rawCity || 'OUTROS';
+                if (!cityGroups.has(cityKey)) {
+                    cityGroups.set(cityKey, []);
+                }
+                cityGroups.get(cityKey)!.push(c);
+            });
+
+            // Tamanho de bloco adequado para preservar cidades satélites inteiras
+            const avgClientsPerDay = Math.max(8, Math.ceil(uniqueClients.length / activeDays.length));
+            const maxBlockSize = Math.max(12, Math.round(avgClientsPerDay * 1.35));
+
+            interface GeoBlock {
+                id: string;
+                cityName: string;
+                isCityWhole: boolean;
+                clients: typeof uniqueClients;
+                centerLat: number;
+                centerLng: number;
+                polarAngle: number;
+                distFromBase: number;
+                totalVisits: number;
+            }
+
+            const geoBlocks: GeoBlock[] = [];
+
+            cityGroups.forEach((cList, cityName) => {
+                // Se a cidade couber no bloco diário, mantém como BLOCO ÚNICO INDIVISÍVEL
+                if (cList.length <= maxBlockSize) {
+                    const blockCoords = cList.filter(c => c.lat && c.lng);
+                    const bLat = blockCoords.length > 0 ? blockCoords.reduce((s, c) => s + c.lat, 0) / blockCoords.length : baseLat;
+                    const bLng = blockCoords.length > 0 ? blockCoords.reduce((s, c) => s + c.lng, 0) / blockCoords.length : baseLng;
+                    const pAngle = (bLat && bLng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, bLat, bLng) : 0;
+                    const dBase = (bLat && bLng) ? calcDist(baseLat, baseLng, bLat, bLng) : 9999;
+                    const vWeight = cList.reduce((acc, c) => acc + (c.tipo === 'SEMANAL' ? 1 : 0.5), 0);
+
+                    geoBlocks.push({
+                        id: `${cityName}_FULL`,
+                        cityName,
+                        isCityWhole: true,
+                        clients: cList,
+                        centerLat: bLat,
+                        centerLng: bLng,
+                        polarAngle: pAngle,
+                        distFromBase: dBase,
+                        totalVisits: vWeight
+                    });
+                } else {
+                    // Metrópole/Cidade-sede com muitos clientes: particiona em setores contíguos ordenados pelo ângulo polar
+                    const sortedCity = [...cList].sort((a, b) => {
+                        const aAngle = (a.lat && a.lng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, a.lat, a.lng) : a.polarAngle;
+                        const bAngle = (b.lat && b.lng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, b.lat, b.lng) : b.polarAngle;
+                        return aAngle - bAngle;
+                    });
+
+                    let partIdx = 1;
+                    for (let i = 0; i < sortedCity.length; i += maxBlockSize) {
+                        const chunk = sortedCity.slice(i, i + maxBlockSize);
+                        const blockCoords = chunk.filter(c => c.lat && c.lng);
+                        const bLat = blockCoords.length > 0 ? blockCoords.reduce((s, c) => s + c.lat, 0) / blockCoords.length : baseLat;
+                        const bLng = blockCoords.length > 0 ? blockCoords.reduce((s, c) => s + c.lng, 0) / blockCoords.length : baseLng;
+                        const pAngle = (bLat && bLng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, bLat, bLng) : 0;
+                        const dBase = (bLat && bLng) ? calcDist(baseLat, baseLng, bLat, bLng) : 9999;
+                        const vWeight = chunk.reduce((acc, c) => acc + (c.tipo === 'SEMANAL' ? 1 : 0.5), 0);
+
+                        geoBlocks.push({
+                            id: `${cityName}_PART_${partIdx++}`,
+                            cityName,
+                            isCityWhole: false,
+                            clients: chunk,
+                            centerLat: bLat,
+                            centerLng: bLng,
+                            polarAngle: pAngle,
+                            distFromBase: dBase,
+                            totalVisits: vWeight
+                        });
+                    }
+                }
+            });
+
+            // Ordena os blocos espacialmente por ângulo polar (varredura contígua em leque)
+            geoBlocks.sort((a, b) => {
+                const diffAngle = a.polarAngle - b.polarAngle;
                 if (Math.abs(diffAngle) > 0.05) return diffAngle;
                 return a.distFromBase - b.distFromBase;
             });
-
-            const allSemanais = sortedSpatially.filter(c => c.tipo === 'SEMANAL');
-            let poolQuinzenais13 = sortedSpatially.filter(c => c.tipo === 'QUINZENAL_1_3');
-            let poolQuinzenais24 = sortedSpatially.filter(c => c.tipo === 'QUINZENAL_2_4');
-
-            if (optBalanceWorkload) {
-                const allQuinzenais = [...poolQuinzenais13, ...poolQuinzenais24];
-                const targetQ13 = Math.floor(allQuinzenais.length / 2);
-
-                if (poolQuinzenais13.length > targetQ13) {
-                    const excess = poolQuinzenais13.length - targetQ13;
-                    const toMove = poolQuinzenais13.splice(poolQuinzenais13.length - excess, excess);
-                    toMove.forEach(c => {
-                        c.tipo = 'QUINZENAL_2_4';
-                        c.originalPeriodicidade = '2 4';
-                    });
-                    poolQuinzenais24.push(...toMove);
-                } else if (poolQuinzenais13.length < targetQ13) {
-                    const deficit = targetQ13 - poolQuinzenais13.length;
-                    const toMove = poolQuinzenais24.splice(0, deficit);
-                    toMove.forEach(c => {
-                        c.tipo = 'QUINZENAL_1_3';
-                        c.originalPeriodicidade = '1 3';
-                    });
-                    poolQuinzenais13.push(...toMove);
-                }
-            }
 
             interface DayBucket {
                 day: string;
@@ -3054,144 +3109,77 @@ export const AjusteRota: React.FC = () => {
             });
 
             const unallocatedClients: typeof uniqueClients = [];
+            const totalVisitsPortfolio = geoBlocks.reduce((s, b) => s + b.totalVisits, 0);
 
-            if (allowOverflow) {
-                // Distribuição flexibilizada: 100% dos clientes distribuídos nos dias disponíveis
-                let remSemanais = [...allSemanais];
-                let accSemanais = 0;
-                let cumWeightSemanais = 0;
-                dayBuckets.forEach((bucket, idx) => {
-                    cumWeightSemanais += bucket.weight;
-                    const isLast = idx === dayBuckets.length - 1;
-                    const cumTarget = isLast ? allSemanais.length : Math.round(allSemanais.length * (cumWeightSemanais / totalWeight));
-                    const quota = Math.max(0, Math.min(remSemanais.length, cumTarget - accSemanais));
-                    bucket.semanais = remSemanais.splice(0, quota);
-                    accSemanais += bucket.semanais.length;
-                });
+            // 3. Alocação dos Blocos Municipais aos Dias da Semana
+            let currentBucketIdx = 0;
+            let currentBucketVisits = 0;
 
-                const totalTargetVisits13 = allSemanais.length + poolQuinzenais13.length;
-                let remQ13 = [...poolQuinzenais13];
-                let accVisits13 = 0;
-                let cumWeight13 = 0;
-                dayBuckets.forEach((bucket, idx) => {
-                    cumWeight13 += bucket.weight;
-                    const isLast = idx === dayBuckets.length - 1;
-                    const cumTarget = isLast ? totalTargetVisits13 : Math.round(totalTargetVisits13 * (cumWeight13 / totalWeight));
-                    const targetForThisBucket = Math.max(0, cumTarget - accVisits13);
-                    const neededQ13 = Math.max(0, targetForThisBucket - bucket.semanais.length);
-                    const hasCapLimit = optLimitKm || optLimitHours || optLimitClients;
-                    const maxAllowed = hasCapLimit ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
-                    const quota = isLast ? remQ13.length : Math.max(0, Math.min(remQ13.length, Math.min(maxAllowed, neededQ13)));
-                    bucket.quinzenais13 = remQ13.splice(0, quota);
-                    accVisits13 += (bucket.semanais.length + bucket.quinzenais13.length);
-                });
-                while (remQ13.length > 0) {
-                    const c = remQ13.shift()!;
-                    const bestBucket = [...dayBuckets].sort((a, b) => 
-                        (a.semanais.length + a.quinzenais13.length) - (b.semanais.length + b.quinzenais13.length)
-                    )[0];
-                    bestBucket.quinzenais13.push(c);
+            geoBlocks.forEach((block, bIdx) => {
+                const bucket = dayBuckets[currentBucketIdx];
+                const isLastBucket = currentBucketIdx === dayBuckets.length - 1;
+                const isLastBlock = bIdx === geoBlocks.length - 1;
+
+                const bucketTargetVisits = (bucket.weight / totalWeight) * totalVisitsPortfolio;
+
+                if (!isLastBucket && !isLastBlock && (currentBucketVisits >= bucketTargetVisits * 0.85) && (currentBucketVisits + block.totalVisits > bucketTargetVisits * 1.15)) {
+                    currentBucketIdx++;
+                    currentBucketVisits = 0;
                 }
 
-                const totalTargetVisits24 = allSemanais.length + poolQuinzenais24.length;
-                let remQ24 = [...poolQuinzenais24];
-                let accVisits24 = 0;
-                let cumWeight24 = 0;
-                dayBuckets.forEach((bucket, idx) => {
-                    cumWeight24 += bucket.weight;
-                    const isLast = idx === dayBuckets.length - 1;
-                    const cumTarget = isLast ? totalTargetVisits24 : Math.round(totalTargetVisits24 * (cumWeight24 / totalWeight));
-                    const targetForThisBucket = Math.max(0, cumTarget - accVisits24);
-                    const neededQ24 = Math.max(0, targetForThisBucket - bucket.semanais.length);
-                    const hasCapLimit = optLimitKm || optLimitHours || optLimitClients;
-                    const maxAllowed = hasCapLimit ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
-                    const quota = isLast ? remQ24.length : Math.max(0, Math.min(remQ24.length, Math.min(maxAllowed, neededQ24)));
-                    bucket.quinzenais24 = remQ24.splice(0, quota);
-                    accVisits24 += (bucket.semanais.length + bucket.quinzenais24.length);
-                });
-                while (remQ24.length > 0) {
-                    const c = remQ24.shift()!;
-                    const bestBucket = [...dayBuckets].sort((a, b) => 
-                        (a.semanais.length + a.quinzenais24.length) - (b.semanais.length + b.quinzenais24.length)
-                    )[0];
-                    bestBucket.quinzenais24.push(c);
-                }
-            } else {
-                // Limite Estrito: Preenche rigorosamente até maxCap. Excedentes vão para unallocatedClients
-                let remSemanais = [...allSemanais];
-                let accSemanais = 0;
-                let cumWeightSemanais = 0;
-                dayBuckets.forEach((bucket, idx) => {
-                    cumWeightSemanais += bucket.weight;
-                    const isLast = idx === dayBuckets.length - 1;
-                    const cumTarget = isLast ? allSemanais.length : Math.round(allSemanais.length * (cumWeightSemanais / totalWeight));
-                    const desired = Math.max(0, Math.min(remSemanais.length, cumTarget - accSemanais));
-                    const quota = Math.min(bucket.maxCap, desired);
-                    bucket.semanais = remSemanais.splice(0, quota);
-                    accSemanais += bucket.semanais.length;
-                });
+                const targetBucket = dayBuckets[currentBucketIdx];
+                currentBucketVisits += block.totalVisits;
 
-                // Se restarem semanais, tenta preencher buckets que ainda possuam espaço
-                while (remSemanais.length > 0) {
-                    const availableBucket = dayBuckets.find(b => b.semanais.length < b.maxCap);
-                    if (!availableBucket) break;
-                    availableBucket.semanais.push(remSemanais.shift()!);
-                }
-                if (remSemanais.length > 0) {
-                    unallocatedClients.push(...remSemanais);
-                }
+                const blockSemanais = block.clients.filter(c => c.tipo === 'SEMANAL');
+                const blockQuinzenais = block.clients.filter(c => c.tipo !== 'SEMANAL');
 
-                // Quinzenais 1/3 com teto estrito (maxCap - semanais)
-                let remQ13 = [...poolQuinzenais13];
-                let accVisits13 = 0;
-                let cumWeight13 = 0;
-                const totalTargetVisits13 = allSemanais.length + poolQuinzenais13.length;
-                dayBuckets.forEach((bucket, idx) => {
-                    cumWeight13 += bucket.weight;
-                    const isLast = idx === dayBuckets.length - 1;
-                    const cumTarget = isLast ? totalTargetVisits13 : Math.round(totalTargetVisits13 * (cumWeight13 / totalWeight));
-                    const targetForThisBucket = Math.max(0, cumTarget - accVisits13);
-                    const neededQ13 = Math.max(0, targetForThisBucket - bucket.semanais.length);
-                    const maxAllowed = Math.max(0, bucket.maxCap - bucket.semanais.length);
-                    const quota = Math.max(0, Math.min(remQ13.length, Math.min(maxAllowed, neededQ13)));
-                    bucket.quinzenais13 = remQ13.splice(0, quota);
-                    accVisits13 += (bucket.semanais.length + bucket.quinzenais13.length);
-                });
-                while (remQ13.length > 0) {
-                    const availableBucket = dayBuckets.find(b => (b.semanais.length + b.quinzenais13.length) < b.maxCap);
-                    if (!availableBucket) break;
-                    availableBucket.quinzenais13.push(remQ13.shift()!);
-                }
-                if (remQ13.length > 0) {
-                    unallocatedClients.push(...remQ13);
-                }
+                targetBucket.semanais.push(...blockSemanais);
 
-                // Quinzenais 2/4 com teto estrito (maxCap - semanais)
-                let remQ24 = [...poolQuinzenais24];
-                let accVisits24 = 0;
-                let cumWeight24 = 0;
-                const totalTargetVisits24 = allSemanais.length + poolQuinzenais24.length;
-                dayBuckets.forEach((bucket, idx) => {
-                    cumWeight24 += bucket.weight;
-                    const isLast = idx === dayBuckets.length - 1;
-                    const cumTarget = isLast ? totalTargetVisits24 : Math.round(totalTargetVisits24 * (cumWeight24 / totalWeight));
-                    const targetForThisBucket = Math.max(0, cumTarget - accVisits24);
-                    const neededQ24 = Math.max(0, targetForThisBucket - bucket.semanais.length);
-                    const maxAllowed = Math.max(0, bucket.maxCap - bucket.semanais.length);
-                    const quota = Math.max(0, Math.min(remQ24.length, Math.min(maxAllowed, neededQ24)));
-                    bucket.quinzenais24 = remQ24.splice(0, quota);
-                    accVisits24 += (bucket.semanais.length + bucket.quinzenais24.length);
+                // Equalização das quinzenas da cidade dentro do dia alocado
+                if (optBalanceWorkload) {
+                    const halfQ = Math.ceil(blockQuinzenais.length / 2);
+                    const q13 = blockQuinzenais.slice(0, halfQ);
+                    const q24 = blockQuinzenais.slice(halfQ);
+
+                    q13.forEach(c => {
+                        c.tipo = 'QUINZENAL_1_3';
+                        c.originalPeriodicidade = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (1,3)' : '1 3';
+                    });
+                    q24.forEach(c => {
+                        c.tipo = 'QUINZENAL_2_4';
+                        c.originalPeriodicidade = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
+                    });
+
+                    targetBucket.quinzenais13.push(...q13);
+                    targetBucket.quinzenais24.push(...q24);
+                } else {
+                    blockQuinzenais.forEach(c => {
+                        if (c.tipo === 'QUINZENAL_2_4') {
+                            targetBucket.quinzenais24.push(c);
+                        } else {
+                            targetBucket.quinzenais13.push(c);
+                        }
+                    });
+                }
+            });
+
+            // Em modo com teto estrito (!allowOverflow), remove excedentes
+            if (!allowOverflow) {
+                dayBuckets.forEach(bucket => {
+                    const maxAllowed = bucket.maxCap;
+                    while ((bucket.semanais.length + bucket.quinzenais13.length) > maxAllowed && bucket.quinzenais13.length > 0) {
+                        unallocatedClients.push(bucket.quinzenais13.pop()!);
+                    }
+                    while ((bucket.semanais.length + bucket.quinzenais24.length) > maxAllowed && bucket.quinzenais24.length > 0) {
+                        unallocatedClients.push(bucket.quinzenais24.pop()!);
+                    }
+                    while (bucket.semanais.length > maxAllowed) {
+                        unallocatedClients.push(bucket.semanais.pop()!);
+                    }
                 });
-                while (remQ24.length > 0) {
-                    const availableBucket = dayBuckets.find(b => (b.semanais.length + b.quinzenais24.length) < b.maxCap);
-                    if (!availableBucket) break;
-                    availableBucket.quinzenais24.push(remQ24.shift()!);
-                }
-                if (remQ24.length > 0) {
-                    unallocatedClients.push(...remQ24);
-                }
             }
 
+            // 4. Refinamento Seguro de Borda entre Dias Adjacentes (sem quebrar cidades satélites)
             const calcDayCentroid = (bucket: DayBucket) => {
                 const stops = [...bucket.semanais, ...bucket.quinzenais13, ...bucket.quinzenais24].filter(c => c.lat && c.lng);
                 if (stops.length > 0) {
@@ -3205,10 +3193,13 @@ export const AjusteRota: React.FC = () => {
 
             let dayCentroids = dayBuckets.map(calcDayCentroid);
 
-            for (let pass = 0; pass < 6; pass++) {
+            // Mapeia cidades que são satélites (indivisíveis) para blindá-las contra desmembramento
+            const protectedCities = new Set<string>();
+            geoBlocks.filter(b => b.isCityWhole).forEach(b => protectedCities.add(b.cityName));
+
+            for (let pass = 0; pass < 3; pass++) {
                 dayCentroids = dayBuckets.map(calcDayCentroid);
 
-                // 1. Refinamento de centroides para clientes Semanais de fronteira
                 for (let i = 0; i < dayBuckets.length; i++) {
                     for (let j = i + 1; j < dayBuckets.length; j++) {
                         const b1 = dayBuckets[i];
@@ -3216,77 +3207,23 @@ export const AjusteRota: React.FC = () => {
                         const c1 = dayCentroids[i];
                         const c2 = dayCentroids[j];
 
+                        // Apenas troca clientes avulsos de cidades que NÃO sejam satélites inteiras protegidas
                         for (let k1 = 0; k1 < b1.semanais.length; k1++) {
                             const cli1 = b1.semanais[k1];
-                            if (!cli1.lat || !cli1.lng) continue;
+                            const city1 = (cli1.sampleVisit.Cidade || '').trim().toUpperCase();
+                            if (protectedCities.has(city1) || !cli1.lat || !cli1.lng) continue;
 
                             for (let k2 = 0; k2 < b2.semanais.length; k2++) {
                                 const cli2 = b2.semanais[k2];
-                                if (!cli2.lat || !cli2.lng) continue;
+                                const city2 = (cli2.sampleVisit.Cidade || '').trim().toUpperCase();
+                                if (protectedCities.has(city2) || !cli2.lat || !cli2.lng) continue;
 
                                 const currentDist = calcDist(cli1.lat, cli1.lng, c1.lat, c1.lng) + calcDist(cli2.lat, cli2.lng, c2.lat, c2.lng);
                                 const swappedDist = calcDist(cli1.lat, cli1.lng, c2.lat, c2.lng) + calcDist(cli2.lat, cli2.lng, c1.lat, c1.lng);
 
-                                if (swappedDist < currentDist - 0.5) {
+                                if (swappedDist < currentDist - 0.8) {
                                     b1.semanais[k1] = cli2;
                                     b2.semanais[k2] = cli1;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 2. Refinamento de centroides para clientes Quinzenais 1/3
-                for (let i = 0; i < dayBuckets.length; i++) {
-                    for (let j = i + 1; j < dayBuckets.length; j++) {
-                        const b1 = dayBuckets[i];
-                        const b2 = dayBuckets[j];
-                        const c1 = dayCentroids[i];
-                        const c2 = dayCentroids[j];
-
-                        for (let k1 = 0; k1 < b1.quinzenais13.length; k1++) {
-                            const cli1 = b1.quinzenais13[k1];
-                            if (!cli1.lat || !cli1.lng) continue;
-
-                            for (let k2 = 0; k2 < b2.quinzenais13.length; k2++) {
-                                const cli2 = b2.quinzenais13[k2];
-                                if (!cli2.lat || !cli2.lng) continue;
-
-                                const currentDist = calcDist(cli1.lat, cli1.lng, c1.lat, c1.lng) + calcDist(cli2.lat, cli2.lng, c2.lat, c2.lng);
-                                const swappedDist = calcDist(cli1.lat, cli1.lng, c2.lat, c2.lng) + calcDist(cli2.lat, cli2.lng, c1.lat, c1.lng);
-
-                                if (swappedDist < currentDist - 0.5) {
-                                    b1.quinzenais13[k1] = cli2;
-                                    b2.quinzenais13[k2] = cli1;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                for (let i = 0; i < dayBuckets.length; i++) {
-                    for (let j = i + 1; j < dayBuckets.length; j++) {
-                        const b1 = dayBuckets[i];
-                        const b2 = dayBuckets[j];
-                        const c1 = dayCentroids[i];
-                        const c2 = dayCentroids[j];
-
-                        for (let k1 = 0; k1 < b1.quinzenais24.length; k1++) {
-                            const cli1 = b1.quinzenais24[k1];
-                            if (!cli1.lat || !cli1.lng) continue;
-
-                            for (let k2 = 0; k2 < b2.quinzenais24.length; k2++) {
-                                const cli2 = b2.quinzenais24[k2];
-                                if (!cli2.lat || !cli2.lng) continue;
-
-                                const currentDist = calcDist(cli1.lat, cli1.lng, c1.lat, c1.lng) + calcDist(cli2.lat, cli2.lng, c2.lat, c2.lng);
-                                const swappedDist = calcDist(cli1.lat, cli1.lng, c2.lat, c2.lng) + calcDist(cli2.lat, cli2.lng, c1.lat, c1.lng);
-
-                                if (swappedDist < currentDist - 0.5) {
-                                    b1.quinzenais24[k1] = cli2;
-                                    b2.quinzenais24[k2] = cli1;
                                     break;
                                 }
                             }
