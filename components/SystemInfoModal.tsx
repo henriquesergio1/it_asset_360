@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.148.1',
+    date: 'Hoje',
+    title: 'Fuel360: Contraste do Popup do Mapa no Tema Escuro e Limpeza Visual',
+    changes: [
+      'Contraste do Popup no Mapa (Dark Mode): Estilização escura com fundo slate-900 e borda slate-700 nos balões do Leaflet (.leaflet-popup-content-wrapper e .leaflet-popup-tip), garantindo perfeita legibilidade das informações do PDV e base.',
+      'Limpeza Visual da Área do Mapa: Remoção do badge flutuante redundante "Visão Espacial do Ajuste" para ampliar a área útil e diminuir a poluição visual.'
+    ]
+  },
+  {
     version: '3.148.0',
     date: 'Hoje',
     title: 'Fuel360: Contador de PDVs por Colaborador no Seletor de Busca',

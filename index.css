@@ -138,6 +138,29 @@
     border-color: #d9d9d9 !important;
   }
 
+  /* Popups do Mapa Leaflet no Modo Escuro */
+  html.dark .leaflet-popup-content-wrapper {
+    background-color: #0f172a !important;
+    color: #f1f5f9 !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid #334155 !important;
+    border-radius: 1rem !important;
+  }
+
+  html.dark .leaflet-popup-tip {
+    background-color: #0f172a !important;
+    border: 1px solid #334155 !important;
+    box-shadow: none !important;
+  }
+
+  html.dark .leaflet-popup-close-button {
+    color: #94a3b8 !important;
+  }
+
+  html.dark .leaflet-popup-close-button:hover {
+    color: #f8fafc !important;
+  }
+
   /* Redução de sombras exageradas nas tabelas e containers em tema claro */
   html:not(.dark) .shadow-2xl,
   html:not(.dark) .shadow-xl,

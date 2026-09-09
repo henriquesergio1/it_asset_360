@@ -3901,10 +3901,6 @@ export const AjusteRota: React.FC = () => {
                             ? 'fixed inset-0 z-[1100] w-screen h-screen rounded-none' 
                             : 'relative isolate rounded-2xl h-96 z-10'
                     }`}>
-                        <div className="absolute top-3 left-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-md z-[1000] text-xs font-bold text-slate-800 dark:text-white flex items-center">
-                            <GlobeIcon className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400 animate-pulse"/> Visão Espacial do Ajuste
-                        </div>
-
                         {/* CONTROLES FLUTUANTES DO MAPA: ALTERNADOR RÁPIDO DE QUINZENA, HEATMAP E TELA CHEIA */}
                         <div className="absolute top-3 right-3 z-[1000] flex flex-wrap items-center gap-2">
                             {scopedAdjustedRoutes.length > 0 && (
@@ -4262,7 +4258,7 @@ export const AjusteRota: React.FC = () => {
                                                             </div>
                                                             <button
                                                                 onClick={() => handleExcludeVisit(v.Cod_Cliente)}
-                                                                className="self-end bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded p-1"
+                                                                className="self-end bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/80 rounded p-1 transition cursor-pointer"
                                                                 title="Excluir Visita"
                                                             >
                                                                 <TrashIcon className="w-4 h-4"/>
