@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.167.0',
+    date: 'Hoje',
+    title: 'Fuel360: Particionamento Espacial Balanceado e Distribuição Homogênea no Roteirizador',
+    changes: [
+      'Particionamento Espacial Balanceado (K-Partições Rígidas): O motor de roteirização agora calcula cotas estritas e rigorosamente homogêneas de clientes por dia ativo (ex: 11 a 12 clientes/dia para 57 PDVs em 5 dias), eliminando definitivamente sextas-feiras vazias (0 PDVs) ou dias hiperlotados.',
+      'Varredura Angular e Integridade de Cidades Satélites: Cidades menores e distantes (São Francisco Xavier, Monteiro Lobato, etc.) permanecem 100% indivisíveis no mesmo dia da semana e no mesmo ciclo quinzenal, enquanto metrópoles densas são distribuídas em setores contíguos em leque ao redor da base.',
+      'Programação Dinâmica Min-Cost com Refinamento de Borda: Particionamento 1D ótimo de setores geográficos com balanceamento fino nas bordas entre dias adjacentes, prevenindo sobrecargas de jornada viária e garantindo que todos os dias ativos recebam atendimento equilibrado.'
+    ]
+  },
+  {
     version: '3.166.0',
     date: 'Hoje',
     title: 'Fuel360: Agrupamento Geográfico Estrito por Cidade/Microrregião no Roteirizador',

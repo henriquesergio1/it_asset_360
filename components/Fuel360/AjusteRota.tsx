@@ -2961,115 +2961,51 @@ export const AjusteRota: React.FC = () => {
             const uniqueClients = Array.from(uniqueClientsMap.values());
             if (uniqueClients.length === 0) continue;
 
-            // 2. Clusterização Geográfica Primária por Cidade / Microrregião
+            // 2. Particionamento Espacial Balanceado (K-Partições com Cota Rígida por Dia)
             const getDayWeight = (day: string) => (day === 'SÁBADO' && optSatHalfPeriod) ? 0.5 : 1.0;
             const totalWeight = activeDays.reduce((sum, d) => sum + getDayWeight(d), 0);
 
+            // Centro geográfico da carteira de clientes
             const validCoords = uniqueClients.filter(c => c.lat && c.lng);
             const centerPortfolioLat = validCoords.length > 0 
                 ? validCoords.reduce((acc, c) => acc + c.lat, 0) / validCoords.length 
-                : baseLat;
+                : (baseLat || -23.18);
             const centerPortfolioLng = validCoords.length > 0 
                 ? validCoords.reduce((acc, c) => acc + c.lng, 0) / validCoords.length 
-                : baseLng;
+                : (baseLng || -45.88);
 
-            // Agrupa clientes por Cidade (unidade primária de roteirização geográfica)
-            const cityGroups = new Map<string, typeof uniqueClients>();
+            // Garantir coordenadas válidas para clientes com lat/long zerados
             uniqueClients.forEach(c => {
-                const rawCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
-                const cityKey = rawCity || 'OUTROS';
-                if (!cityGroups.has(cityKey)) {
-                    cityGroups.set(cityKey, []);
-                }
-                cityGroups.get(cityKey)!.push(c);
-            });
-
-            // Tamanho de bloco adequado para preservar cidades satélites inteiras
-            const avgClientsPerDay = Math.max(8, Math.ceil(uniqueClients.length / activeDays.length));
-            const maxBlockSize = Math.max(12, Math.round(avgClientsPerDay * 1.35));
-
-            interface GeoBlock {
-                id: string;
-                cityName: string;
-                isCityWhole: boolean;
-                clients: typeof uniqueClients;
-                centerLat: number;
-                centerLng: number;
-                polarAngle: number;
-                distFromBase: number;
-                totalVisits: number;
-            }
-
-            const geoBlocks: GeoBlock[] = [];
-
-            cityGroups.forEach((cList, cityName) => {
-                // Se a cidade couber no bloco diário, mantém como BLOCO ÚNICO INDIVISÍVEL
-                if (cList.length <= maxBlockSize) {
-                    const blockCoords = cList.filter(c => c.lat && c.lng);
-                    const bLat = blockCoords.length > 0 ? blockCoords.reduce((s, c) => s + c.lat, 0) / blockCoords.length : baseLat;
-                    const bLng = blockCoords.length > 0 ? blockCoords.reduce((s, c) => s + c.lng, 0) / blockCoords.length : baseLng;
-                    const pAngle = (bLat && bLng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, bLat, bLng) : 0;
-                    const dBase = (bLat && bLng) ? calcDist(baseLat, baseLng, bLat, bLng) : 9999;
-                    const vWeight = cList.reduce((acc, c) => acc + (c.tipo === 'SEMANAL' ? 1 : 0.5), 0);
-
-                    geoBlocks.push({
-                        id: `${cityName}_FULL`,
-                        cityName,
-                        isCityWhole: true,
-                        clients: cList,
-                        centerLat: bLat,
-                        centerLng: bLng,
-                        polarAngle: pAngle,
-                        distFromBase: dBase,
-                        totalVisits: vWeight
-                    });
-                } else {
-                    // Metrópole/Cidade-sede com muitos clientes: particiona em setores contíguos ordenados pelo ângulo polar
-                    const sortedCity = [...cList].sort((a, b) => {
-                        const aAngle = (a.lat && a.lng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, a.lat, a.lng) : a.polarAngle;
-                        const bAngle = (b.lat && b.lng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, b.lat, b.lng) : b.polarAngle;
-                        return aAngle - bAngle;
-                    });
-
-                    let partIdx = 1;
-                    for (let i = 0; i < sortedCity.length; i += maxBlockSize) {
-                        const chunk = sortedCity.slice(i, i + maxBlockSize);
-                        const blockCoords = chunk.filter(c => c.lat && c.lng);
-                        const bLat = blockCoords.length > 0 ? blockCoords.reduce((s, c) => s + c.lat, 0) / blockCoords.length : baseLat;
-                        const bLng = blockCoords.length > 0 ? blockCoords.reduce((s, c) => s + c.lng, 0) / blockCoords.length : baseLng;
-                        const pAngle = (bLat && bLng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, bLat, bLng) : 0;
-                        const dBase = (bLat && bLng) ? calcDist(baseLat, baseLng, bLat, bLng) : 9999;
-                        const vWeight = chunk.reduce((acc, c) => acc + (c.tipo === 'SEMANAL' ? 1 : 0.5), 0);
-
-                        geoBlocks.push({
-                            id: `${cityName}_PART_${partIdx++}`,
-                            cityName,
-                            isCityWhole: false,
-                            clients: chunk,
-                            centerLat: bLat,
-                            centerLng: bLng,
-                            polarAngle: pAngle,
-                            distFromBase: dBase,
-                            totalVisits: vWeight
-                        });
+                if (!c.lat || !c.lng) {
+                    const cityMatch = validCoords.find(vc => 
+                        (vc.sampleVisit.Cidade || '').trim().toUpperCase() === (c.sampleVisit.Cidade || '').trim().toUpperCase()
+                    );
+                    if (cityMatch && cityMatch.lat && cityMatch.lng) {
+                        c.lat = cityMatch.lat;
+                        c.lng = cityMatch.lng;
+                    } else {
+                        c.lat = centerPortfolioLat;
+                        c.lng = centerPortfolioLng;
                     }
+                    c.polarAngle = calcPolarAngle(centerPortfolioLat, centerPortfolioLng, c.lat, c.lng);
+                    c.distFromBase = calcDist(baseLat, baseLng, c.lat, c.lng);
                 }
             });
 
-            // Ordena os blocos espacialmente por ângulo polar (varredura contígua em leque)
-            geoBlocks.sort((a, b) => {
-                const diffAngle = a.polarAngle - b.polarAngle;
-                if (Math.abs(diffAngle) > 0.05) return diffAngle;
-                return a.distFromBase - b.distFromBase;
-            });
-
-            interface DayBucket {
-                day: string;
-                weight: number;
-                maxCap: number;
-                semanais: typeof uniqueClients;
-                quinzenais13: typeof uniqueClients;
-                quinzenais24: typeof uniqueClients;
+            // 2.1. Cálculo das Cotas Rígidas por Dia (Garantia de que NENHUM dia fique com 0 PDVs e nenhum com sobrecarga)
+            const dayQuotas: number[] = [];
+            let accumulatedAssigned = 0;
+            let accumulatedWeight = 0;
+            for (let i = 0; i < activeDays.length; i++) {
+                const w = getDayWeight(activeDays[i]);
+                accumulatedWeight += w;
+                const isLast = (i === activeDays.length - 1);
+                const targetAccumulated = isLast 
+                    ? uniqueClients.length 
+                    : Math.min(uniqueClients.length, Math.round(uniqueClients.length * (accumulatedWeight / totalWeight)));
+                const quota = Math.max(uniqueClients.length >= activeDays.length ? 1 : 0, targetAccumulated - accumulatedAssigned);
+                dayQuotas.push(quota);
+                accumulatedAssigned += quota;
             }
 
             // Distância média dos clientes à base do vendedor para estimativa viária realista
@@ -3081,7 +3017,17 @@ export const AjusteRota: React.FC = () => {
             const baseRoundTripMins = Math.round(((avgDistFromBaseKm * 2 * 1.18) / 50) * 60);
             const interStopTravelMins = 12;
 
-            const dayBuckets: DayBucket[] = activeDays.map(day => {
+            interface DayBucket {
+                day: string;
+                weight: number;
+                targetQuota: number;
+                maxCap: number;
+                semanais: typeof uniqueClients;
+                quinzenais13: typeof uniqueClients;
+                quinzenais24: typeof uniqueClients;
+            }
+
+            const dayBuckets: DayBucket[] = activeDays.map((day, idx) => {
                 const w = getDayWeight(day);
                 let cap = Infinity;
                 if (optLimitClients) {
@@ -3101,6 +3047,7 @@ export const AjusteRota: React.FC = () => {
                 return {
                     day,
                     weight: w,
+                    targetQuota: dayQuotas[idx] || 0,
                     maxCap: cap,
                     semanais: [],
                     quinzenais13: [],
@@ -3108,38 +3055,269 @@ export const AjusteRota: React.FC = () => {
                 };
             });
 
-            const unallocatedClients: typeof uniqueClients = [];
-            const totalVisitsPortfolio = geoBlocks.reduce((s, b) => s + b.totalVisits, 0);
-
-            // 3. Alocação dos Blocos Municipais aos Dias da Semana
-            let currentBucketIdx = 0;
-            let currentBucketVisits = 0;
-
-            geoBlocks.forEach((block, bIdx) => {
-                const bucket = dayBuckets[currentBucketIdx];
-                const isLastBucket = currentBucketIdx === dayBuckets.length - 1;
-                const isLastBlock = bIdx === geoBlocks.length - 1;
-
-                const bucketTargetVisits = (bucket.weight / totalWeight) * totalVisitsPortfolio;
-
-                if (!isLastBucket && !isLastBlock && (currentBucketVisits >= bucketTargetVisits * 0.85) && (currentBucketVisits + block.totalVisits > bucketTargetVisits * 1.15)) {
-                    currentBucketIdx++;
-                    currentBucketVisits = 0;
+            // 2.2. Agrupamento Geográfico Municipal e Setorial
+            const cityGroups = new Map<string, typeof uniqueClients>();
+            uniqueClients.forEach(c => {
+                const rawCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
+                const cityKey = rawCity || 'GERAL';
+                if (!cityGroups.has(cityKey)) {
+                    cityGroups.set(cityKey, []);
                 }
+                cityGroups.get(cityKey)!.push(c);
+            });
 
-                const targetBucket = dayBuckets[currentBucketIdx];
-                currentBucketVisits += block.totalVisits;
+            interface GeoCluster {
+                id: string;
+                cityName: string;
+                isSatellite: boolean;
+                clients: typeof uniqueClients;
+                centerLat: number;
+                centerLng: number;
+                polarAngle: number;
+                distFromBase: number;
+            }
 
-                const blockSemanais = block.clients.filter(c => c.tipo === 'SEMANAL');
-                const blockQuinzenais = block.clients.filter(c => c.tipo !== 'SEMANAL');
+            const maxDailyTarget = Math.max(...dayQuotas, 8);
+            const clusters: GeoCluster[] = [];
 
-                targetBucket.semanais.push(...blockSemanais);
+            cityGroups.forEach((cList, cityName) => {
+                // Cidades satélites indivisíveis: se a cidade couber na cota diária, fica 100% no mesmo bloco e dia
+                if (cList.length <= maxDailyTarget) {
+                    const cLat = cList.reduce((s, c) => s + c.lat, 0) / cList.length;
+                    const cLng = cList.reduce((s, c) => s + c.lng, 0) / cList.length;
+                    const pAngle = calcPolarAngle(centerPortfolioLat, centerPortfolioLng, cLat, cLng);
+                    const dBase = calcDist(baseLat, baseLng, cLat, cLng);
 
-                // Equalização das quinzenas da cidade dentro do dia alocado
+                    clusters.push({
+                        id: `${cityName}_SATELLITE`,
+                        cityName,
+                        isSatellite: true,
+                        clients: cList,
+                        centerLat: cLat,
+                        centerLng: cLng,
+                        polarAngle: pAngle,
+                        distFromBase: dBase
+                    });
+                } else {
+                    // Cidades maiores: divide em sub-setores contíguos ordenados pelo ângulo polar
+                    const sortedCity = [...cList].sort((a, b) => {
+                        const aAngle = calcPolarAngle(centerPortfolioLat, centerPortfolioLng, a.lat, a.lng);
+                        const bAngle = calcPolarAngle(centerPortfolioLat, centerPortfolioLng, b.lat, b.lng);
+                        return aAngle - bAngle;
+                    });
+
+                    const sliceSize = Math.max(4, Math.round(uniqueClients.length / activeDays.length));
+                    let subIdx = 1;
+                    for (let i = 0; i < sortedCity.length; i += sliceSize) {
+                        const chunk = sortedCity.slice(i, i + sliceSize);
+                        const cLat = chunk.reduce((s, c) => s + c.lat, 0) / chunk.length;
+                        const cLng = chunk.reduce((s, c) => s + c.lng, 0) / chunk.length;
+                        const pAngle = calcPolarAngle(centerPortfolioLat, centerPortfolioLng, cLat, cLng);
+                        const dBase = calcDist(baseLat, baseLng, cLat, cLng);
+
+                        clusters.push({
+                            id: `${cityName}_SUB_${subIdx++}`,
+                            cityName,
+                            isSatellite: false,
+                            clients: chunk,
+                            centerLat: cLat,
+                            centerLng: cLng,
+                            polarAngle: pAngle,
+                            distFromBase: dBase
+                        });
+                    }
+                }
+            });
+
+            // Garantir que a quantidade de clusters seja de pelo menos o número de dias ativos
+            while (clusters.length < activeDays.length && uniqueClients.length >= activeDays.length) {
+                let largestIdx = -1;
+                let maxLen = 1;
+                clusters.forEach((cl, idx) => {
+                    if (cl.clients.length > maxLen) {
+                        maxLen = cl.clients.length;
+                        largestIdx = idx;
+                    }
+                });
+
+                if (largestIdx === -1) break;
+
+                const toSplit = clusters[largestIdx];
+                const half = Math.ceil(toSplit.clients.length / 2);
+                const chunk1 = toSplit.clients.slice(0, half);
+                const chunk2 = toSplit.clients.slice(half);
+
+                const cLat1 = chunk1.reduce((s, c) => s + c.lat, 0) / chunk1.length;
+                const cLng1 = chunk1.reduce((s, c) => s + c.lng, 0) / chunk1.length;
+                const cLat2 = chunk2.reduce((s, c) => s + c.lat, 0) / chunk2.length;
+                const cLng2 = chunk2.reduce((s, c) => s + c.lng, 0) / chunk2.length;
+
+                clusters.splice(largestIdx, 1, 
+                    {
+                        id: `${toSplit.id}_A`,
+                        cityName: toSplit.cityName,
+                        isSatellite: false,
+                        clients: chunk1,
+                        centerLat: cLat1,
+                        centerLng: cLng1,
+                        polarAngle: calcPolarAngle(centerPortfolioLat, centerPortfolioLng, cLat1, cLng1),
+                        distFromBase: calcDist(baseLat, baseLng, cLat1, cLng1)
+                    },
+                    {
+                        id: `${toSplit.id}_B`,
+                        cityName: toSplit.cityName,
+                        isSatellite: false,
+                        clients: chunk2,
+                        centerLat: cLat2,
+                        centerLng: cLng2,
+                        polarAngle: calcPolarAngle(centerPortfolioLat, centerPortfolioLng, cLat2, cLng2),
+                        distFromBase: calcDist(baseLat, baseLng, cLat2, cLng2)
+                    }
+                );
+            }
+
+            // 2.3. Varredura Angular Contígua
+            clusters.sort((a, b) => a.polarAngle - b.polarAngle);
+
+            let maxGap = -1;
+            let bestCutIdx = 0;
+            for (let i = 0; i < clusters.length; i++) {
+                const nextIdx = (i + 1) % clusters.length;
+                let angleGap = clusters[nextIdx].polarAngle - clusters[i].polarAngle;
+                if (angleGap < 0) angleGap += 2 * Math.PI;
+                if (angleGap > maxGap) {
+                    maxGap = angleGap;
+                    bestCutIdx = nextIdx;
+                }
+            }
+            const sweepClusters = [
+                ...clusters.slice(bestCutIdx),
+                ...clusters.slice(0, bestCutIdx)
+            ];
+
+            // 2.4. Particionamento 1D Ótimo dos Clusters para os Dias Ativos (DP Min-Cost)
+            const M = sweepClusters.length;
+            const K = activeDays.length;
+
+            const dp: number[][] = Array.from({ length: K + 1 }, () => Array(M + 1).fill(Infinity));
+            const parent: number[][] = Array.from({ length: K + 1 }, () => Array(M + 1).fill(-1));
+            dp[0][0] = 0;
+
+            const clusterSizes = sweepClusters.map(c => c.clients.length);
+            const prefixSizes: number[] = [0];
+            for (let i = 0; i < M; i++) {
+                prefixSizes.push(prefixSizes[i] + clusterSizes[i]);
+            }
+
+            for (let d = 1; d <= K; d++) {
+                const targetQ = dayQuotas[d - 1];
+                for (let i = d; i <= M; i++) {
+                    for (let j = d - 1; j < i; j++) {
+                        if (dp[d - 1][j] === Infinity) continue;
+                        const countInDay = prefixSizes[i] - prefixSizes[j];
+                        const diff = countInDay - targetQ;
+                        const cost = dp[d - 1][j] + (diff * diff) + (countInDay === 0 ? 50000 : 0);
+                        if (cost < dp[d][i]) {
+                            dp[d][i] = cost;
+                            parent[d][i] = j;
+                        }
+                    }
+                }
+            }
+
+            const dayClusters: GeoCluster[][] = Array.from({ length: K }, () => []);
+            let curI = M;
+            for (let d = K; d >= 1; d--) {
+                const prevJ = parent[d][curI] >= 0 ? parent[d][curI] : Math.max(0, curI - 1);
+                dayClusters[d - 1] = sweepClusters.slice(prevJ, curI);
+                curI = prevJ;
+            }
+
+            const dayAssignedClients: Array<typeof uniqueClients> = Array.from({ length: K }, () => []);
+            dayClusters.forEach((cList, dIdx) => {
+                cList.forEach(cl => {
+                    dayAssignedClients[dIdx].push(...cl.clients);
+                });
+            });
+
+            // 2.5. Refinamento de Borda Fina entre Dias Adjacentes (Apenas clientes não-satélites)
+            for (let pass = 0; pass < 5; pass++) {
+                for (let i = 0; i < K - 1; i++) {
+                    const d1 = i;
+                    const d2 = i + 1;
+                    const diff1 = dayAssignedClients[d1].length - dayQuotas[d1];
+                    const diff2 = dayAssignedClients[d2].length - dayQuotas[d2];
+
+                    if (diff1 > 0 && diff2 < 0) {
+                        const candidateIdx = dayAssignedClients[d1].findIndex(c => {
+                            const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
+                            const isSat = clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
+                            return !isSat;
+                        });
+                        if (candidateIdx >= 0) {
+                            const [moved] = dayAssignedClients[d1].splice(candidateIdx, 1);
+                            dayAssignedClients[d2].unshift(moved);
+                        }
+                    } else if (diff2 > 0 && diff1 < 0) {
+                        const candidateIdx = dayAssignedClients[d2].findIndex(c => {
+                            const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
+                            const isSat = clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
+                            return !isSat;
+                        });
+                        if (candidateIdx >= 0) {
+                            const [moved] = dayAssignedClients[d2].splice(candidateIdx, 1);
+                            dayAssignedClients[d1].push(moved);
+                        }
+                    }
+                }
+            }
+
+            // 2.6. Distribuição Interna e Equalização Quinzenal Homogênea
+            for (let d = 0; d < K; d++) {
+                const bucket = dayBuckets[d];
+                const clientsInDay = dayAssignedClients[d];
+
+                const semanais = clientsInDay.filter(c => c.tipo === 'SEMANAL');
+                const quinzenais = clientsInDay.filter(c => c.tipo !== 'SEMANAL');
+
+                bucket.semanais.push(...semanais);
+
                 if (optBalanceWorkload) {
-                    const halfQ = Math.ceil(blockQuinzenais.length / 2);
-                    const q13 = blockQuinzenais.slice(0, halfQ);
-                    const q24 = blockQuinzenais.slice(halfQ);
+                    quinzenais.sort((a, b) => a.polarAngle - b.polarAngle);
+
+                    const q13: typeof uniqueClients = [];
+                    const q24: typeof uniqueClients = [];
+
+                    const satGroups = new Map<string, typeof uniqueClients>();
+                    const nonSat: typeof uniqueClients = [];
+
+                    quinzenais.forEach(c => {
+                        const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
+                        const isSat = clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
+                        if (isSat) {
+                            if (!satGroups.has(cCity)) satGroups.set(cCity, []);
+                            satGroups.get(cCity)!.push(c);
+                        } else {
+                            nonSat.push(c);
+                        }
+                    });
+
+                    // Cidades satélites inteiras no mesmo ciclo quinzenal para evitar viagem repetida
+                    satGroups.forEach(sList => {
+                        if (q13.length <= q24.length) {
+                            q13.push(...sList);
+                        } else {
+                            q24.push(...sList);
+                        }
+                    });
+
+                    nonSat.forEach(c => {
+                        if (q13.length <= q24.length) {
+                            q13.push(c);
+                        } else {
+                            q24.push(c);
+                        }
+                    });
 
                     q13.forEach(c => {
                         c.tipo = 'QUINZENAL_1_3';
@@ -3150,18 +3328,20 @@ export const AjusteRota: React.FC = () => {
                         c.originalPeriodicidade = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
                     });
 
-                    targetBucket.quinzenais13.push(...q13);
-                    targetBucket.quinzenais24.push(...q24);
+                    bucket.quinzenais13.push(...q13);
+                    bucket.quinzenais24.push(...q24);
                 } else {
-                    blockQuinzenais.forEach(c => {
+                    quinzenais.forEach(c => {
                         if (c.tipo === 'QUINZENAL_2_4') {
-                            targetBucket.quinzenais24.push(c);
+                            bucket.quinzenais24.push(c);
                         } else {
-                            targetBucket.quinzenais13.push(c);
+                            bucket.quinzenais13.push(c);
                         }
                     });
                 }
-            });
+            }
+
+            const unallocatedClients: typeof uniqueClients = [];
 
             // Em modo com teto estrito (!allowOverflow), remove excedentes
             if (!allowOverflow) {
@@ -3177,59 +3357,6 @@ export const AjusteRota: React.FC = () => {
                         unallocatedClients.push(bucket.semanais.pop()!);
                     }
                 });
-            }
-
-            // 4. Refinamento Seguro de Borda entre Dias Adjacentes (sem quebrar cidades satélites)
-            const calcDayCentroid = (bucket: DayBucket) => {
-                const stops = [...bucket.semanais, ...bucket.quinzenais13, ...bucket.quinzenais24].filter(c => c.lat && c.lng);
-                if (stops.length > 0) {
-                    return {
-                        lat: stops.reduce((s, c) => s + c.lat, 0) / stops.length,
-                        lng: stops.reduce((s, c) => s + c.lng, 0) / stops.length
-                    };
-                }
-                return { lat: baseLat, lng: baseLng };
-            };
-
-            let dayCentroids = dayBuckets.map(calcDayCentroid);
-
-            // Mapeia cidades que são satélites (indivisíveis) para blindá-las contra desmembramento
-            const protectedCities = new Set<string>();
-            geoBlocks.filter(b => b.isCityWhole).forEach(b => protectedCities.add(b.cityName));
-
-            for (let pass = 0; pass < 3; pass++) {
-                dayCentroids = dayBuckets.map(calcDayCentroid);
-
-                for (let i = 0; i < dayBuckets.length; i++) {
-                    for (let j = i + 1; j < dayBuckets.length; j++) {
-                        const b1 = dayBuckets[i];
-                        const b2 = dayBuckets[j];
-                        const c1 = dayCentroids[i];
-                        const c2 = dayCentroids[j];
-
-                        // Apenas troca clientes avulsos de cidades que NÃO sejam satélites inteiras protegidas
-                        for (let k1 = 0; k1 < b1.semanais.length; k1++) {
-                            const cli1 = b1.semanais[k1];
-                            const city1 = (cli1.sampleVisit.Cidade || '').trim().toUpperCase();
-                            if (protectedCities.has(city1) || !cli1.lat || !cli1.lng) continue;
-
-                            for (let k2 = 0; k2 < b2.semanais.length; k2++) {
-                                const cli2 = b2.semanais[k2];
-                                const city2 = (cli2.sampleVisit.Cidade || '').trim().toUpperCase();
-                                if (protectedCities.has(city2) || !cli2.lat || !cli2.lng) continue;
-
-                                const currentDist = calcDist(cli1.lat, cli1.lng, c1.lat, c1.lng) + calcDist(cli2.lat, cli2.lng, c2.lat, c2.lng);
-                                const swappedDist = calcDist(cli1.lat, cli1.lng, c2.lat, c2.lng) + calcDist(cli2.lat, cli2.lng, c1.lat, c1.lng);
-
-                                if (swappedDist < currentDist - 0.8) {
-                                    b1.semanais[k1] = cli2;
-                                    b2.semanais[k2] = cli1;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
             }
 
             for (const bucket of dayBuckets) {
