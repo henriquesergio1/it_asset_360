@@ -9,6 +9,19 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.149.0',
+    date: 'Hoje',
+    title: 'Fuel360: Detecção de Anomalias Geográficas e Ajuste de Coordenadas GPS',
+    changes: [
+      'Detecção de Anomalias no Mapa e Tabela: Identificação automática de PDVs com coordenadas aberrantes ou distantes da base residencial do colaborador (> 80 km), destacando marcadores de alerta no mapa e badges indicativos na grade.',
+      'Alerta e Ação no Popup do Marcador: Exibição de aviso explicativo com a quilometragem calculada da base e botão dedicado para ajuste imediato da localização.',
+      'Modal de Ajuste de Coordenadas GPS: Permite edição manual de Latitude e Longitude com validação numérica instantânea.',
+      'Localização Automática por Endereço: Botão de busca e geocodificação direta via Google Maps e CEP corporativo.',
+      'Copiar Coordenadas de Cliente Vizinho: Sugestão inteligente e pontuada de clientes vizinhos (mesma rua, mesmo bairro ou cidade) com aplicação de coordenadas em 1 clique.',
+      'Recálculo Dinâmico em Tempo Real: Atualização instantânea dos circuitos viários OSRM, itinerários passo a passo e totalizadores de KM e tempo, eliminando desvios espúrios na rota.'
+    ]
+  },
+  {
     version: '3.148.1',
     date: 'Hoje',
     title: 'Fuel360: Contraste do Popup do Mapa no Tema Escuro e Limpeza Visual',

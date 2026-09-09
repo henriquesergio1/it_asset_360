@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
-import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable } from './services/apiService';
+import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress } from './services/apiService';
 import { VisitaPrevista, Colaborador } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -278,6 +278,53 @@ const calcDist = (lat1: number, lon1: number, lat2: number, lon2: number): numbe
               Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
+};
+
+// Helper de detecção de anomalia de coordenadas (ex: outlier a mais de 80km da base/centroide)
+const checkCoordinateAnomaly = (
+    client: VisitaPrevista,
+    baseLat?: number,
+    baseLng?: number,
+    fallbackCentroid?: { lat: number; lng: number }
+): { isAnomalous: boolean; distKm: number; referenceType: 'base' | 'centroid' | 'none' } => {
+    if (!client.Lat || !client.Long) {
+        return { isAnomalous: true, distKm: 0, referenceType: 'none' };
+    }
+    const refLat = baseLat || fallbackCentroid?.lat;
+    const refLng = baseLng || fallbackCentroid?.lng;
+    const refType = baseLat && baseLng ? 'base' : (fallbackCentroid ? 'centroid' : 'none');
+
+    if (refLat && refLng) {
+        const dist = calcDist(refLat, refLng, client.Lat, client.Long);
+        // Distância superior a 80 km da base (ou centroide) é tratada como anomalia geográfica suspeita
+        if (dist > 80) {
+            return { isAnomalous: true, distKm: Math.round(dist * 10) / 10, referenceType: refType };
+        }
+        return { isAnomalous: false, distKm: Math.round(dist * 10) / 10, referenceType: refType };
+    }
+    return { isAnomalous: false, distKm: 0, referenceType: 'none' };
+};
+
+// Helper para aplicação de coordenadas geográficas customizadas salvas no navegador
+const applyCustomCoordinates = (routes: VisitaPrevista[]): VisitaPrevista[] => {
+    try {
+        const raw = localStorage.getItem('FUEL360_CUSTOM_CLIENT_COORDS');
+        if (!raw) return routes;
+        const customMap: Record<string, { lat: number; long: number }> = JSON.parse(raw);
+        return routes.map(r => {
+            const custom = customMap[String(r.Cod_Cliente)];
+            if (custom && typeof custom.lat === 'number' && typeof custom.long === 'number' && !isNaN(custom.lat) && !isNaN(custom.long)) {
+                return {
+                    ...r,
+                    Lat: custom.lat,
+                    Long: custom.long
+                };
+            }
+            return r;
+        });
+    } catch {
+        return routes;
+    }
 };
 
 // Helper de ângulo polar geográfico normalizado [0, 2*PI) em relação à base
@@ -936,6 +983,14 @@ export const AjusteRota: React.FC = () => {
     const [newCustomChannelName, setNewCustomChannelName] = useState('');
     const [newCustomChannelTime, setNewCustomChannelTime] = useState(15);
     const [lastAuditInfo, setLastAuditInfo] = useState<{ usuario?: string; dataHora?: string } | null>(null);
+
+    // Ajuste de Coordenadas Geográficas (GPS) de Clientes
+    const [coordinateModalClient, setCoordinateModalClient] = useState<VisitaPrevista | null>(null);
+    const [coordModalLat, setCoordModalLat] = useState<string>('');
+    const [coordModalLng, setCoordModalLng] = useState<string>('');
+    const [coordNeighborSearch, setCoordNeighborSearch] = useState<string>('');
+    const [isGeocodingCoord, setIsGeocodingCoord] = useState<boolean>(false);
+    const [coordGeocodeFeedback, setCoordGeocodeFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
     // Carregar canais de atendimento gravados no banco de dados corporativo
     const loadChannelServiceTimes = useCallback(async () => {
@@ -1912,6 +1967,197 @@ export const AjusteRota: React.FC = () => {
         };
     }, []);
 
+    // Centroides geográficos médios por colaborador (para fallback de distância na ausência de LatitudeBase)
+    const sellerCentroidsMap = useMemo(() => {
+        const map = new Map<number, { lat: number; lng: number }>();
+        const grouped = new Map<number, { latSum: number; lngSum: number; count: number }>();
+        adjustedRoutes.forEach(r => {
+            if (r.Lat && r.Long) {
+                const cur = grouped.get(r.Cod_Vend) || { latSum: 0, lngSum: 0, count: 0 };
+                cur.latSum += r.Lat;
+                cur.lngSum += r.Long;
+                cur.count += 1;
+                grouped.set(r.Cod_Vend, cur);
+            }
+        });
+        grouped.forEach((val, sellerId) => {
+            if (val.count > 0) {
+                map.set(sellerId, { lat: val.latSum / val.count, lng: val.lngSum / val.count });
+            }
+        });
+        return map;
+    }, [adjustedRoutes]);
+
+    // Abrir modal de ajuste de coordenadas
+    const handleOpenCoordinateModal = useCallback((client: VisitaPrevista) => {
+        setCoordinateModalClient(client);
+        setCoordModalLat(client.Lat ? String(client.Lat) : '');
+        setCoordModalLng(client.Long ? String(client.Long) : '');
+        setCoordNeighborSearch('');
+        setCoordGeocodeFeedback(null);
+    }, []);
+
+    // Fechar modal de ajuste de coordenadas
+    const handleCloseCoordinateModal = useCallback(() => {
+        setCoordinateModalClient(null);
+        setCoordModalLat('');
+        setCoordModalLng('');
+        setCoordNeighborSearch('');
+        setCoordGeocodeFeedback(null);
+    }, []);
+
+    // Salvar novas coordenadas no cliente e recalcular
+    const handleSaveCoordinates = useCallback(() => {
+        if (!coordinateModalClient) return;
+
+        const cleanLat = coordModalLat.replace(',', '.').trim();
+        const cleanLng = coordModalLng.replace(',', '.').trim();
+        const latNum = parseFloat(cleanLat);
+        const lngNum = parseFloat(cleanLng);
+
+        if (isNaN(latNum) || isNaN(lngNum)) {
+            alert("Por favor, informe valores numéricos válidos para Latitude e Longitude.");
+            return;
+        }
+
+        if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
+            alert("Valores de coordenadas fora dos limites geográficos válidos (Lat: -90 a 90, Long: -180 a 180).");
+            return;
+        }
+
+        const codCliente = coordinateModalClient.Cod_Cliente;
+
+        // 1. Persistir no localStorage para manter entre recargas
+        try {
+            const raw = localStorage.getItem('FUEL360_CUSTOM_CLIENT_COORDS');
+            const customMap: Record<string, { lat: number; long: number }> = raw ? JSON.parse(raw) : {};
+            customMap[String(codCliente)] = { lat: latNum, long: lngNum };
+            localStorage.setItem('FUEL360_CUSTOM_CLIENT_COORDS', JSON.stringify(customMap));
+        } catch (err) {
+            console.error("Erro ao salvar coordenada no localStorage:", err);
+        }
+
+        // 2. Atualizar adjustedRoutes
+        setAdjustedRoutes(prev => prev.map(r => {
+            if (r.Cod_Cliente === codCliente) {
+                return { ...r, Lat: latNum, Long: lngNum };
+            }
+            return r;
+        }));
+
+        // 3. Atualizar originalRoutes
+        setOriginalRoutes(prev => prev.map(r => {
+            if (r.Cod_Cliente === codCliente) {
+                return { ...r, Lat: latNum, Long: lngNum };
+            }
+            return r;
+        }));
+
+        handleCloseCoordinateModal();
+    }, [coordinateModalClient, coordModalLat, coordModalLng, handleCloseCoordinateModal]);
+
+    // Buscar geocodificação do endereço do cliente
+    const handleGeocodeClientAddress = useCallback(async () => {
+        if (!coordinateModalClient) return;
+        setIsGeocodingCoord(true);
+        setCoordGeocodeFeedback(null);
+
+        try {
+            const fullAddress = [
+                coordinateModalClient.Endereco,
+                coordinateModalClient.Bairro,
+                coordinateModalClient.Cidade,
+                coordinateModalClient.CEP ? `CEP ${coordinateModalClient.CEP}` : ''
+            ].filter(Boolean).join(', ');
+
+            const res = await geocodeAddress(fullAddress);
+            if (res && typeof res.lat === 'number' && typeof res.lon === 'number' && !isNaN(res.lat) && !isNaN(res.lon)) {
+                setCoordModalLat(String(res.lat));
+                setCoordModalLng(String(res.lon));
+                setCoordGeocodeFeedback({
+                    type: 'success',
+                    message: `Localização encontrada: Lat ${res.lat.toFixed(6)}, Long ${res.lon.toFixed(6)}`
+                });
+            } else {
+                setCoordGeocodeFeedback({
+                    type: 'error',
+                    message: "Não foi possível localizar as coordenadas para este endereço. Tente copiar de um cliente vizinho."
+                });
+            }
+        } catch (err: any) {
+            setCoordGeocodeFeedback({
+                type: 'error',
+                message: "Falha na geocodificação: " + (err.message || "Erro de conexão")
+            });
+        } finally {
+            setIsGeocodingCoord(false);
+        }
+    }, [coordinateModalClient]);
+
+    // Lista de clientes vizinhos elegíveis para cópia de coordenadas
+    const eligibleNeighbors = useMemo(() => {
+        if (!coordinateModalClient) return [];
+        const currentCod = coordinateModalClient.Cod_Cliente;
+        const currentStreet = (coordinateModalClient.Endereco || '').toLowerCase().split(',')[0].replace(/^(r|rua|av|avenida|trav|travessa|rod|rodovia|alameda|al)\.?\s+/i, '').trim();
+        const currentBairro = (coordinateModalClient.Bairro || '').trim().toLowerCase();
+        const currentCity = (coordinateModalClient.Cidade || '').trim().toLowerCase();
+        const sellerId = coordinateModalClient.Cod_Vend;
+
+        // Dedup de clientes únicos em adjustedRoutes com coordenadas válidas
+        const seen = new Set<number>();
+        const validClients: VisitaPrevista[] = [];
+        
+        adjustedRoutes.forEach(r => {
+            if (r.Cod_Cliente !== currentCod && r.Lat && r.Long && !seen.has(r.Cod_Cliente)) {
+                seen.add(r.Cod_Cliente);
+                validClients.push(r);
+            }
+        });
+
+        // Pontuar relevância de vizinhança
+        const scored = validClients.map(c => {
+            let score = 0;
+            const cStreet = (c.Endereco || '').toLowerCase().split(',')[0].replace(/^(r|rua|av|avenida|trav|travessa|rod|rodovia|alameda|al)\.?\s+/i, '').trim();
+            const cBairro = (c.Bairro || '').trim().toLowerCase();
+            const cCity = (c.Cidade || '').trim().toLowerCase();
+
+            // Mesma rua (ex: Wilson das Neves)
+            if (currentStreet && cStreet && (currentStreet.includes(cStreet) || cStreet.includes(currentStreet))) {
+                score += 100;
+            }
+            // Mesmo bairro
+            if (currentBairro && cBairro && currentBairro === cBairro) {
+                score += 40;
+            }
+            // Mesma cidade
+            if (currentCity && cCity && currentCity === cCity) {
+                score += 20;
+            }
+            // Mesmo vendedor
+            if (c.Cod_Vend === sellerId) {
+                score += 10;
+            }
+
+            return { client: c, score };
+        });
+
+        // Ordenar: maior pontuação primeiro
+        scored.sort((a, b) => b.score - a.score);
+
+        // Se houver busca no campo de filtro
+        if (coordNeighborSearch.trim()) {
+            const query = coordNeighborSearch.trim().toLowerCase();
+            return scored.filter(item => 
+                String(item.client.Cod_Cliente).includes(query) ||
+                item.client.Razao_Social.toLowerCase().includes(query) ||
+                (item.client.Endereco || '').toLowerCase().includes(query) ||
+                (item.client.Bairro || '').toLowerCase().includes(query)
+            ).slice(0, 20).map(s => s.client);
+        }
+
+        return scored.slice(0, 20).map(s => s.client);
+    }, [coordinateModalClient, adjustedRoutes, coordNeighborSearch]);
+
     // Mapeamento de cores
     const promoterColorMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -1957,9 +2203,10 @@ export const AjusteRota: React.FC = () => {
             
             // Consolidar carteira de clientes únicos por vendedor, eliminando repetições mensais (semanais 4x e quinzenais 2x)
             const uniqueData = consolidateUniqueClients(filteredData);
+            const dataWithCustomCoords = applyCustomCoordinates(uniqueData);
 
-            setOriginalRoutes(uniqueData);
-            setAdjustedRoutes(JSON.parse(JSON.stringify(uniqueData)));
+            setOriginalRoutes(dataWithCustomCoords);
+            setAdjustedRoutes(JSON.parse(JSON.stringify(dataWithCustomCoords)));
         } catch (e: any) {
             alert("Erro ao carregar rotas: " + e.message);
         } finally {
@@ -1986,9 +2233,10 @@ export const AjusteRota: React.FC = () => {
 
         // Consolidar clientes únicos da planilha por colaborador
         const finalData = consolidateUniqueClients(mappedData);
+        const dataWithCustomCoords = applyCustomCoordinates(finalData);
 
-        setOriginalRoutes(finalData);
-        setAdjustedRoutes(JSON.parse(JSON.stringify(finalData)));
+        setOriginalRoutes(dataWithCustomCoords);
+        setAdjustedRoutes(JSON.parse(JSON.stringify(dataWithCustomCoords)));
         setLoading(false);
         alert(`Sucesso! ${finalData.length} clientes únicos carregados da planilha.`);
     };
@@ -4151,7 +4399,19 @@ export const AjusteRota: React.FC = () => {
                                         }
                                     }
 
+                                    const colab = getColabBySectorOrName(v.Cod_Vend, v.Nome_Vendedor);
+                                    const baseLat = colab?.LatitudeBase;
+                                    const baseLng = colab?.LongitudeBase;
+                                    const fallbackCentroid = sellerCentroidsMap.get(v.Cod_Vend);
+                                    const anomaly = checkCoordinateAnomaly(v, baseLat, baseLng, fallbackCentroid);
+
                                     const isPdvHighlighted = v.Cod_Cliente === highlightedClientCode;
+                                    const isAnomalousPdv = anomaly.isAnomalous && anomaly.distKm > 80;
+
+                                    const markerFillColor = isPdvHighlighted ? '#4f46e5' : (isAnomalousPdv ? '#ef4444' : mainColor);
+                                    const markerBorderColor = isPdvHighlighted ? '#ffffff' : (isAnomalousPdv ? '#991b1b' : borderColor);
+                                    const markerWeight = isPdvHighlighted ? 4 : (isAnomalousPdv ? 3.5 : (showHeatmap ? 1.5 : borderWidth));
+                                    const markerRadius = showHeatmap ? Math.max(4, radius - 2) : (isPdvHighlighted ? radius + 3.5 : (isAnomalousPdv ? radius + 2 : radius));
 
                                     return (
                                         <CircleMarker
@@ -4162,12 +4422,12 @@ export const AjusteRota: React.FC = () => {
                                                 }
                                             }}
                                             center={[v.Lat, v.Long]}
-                                            radius={showHeatmap ? Math.max(4, radius - 2) : (isPdvHighlighted ? radius + 3.5 : radius)}
+                                            radius={markerRadius}
                                             pathOptions={{ 
-                                                fillColor: isPdvHighlighted ? '#4f46e5' : mainColor, 
-                                                color: isPdvHighlighted ? '#ffffff' : borderColor, 
-                                                fillOpacity: showHeatmap ? 0.45 : (isPdvHighlighted ? 1 : 0.92), 
-                                                weight: isPdvHighlighted ? 4 : (showHeatmap ? 1.5 : borderWidth),
+                                                fillColor: markerFillColor, 
+                                                color: markerBorderColor, 
+                                                fillOpacity: showHeatmap ? 0.45 : (isPdvHighlighted ? 1 : (isAnomalousPdv ? 1 : 0.92)), 
+                                                weight: markerWeight,
                                                 dashArray: isPdvHighlighted ? undefined : dashArray,
                                                 className: 'transition-all duration-300 ease-in-out cursor-pointer'
                                             }}
@@ -4179,6 +4439,18 @@ export const AjusteRota: React.FC = () => {
                                         >
                                             <Popup>
                                                 <div className="text-xs space-y-2 p-1 font-sans">
+                                                    {/* Banner de Alerta de Anomalia de Coordenadas */}
+                                                    {isAnomalousPdv && (
+                                                        <div className="bg-red-50 dark:bg-red-950/70 border border-red-300 dark:border-red-800 rounded-xl p-2 text-red-700 dark:text-red-300 shadow-xs">
+                                                            <div className="flex items-center gap-1.5 font-black text-[11px]">
+                                                                <span className="text-sm">⚠️</span>
+                                                                <span>GPS Distante (~{anomaly.distKm} km {anomaly.referenceType === 'base' ? 'da base' : 'do grupo'})</span>
+                                                            </div>
+                                                            <p className="text-[10px] mt-0.5 text-red-600 dark:text-red-400 font-medium">
+                                                                Localização pode estar incorreta no ERP. Ajuste as coordenadas para recalcular a rota viária correta.
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                     <div>
                                                         <div className="flex items-center justify-between gap-1 mb-1">
                                                             <span 
@@ -4266,8 +4538,21 @@ export const AjusteRota: React.FC = () => {
                                                         </div>
                                                     </div>
 
-                                                    {/* Botão para navegar até o cliente na Grade de Ajuste Fino sob demanda */}
-                                                    <div className="border-t border-slate-100 dark:border-slate-800 pt-2">
+                                                    {/* Botão para navegar até o cliente na Grade de Ajuste Fino ou Ajustar GPS */}
+                                                    <div className="border-t border-slate-100 dark:border-slate-800 pt-2 space-y-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenCoordinateModal(v)}
+                                                            className={`w-full py-1.5 px-3 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs ${
+                                                                isAnomalousPdv
+                                                                    ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                                                                    : 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800/80'
+                                                            }`}
+                                                            title="Ajustar ou corrigir coordenadas de Latitude e Longitude deste cliente"
+                                                        >
+                                                            <LocationMarkerIcon className="w-3.5 h-3.5" />
+                                                            <span>{isAnomalousPdv ? '⚠️ Corrigir Coordenadas GPS' : 'Ajustar Coordenadas GPS'}</span>
+                                                        </button>
                                                         <button
                                                             type="button"
                                                             onClick={() => handleScrollToPdvInTable(v.Cod_Cliente)}
@@ -4678,6 +4963,27 @@ export const AjusteRota: React.FC = () => {
                                                                         <span className="truncate">{v.Bairro ? `${v.Bairro} • ` : ''}{v.Cidade}</span>
                                                                     </div>
                                                                 )}
+                                                                {(() => {
+                                                                    const rColab = getColabBySectorOrName(v.Cod_Vend, v.Nome_Vendedor);
+                                                                    const rCentroid = sellerCentroidsMap.get(v.Cod_Vend);
+                                                                    const rAnom = checkCoordinateAnomaly(v, rColab?.LatitudeBase, rColab?.LongitudeBase, rCentroid);
+                                                                    if (rAnom.isAnomalous && rAnom.distKm > 80) {
+                                                                        return (
+                                                                            <div className="mt-1">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={(e) => { e.stopPropagation(); handleOpenCoordinateModal(v); }}
+                                                                                    className="inline-flex items-center gap-1 text-[9px] font-black bg-red-100 hover:bg-red-200 dark:bg-red-900/60 dark:hover:bg-red-900 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 px-2 py-0.5 rounded-full cursor-pointer transition shadow-2xs"
+                                                                                    title={`Coordenadas suspeitas (~${rAnom.distKm} km da base). Clique para ajustar.`}
+                                                                                >
+                                                                                    <span>⚠️ GPS Distante (~{rAnom.distKm} km)</span>
+                                                                                    <span className="underline ml-0.5">Corrigir</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })()}
                                                             </td>
                                                             <td className="p-3">
                                                                 {teamType === 'vendedores' ? (
@@ -4734,6 +5040,17 @@ export const AjusteRota: React.FC = () => {
                                                             </td>
                                                             <td className="p-3 text-center">
                                                                 <div className="flex items-center justify-center space-x-1.5">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleOpenCoordinateModal(v);
+                                                                        }}
+                                                                        className="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 transition p-1 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded-lg cursor-pointer"
+                                                                        title="Ajustar coordenadas GPS do cliente"
+                                                                    >
+                                                                        <LocationMarkerIcon className="w-4 h-4"/>
+                                                                    </button>
                                                                     <button
                                                                         type="button"
                                                                         onClick={(e) => {
@@ -6045,6 +6362,251 @@ export const AjusteRota: React.FC = () => {
                                     </>
                                 )}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE AJUSTE DE COORDENADAS GPS */}
+            {coordinateModalClient && (
+                <div className="fixed inset-0 z-[2000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 lg:p-6 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+                        {/* Header */}
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                                    <LocationMarkerIcon className="w-5 h-5"/>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center">
+                                        Ajustar Coordenadas GPS
+                                        <span className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                            #{coordinateModalClient.Cod_Cliente}
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Correção de Latitude e Longitude com recálculo instantâneo das rotas viárias OSRM.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleCloseCoordinateModal}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Conteúdo do Modal com Scroll */}
+                        <div className="p-6 overflow-y-auto custom-scrollbar space-y-5 flex-1">
+                            {/* Cartão de Identificação do Cliente */}
+                            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">
+                                        {coordinateModalClient.Cod_Cliente} - {coordinateModalClient.Razao_Social}
+                                    </h4>
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                                        {formatSellerDisplayName(coordinateModalClient.Cod_Vend, coordinateModalClient.Nome_Vendedor)}
+                                    </span>
+                                </div>
+                                <div className="text-xs text-slate-600 dark:text-slate-300 space-y-0.5">
+                                    <p>📍 <strong className="font-semibold">Endereço:</strong> {coordinateModalClient.Endereco || 'Não informado'}</p>
+                                    <p className="text-slate-500 dark:text-slate-400">
+                                        {coordinateModalClient.Bairro ? `Bairro: ${coordinateModalClient.Bairro} • ` : ''}
+                                        {coordinateModalClient.Cidade ? `Cidade: ${coordinateModalClient.Cidade} • ` : ''}
+                                        {coordinateModalClient.CEP ? `CEP: ${coordinateModalClient.CEP}` : ''}
+                                    </p>
+                                </div>
+
+                                {/* Alerta de Anomalia se houver */}
+                                {(() => {
+                                    const mColab = getColabBySectorOrName(coordinateModalClient.Cod_Vend, coordinateModalClient.Nome_Vendedor);
+                                    const mCentroid = sellerCentroidsMap.get(coordinateModalClient.Cod_Vend);
+                                    const mAnom = checkCoordinateAnomaly(coordinateModalClient, mColab?.LatitudeBase, mColab?.LongitudeBase, mCentroid);
+                                    if (mAnom.isAnomalous && mAnom.distKm > 80) {
+                                        return (
+                                            <div className="mt-2 p-2.5 bg-red-100/80 dark:bg-red-950/80 border border-red-300 dark:border-red-700 rounded-xl text-red-800 dark:text-red-200 text-xs">
+                                                <div className="font-black flex items-center gap-1.5">
+                                                    <span>⚠️</span>
+                                                    <span>Anomalia Geográfica Detectada: ~{mAnom.distKm} KM {mAnom.referenceType === 'base' ? 'da base residencial' : 'do centróide da rota'}!</span>
+                                                </div>
+                                                <p className="text-[11px] mt-0.5 opacity-90">
+                                                    As coordenadas atuais no ERP apontam para uma região muito distante da área de atendimento. Insira as coordenadas corretas abaixo ou copie de um cliente vizinho.
+                                                </p>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
+                            </div>
+
+                            {/* Campos de Latitude e Longitude com Botão de Geocodificação Automática */}
+                            <div className="space-y-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                        <span>🌐</span>
+                                        <span>Coordenadas Geográficas (GPS)</span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={handleGeocodeClientAddress}
+                                        disabled={isGeocodingCoord}
+                                        className="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                                    >
+                                        {isGeocodingCoord ? (
+                                            <>
+                                                <SpinnerIcon className="w-3.5 h-3.5 animate-spin"/>
+                                                <span>Buscando...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <SearchIcon className="w-3.5 h-3.5"/>
+                                                <span>Buscar por Endereço (Google/CEP)</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+
+                                {coordGeocodeFeedback && (
+                                    <div className={`p-2.5 rounded-xl text-xs font-medium border ${
+                                        coordGeocodeFeedback.type === 'success'
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
+                                            : 'bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300'
+                                    }`}>
+                                        {coordGeocodeFeedback.message}
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <span className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Latitude</span>
+                                        <input
+                                            type="text"
+                                            value={coordModalLat}
+                                            onChange={e => setCoordModalLat(e.target.value)}
+                                            placeholder="-23.853215"
+                                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <span className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Longitude</span>
+                                        <input
+                                            type="text"
+                                            value={coordModalLng}
+                                            onChange={e => setCoordModalLng(e.target.value)}
+                                            placeholder="-46.141528"
+                                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-amber-500"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Seção de Cópia de Vizinho */}
+                            <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-4">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                        <span>🏘️</span>
+                                        <span>Copiar Coordenadas de Cliente Vizinho</span>
+                                    </label>
+                                    <span className="text-[10px] text-slate-400 font-medium">
+                                        {eligibleNeighbors.length} vizinhos sugeridos
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                    Selecione um cliente da mesma rua, bairro ou região para herdar instantaneamente a localização válida.
+                                </p>
+
+                                {/* Filtro de busca na lista de vizinhos */}
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={coordNeighborSearch}
+                                        onChange={e => setCoordNeighborSearch(e.target.value)}
+                                        placeholder="Filtrar por nome, rua, código ou bairro..."
+                                        className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-slate-100 outline-none pl-8"
+                                    />
+                                    <SearchIcon className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5"/>
+                                </div>
+
+                                {/* Lista com scroll de vizinhos */}
+                                <div className="max-h-48 overflow-y-auto custom-scrollbar border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                                    {eligibleNeighbors.length === 0 ? (
+                                        <div className="p-4 text-center text-xs text-slate-400">
+                                            Nenhum cliente vizinho encontrado com coordenadas válidas.
+                                        </div>
+                                    ) : (
+                                        eligibleNeighbors.map(n => {
+                                            const isCurrentSelected = coordModalLat === String(n.Lat) && coordModalLng === String(n.Long);
+                                            return (
+                                                <div
+                                                    key={`neighbor-${n.Cod_Cliente}`}
+                                                    className="p-2.5 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs"
+                                                >
+                                                    <div className="min-w-0 flex-1 pr-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-black text-slate-800 dark:text-slate-100 truncate">
+                                                                #{n.Cod_Cliente} - {n.Razao_Social}
+                                                            </span>
+                                                            {n.Endereco && coordinateModalClient.Endereco && n.Endereco.toLowerCase().split(' ')[0] === coordinateModalClient.Endereco.toLowerCase().split(' ')[0] && (
+                                                                <span className="text-[9px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold px-1.5 py-0.2 rounded shrink-0">
+                                                                    Mesma Rua
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                                                            {n.Endereco}{n.Bairro ? ` • ${n.Bairro}` : ''}{n.Cidade ? ` • ${n.Cidade}` : ''}
+                                                        </p>
+                                                        <p className="text-[9px] font-mono text-slate-400 dark:text-slate-500">
+                                                            Lat: {n.Lat} | Long: {n.Long}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setCoordModalLat(String(n.Lat));
+                                                            setCoordModalLng(String(n.Long));
+                                                            setCoordGeocodeFeedback({
+                                                                type: 'success',
+                                                                message: `Coordenadas copiadas do cliente #${n.Cod_Cliente} (${n.Razao_Social})`
+                                                            });
+                                                        }}
+                                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer shrink-0 ${
+                                                            isCurrentSelected
+                                                                ? 'bg-emerald-600 text-white shadow-xs'
+                                                                : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                                                        }`}
+                                                    >
+                                                        {isCurrentSelected ? '✓ Coordenadas Aplicadas' : 'Copiar Coordenadas'}
+                                                    </button>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer do Modal */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                O recálculo de itinerário e circuito OSRM é instantâneo ao salvar.
+                            </span>
+                            <div className="flex items-center space-x-2 self-end">
+                                <button
+                                    type="button"
+                                    onClick={handleCloseCoordinateModal}
+                                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveCoordinates}
+                                    className="px-4 py-2 rounded-xl text-xs font-black text-white bg-amber-600 hover:bg-amber-700 shadow-md transition flex items-center space-x-1.5 cursor-pointer"
+                                >
+                                    <span>💾 Salvar e Recalcular Rota</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
