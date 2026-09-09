@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.163.0',
+    date: 'Hoje',
+    title: 'T.I.: Coluna "Data de Admissão" no Seletor e Ordenação da Grade',
+    changes: [
+      'Coluna "Data de Admissão" no Seletor: Adição formal da opção de visualização de Data de Admissão na personalização de colunas da lista de colaboradores.',
+      'Ordenação Cronológica Direta no Cabeçalho: O operador pode clicar no cabeçalho "Data de Admissão" para ordenar colaboradores de forma crescente ou decrescente.',
+      'Alinhamento Perfeito e Exportações: Célula integrada e alinhada na tabela e inclusão nos relatórios de exportação em CSV, Excel e PDF.'
+    ]
+  },
+  {
     version: '3.162.0',
     date: 'Hoje',
     title: 'T.I.: Campo Data de Admissão e Integração com Importação do R.H.',

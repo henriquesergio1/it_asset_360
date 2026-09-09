@@ -187,7 +187,7 @@ const UserManager: React.FC = () => {
     { id: 'email', label: 'E-mail' },
     { id: 'cpf', label: 'CPF' },
     { id: 'rg', label: 'RG' },
-    { id: 'hireDate', label: 'Admissão' },
+    { id: 'hireDate', label: 'Data de Admissão' },
     { id: 'sector', label: 'Setor' },
     { id: 'assetsCount', label: 'Total Ativos' },
     { id: 'activeSims', label: 'Chips SIM' },
@@ -227,7 +227,7 @@ const UserManager: React.FC = () => {
       if (visibleColumns.includes('email')) rowObj['E-mail'] = u.email || '---';
       if (visibleColumns.includes('cpf')) rowObj['CPF'] = u.cpf ? formatCPF(u.cpf) : '---';
       if (visibleColumns.includes('rg')) rowObj['RG'] = u.rg || '---';
-      if (visibleColumns.includes('hireDate')) rowObj['Admissão'] = formatDisplayDate(u.hireDate);
+      if (visibleColumns.includes('hireDate')) rowObj['Data de Admissão'] = formatDisplayDate(u.hireDate);
       if (visibleColumns.includes('sector')) rowObj['Setor / Função'] = sector?.name || '---';
       if (visibleColumns.includes('assetsCount')) rowObj['Total Ativos'] = userDevices.length + allUserSims.length;
       if (visibleColumns.includes('activeSims')) rowObj['Chips SIM'] = allUserSims.map(s => s.phoneNumber).join(', ') || '---';
@@ -342,6 +342,17 @@ const UserManager: React.FC = () => {
 
     if (sortConfig) {
       result.sort((a, b) => {
+        if (sortConfig.key === 'hireDate') {
+          const aDate = (a.hireDate || '').includes('T') ? a.hireDate.split('T')[0] : (a.hireDate || '');
+          const bDate = (b.hireDate || '').includes('T') ? b.hireDate.split('T')[0] : (b.hireDate || '');
+          if (!aDate && !bDate) return 0;
+          if (!aDate) return 1;
+          if (!bDate) return -1;
+          return sortConfig.direction === 'asc' 
+            ? aDate.localeCompare(bDate)
+            : bDate.localeCompare(aDate);
+        }
+
         const aVal = a[sortConfig.key as keyof User] || '';
         const bVal = b[sortConfig.key as keyof User] || '';
         
@@ -1571,15 +1582,10 @@ const UserManager: React.FC = () => {
     ...(visibleColumns.includes('rg') ? [{ key: 'rg', label: 'RG', minWidth: '120px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
     ...(visibleColumns.includes('hireDate') ? [{ 
       key: 'hireDate', 
-      label: 'Admissão', 
-      minWidth: '120px', 
-      sortable: true,
-      render: (u: User) => (
-        <span className="font-semibold text-slate-700 dark:text-slate-300">
-          {formatDisplayDate(u.hireDate)}
-        </span>
-      )
-    } as any] : []),
+      label: 'Data de Admissão', 
+      minWidth: '150px', 
+      sortable: true
+    } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
     ...(visibleColumns.includes('sector') ? [{ key: 'sectorId', label: 'Setor / Função', minWidth: '180px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
     ...(visibleColumns.includes('assetsCount') ? [{ key: 'assetsCount', label: 'Ativos', minWidth: '100px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
     ...(visibleColumns.includes('activeSims') ? [{ key: 'activeSims', label: 'Números de Chip', minWidth: '160px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
@@ -2028,6 +2034,11 @@ const UserManager: React.FC = () => {
                 {visibleColumns.includes('email') && <td className="px-6 py-4 truncate text-xs">{u.email}</td>}
                 {visibleColumns.includes('cpf') && <td className="px-6 py-4 font-mono text-xs truncate">{formatCPF(u.cpf)}</td>}
                 {visibleColumns.includes('rg') && <td className="px-6 py-4 font-mono text-xs truncate">{u.rg || '---'}</td>}
+                {visibleColumns.includes('hireDate') && (
+                  <td className="px-6 py-4 font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+                    {formatDisplayDate(u.hireDate)}
+                  </td>
+                )}
                 {visibleColumns.includes('sector') && (
                   <td className="px-6 py-4 truncate">
                     <span className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
