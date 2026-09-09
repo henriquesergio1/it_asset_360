@@ -202,6 +202,7 @@ export interface User {
   email: string;
   sectorId: string; 
   internalCode?: string; 
+  hireDate?: string;
   active: boolean;
   status?: UserStatus; // Adicionado para suportar status "Afastado"
   photo?: string;

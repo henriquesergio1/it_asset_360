@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.162.0',
+    date: 'Hoje',
+    title: 'T.I.: Campo Data de Admissão e Integração com Importação do R.H.',
+    changes: [
+      'Novo Campo de Data de Admissão no T.I.: Inclusão do campo estruturado no modelo do colaborador (User) e no formulário de cadastro/edição de T.I.',
+      'Importação e Sincronização Inteligente RH → TI: A data de admissão agora é automaticamente importada em novos cadastros e comparada na central de atualizações.',
+      'Correção de Formatação e Invalid Date: Eliminação definitiva do erro de exibição de data inválida na pré-visualização e comparador de alterações, com formatação padronizada em DD/MM/AAAA.'
+    ]
+  },
+  {
     version: '3.161.0',
     date: 'Hoje',
     title: 'RH: Unificação do Campo Cargo / Função Selecionável no Cadastro de Colaborador',

@@ -26,6 +26,18 @@ import FilePreviewModal from './FilePreviewModal';
 import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
 import { useRef } from 'react';
 
+const formatDisplayDate = (val?: string) => {
+  if (!val) return '---';
+  const clean = val.includes('T') ? val.split('T')[0] : val.substring(0, 10);
+  if (!clean || clean.startsWith('1900-')) return '---';
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    if (y && m && d) return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+  }
+  return clean;
+};
+
 const UserManager: React.FC = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -175,6 +187,7 @@ const UserManager: React.FC = () => {
     { id: 'email', label: 'E-mail' },
     { id: 'cpf', label: 'CPF' },
     { id: 'rg', label: 'RG' },
+    { id: 'hireDate', label: 'Admissão' },
     { id: 'sector', label: 'Setor' },
     { id: 'assetsCount', label: 'Total Ativos' },
     { id: 'activeSims', label: 'Chips SIM' },
@@ -214,6 +227,7 @@ const UserManager: React.FC = () => {
       if (visibleColumns.includes('email')) rowObj['E-mail'] = u.email || '---';
       if (visibleColumns.includes('cpf')) rowObj['CPF'] = u.cpf ? formatCPF(u.cpf) : '---';
       if (visibleColumns.includes('rg')) rowObj['RG'] = u.rg || '---';
+      if (visibleColumns.includes('hireDate')) rowObj['Admissão'] = formatDisplayDate(u.hireDate);
       if (visibleColumns.includes('sector')) rowObj['Setor / Função'] = sector?.name || '---';
       if (visibleColumns.includes('assetsCount')) rowObj['Total Ativos'] = userDevices.length + allUserSims.length;
       if (visibleColumns.includes('activeSims')) rowObj['Chips SIM'] = allUserSims.map(s => s.phoneNumber).join(', ') || '---';
@@ -1339,6 +1353,7 @@ const UserManager: React.FC = () => {
     { label: 'CPF',                  rhKey: 'cpf',            tiKey: 'cpf' },
     { label: 'RG',                   rhKey: 'rg',             tiKey: 'rg' },
     { label: 'PIS',                  rhKey: 'pis',            tiKey: 'pis' },
+    { label: 'Data de Admissão',     rhKey: 'hireDate',       tiKey: 'hireDate' },
     { label: 'E-mail Corporativo',   rhKey: 'emailCorporate', tiKey: 'email' },
     { label: 'Telefone Corporativo', rhKey: 'corporatePhone', tiKey: 'phone' },
     { label: 'Telefone Pessoal',     rhKey: 'personalPhone',  tiKey: 'personalPhone' },
@@ -1368,6 +1383,15 @@ const UserManager: React.FC = () => {
       for (const mapping of RH_TI_FIELD_MAP) {
         const rhVal = String((rc as any)[mapping.rhKey] || '').trim();
         const tiVal = String((tiUser as any)[mapping.tiKey] || '').trim();
+
+        if (mapping.rhKey === 'hireDate') {
+          const cleanRhDate = rhVal.includes('T') ? rhVal.split('T')[0] : rhVal.substring(0, 10);
+          const cleanTiDate = tiVal.includes('T') ? tiVal.split('T')[0] : tiVal.substring(0, 10);
+          if (cleanRhDate && !cleanRhDate.startsWith('1900-') && cleanRhDate !== cleanTiDate) {
+            diffs.push({ ...mapping, rhValue: cleanRhDate, tiValue: cleanTiDate });
+          }
+          continue;
+        }
 
         const isNumericDoc = ['cpf', 'rg', 'pis', 'cep', 'zipCode', 'phone', 'corporatePhone', 'personalPhone'].includes(mapping.rhKey) ||
                              ['cpf', 'rg', 'pis', 'zipCode', 'phone', 'personalPhone'].includes(mapping.tiKey);
@@ -1490,7 +1514,7 @@ const UserManager: React.FC = () => {
       personalPhone: cleanDocument(colab.personalPhone),
       gender: colab.gender || 'Masculino',
       birthDate: colab.birthDate || '',
-      hireDate: colab.hireDate || new Date().toISOString().split('T')[0],
+      hireDate: colab.hireDate ? (colab.hireDate.includes('T') ? colab.hireDate.split('T')[0] : colab.hireDate.substring(0, 10)) : (new Date().toISOString().split('T')[0]),
       notes: 'Importado automaticamente do módulo de R.H.',
       photo: colab.photo || '',
       terms: [],
@@ -1508,6 +1532,7 @@ const UserManager: React.FC = () => {
     // Monta o formData com os dados atuais do TI + override dos campos divergentes do RH
     const addressStr = [rc.street, rc.number, rc.complement, rc.neighborhood, rc.city, rc.state]
       .filter(Boolean).join(', ');
+    const cleanRhHireDate = rc.hireDate ? (rc.hireDate.includes('T') ? rc.hireDate.split('T')[0] : rc.hireDate.substring(0, 10)) : '';
     setEditingId(tiUser.id);
     setFormData({
       ...tiUser,
@@ -1515,6 +1540,7 @@ const UserManager: React.FC = () => {
       cpf: cleanDocument(rc.cpf || tiUser.cpf),
       rg: cleanDocument(rc.rg || tiUser.rg),
       pis: cleanDocument(rc.pis || tiUser.pis),
+      hireDate: cleanRhHireDate || tiUser.hireDate || '',
       email: rc.emailCorporate || rc.emailPersonal || tiUser.email,
       sectorId: rc.sectorId || tiUser.sectorId,
       phone: cleanDocument(rc.corporatePhone || tiUser.phone),
@@ -1543,6 +1569,17 @@ const UserManager: React.FC = () => {
     ...(visibleColumns.includes('email') ? [{ key: 'email', label: 'E-mail', minWidth: '200px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
     ...(visibleColumns.includes('cpf') ? [{ key: 'cpf', label: 'CPF', minWidth: '140px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
     ...(visibleColumns.includes('rg') ? [{ key: 'rg', label: 'RG', minWidth: '120px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
+    ...(visibleColumns.includes('hireDate') ? [{ 
+      key: 'hireDate', 
+      label: 'Admissão', 
+      minWidth: '120px', 
+      sortable: true,
+      render: (u: User) => (
+        <span className="font-semibold text-slate-700 dark:text-slate-300">
+          {formatDisplayDate(u.hireDate)}
+        </span>
+      )
+    } as any] : []),
     ...(visibleColumns.includes('sector') ? [{ key: 'sectorId', label: 'Setor / Função', minWidth: '180px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
     ...(visibleColumns.includes('assetsCount') ? [{ key: 'assetsCount', label: 'Ativos', minWidth: '100px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
     ...(visibleColumns.includes('activeSims') ? [{ key: 'activeSims', label: 'Números de Chip', minWidth: '160px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
@@ -2141,6 +2178,16 @@ const UserManager: React.FC = () => {
                         <option value={UserStatus.ACTIVE}>Ativo</option>
                         <option value={UserStatus.ON_LEAVE}>Afastado (INSS/Licença)</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Data de Admissão</label>
+                      <input 
+                        disabled={isViewOnly} 
+                        type="date" 
+                        className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white" 
+                        value={formData.hireDate ? (formData.hireDate.includes('T') ? formData.hireDate.split('T')[0] : formData.hireDate.substring(0, 10)) : ''} 
+                        onChange={e => setFormData({...formData, hireDate: e.target.value})} 
+                      />
                     </div>
 
                     <div className="md:col-span-2 border-t border-slate-200 dark:border-slate-700 pt-6 mt-2">
@@ -2951,8 +2998,17 @@ const UserManager: React.FC = () => {
                         <tbody className="divide-y divide-amber-500/20">
                           {diffs.map((d, idx) => {
                             const isSectorField = d.rhKey === 'sectorId';
-                            const rhDisplay = isSectorField ? (sectors.find(s => s.id === d.rhValue)?.name || d.rhValue) : d.rhValue;
-                            const tiDisplay = isSectorField ? (sectors.find(s => s.id === d.tiValue)?.name || d.tiValue) : d.tiValue;
+                            const isDateField = d.rhKey === 'hireDate';
+                            const rhDisplay = isSectorField 
+                              ? (sectors.find(s => s.id === d.rhValue)?.name || d.rhValue) 
+                              : isDateField 
+                                ? formatDisplayDate(d.rhValue) 
+                                : d.rhValue;
+                            const tiDisplay = isSectorField 
+                              ? (sectors.find(s => s.id === d.tiValue)?.name || d.tiValue) 
+                              : isDateField 
+                                ? formatDisplayDate(d.tiValue) 
+                                : d.tiValue;
 
                             return (
                               <tr key={idx} className="bg-white/40 dark:bg-slate-900/40">
@@ -2991,7 +3047,7 @@ const UserManager: React.FC = () => {
                     <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
                       <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Admissão</p>
                       <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                        {rc.hireDate ? new Date(rc.hireDate + 'T12:00:00').toLocaleDateString('pt-BR') : '---'}
+                        {formatDisplayDate(rc.hireDate)}
                       </p>
                     </div>
                   </div>
