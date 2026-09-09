@@ -673,7 +673,7 @@ const getSellerQuinzenaStats = (sellerId: number, routes: VisitaPrevista[]): Qui
 
 // Seletor de Colaborador com Busca em Tempo Real e Ordenação por Setor
 const SearchableSellerSelect: React.FC<{
-    sellers: { id: number; name: string }[];
+    sellers: { id: number; name: string; clientCount?: number }[];
     value: string;
     onChange: (sellerId: string) => void;
 }> = ({ sellers, value, onChange }) => {
@@ -722,20 +722,24 @@ const SearchableSellerSelect: React.FC<{
         );
     }, [sellers, searchTerm]);
 
+    const totalScopePdvs = useMemo(() => {
+        return sellers.reduce((acc, s) => acc + (s.clientCount || 0), 0);
+    }, [sellers]);
+
     const selectedSellerObj = sellers.find(s => String(s.id) === value);
     const isAllSelected = !value || value === 'ALL';
     const displayText = selectedSellerObj
         ? (selectedSellerObj.name.startsWith(`${selectedSellerObj.id} - `)
-            ? selectedSellerObj.name
-            : `${selectedSellerObj.id} - ${selectedSellerObj.name}`)
-        : `Todos os Vendedores (${sellers.length})`;
+            ? `${selectedSellerObj.name}${selectedSellerObj.clientCount !== undefined ? ` (${selectedSellerObj.clientCount} PDVs)` : ''}`
+            : `${selectedSellerObj.id} - ${selectedSellerObj.name}${selectedSellerObj.clientCount !== undefined ? ` (${selectedSellerObj.clientCount} PDVs)` : ''}`)
+        : `Todos os Vendedores (${sellers.length} colabs • ${totalScopePdvs} PDVs)`;
 
     return (
         <div className="relative inline-flex items-center space-x-1" ref={containerRef}>
             <button
                 type="button"
                 onClick={() => setIsOpen(prev => !prev)}
-                className="flex items-center justify-between min-w-[220px] max-w-[280px] bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white shadow-sm transition outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                className="flex items-center justify-between min-w-[240px] max-w-[320px] bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white shadow-sm transition outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
                 <span className="truncate mr-2">
                     {displayText}
@@ -758,7 +762,7 @@ const SearchableSellerSelect: React.FC<{
             )}
 
             {isOpen && (
-                <div className="absolute left-0 top-full mt-1.5 w-72 max-w-[90vw] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
+                <div className="absolute left-0 top-full mt-1.5 w-80 max-w-[90vw] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
                     {/* Campo de Busca */}
                     <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/60">
                         <div className="relative flex items-center">
@@ -804,6 +808,9 @@ const SearchableSellerSelect: React.FC<{
                                         TODOS
                                     </span>
                                     <span className="truncate font-bold">Todos os Vendedores ({sellers.length})</span>
+                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold shrink-0">
+                                        • {totalScopePdvs} PDVs
+                                    </span>
                                 </div>
                                 {isAllSelected && (
                                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shrink-0 ml-2" />
@@ -832,11 +839,16 @@ const SearchableSellerSelect: React.FC<{
                                                 : 'hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200'
                                         }`}
                                     >
-                                        <div className="flex items-center space-x-2 truncate">
+                                        <div className="flex items-center space-x-2 truncate min-w-0">
                                             <span className="font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-[11px] text-slate-700 dark:text-slate-300 font-bold shrink-0">
                                                 {seller.id}
                                             </span>
-                                            <span className="truncate">{seller.name.replace(new RegExp(`^${seller.id}\\s*-\\s*`), '')}</span>
+                                            <span className="truncate font-semibold">{seller.name.replace(new RegExp(`^${seller.id}\\s*-\\s*`), '')}</span>
+                                            {seller.clientCount !== undefined && (
+                                                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold shrink-0 ml-auto mr-1">
+                                                    ({seller.clientCount} PDVs)
+                                                </span>
+                                            )}
                                         </div>
                                         {isSelected && (
                                             <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shrink-0 ml-2" />
@@ -1306,15 +1318,24 @@ export const AjusteRota: React.FC = () => {
 
     // Vendedores disponíveis conforme escopo
     const availableSellers = useMemo(() => {
-        const map = new Map<number, { id: number; name: string; supId: string }>();
+        const map = new Map<number, { id: number; name: string; supId: string; clientCount: number }>();
+        const uniqueClientsMap = new Map<number, Set<number>>();
         adjustedRoutes.forEach(r => {
             const supId = r.Cod_Supervisor ? String(r.Cod_Supervisor) : 'SEM_SUPERVISOR';
             if (scopeMode === 'equipe' && selectedSupervisor && supId !== selectedSupervisor) {
                 return;
             }
             if (!map.has(r.Cod_Vend)) {
-                map.set(r.Cod_Vend, { id: r.Cod_Vend, name: formatSellerDisplayName(r.Cod_Vend, r.Nome_Vendedor), supId });
+                map.set(r.Cod_Vend, { id: r.Cod_Vend, name: formatSellerDisplayName(r.Cod_Vend, r.Nome_Vendedor), supId, clientCount: 0 });
+                uniqueClientsMap.set(r.Cod_Vend, new Set());
             }
+            if (r.Cod_Cliente) {
+                uniqueClientsMap.get(r.Cod_Vend)?.add(r.Cod_Cliente);
+            }
+        });
+        uniqueClientsMap.forEach((clients, vId) => {
+            const seller = map.get(vId);
+            if (seller) seller.clientCount = clients.size;
         });
         return Array.from(map.values()).sort((a, b) => {
             const numA = Number(a.id);

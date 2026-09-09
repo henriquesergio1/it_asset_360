@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.148.0',
+    date: 'Hoje',
+    title: 'Fuel360: Contador de PDVs por Colaborador no Seletor de Busca',
+    changes: [
+      'Contador Individual de PDVs: Exibição da quantidade total de clientes/visitas da carteira ao lado de cada vendedor no dropdown (ex: 101 Michele Goncalves (89 PDVs)).',
+      'Totalizador Consolidado: Exibição do somatório total de colaboradores e PDVs do escopo na opção "Todos os Vendedores".'
+    ]
+  },
+  {
     version: '3.147.1',
     date: 'Hoje',
     title: 'Fuel360: Desmarcar Vendedor e Seleção de Todos os Colaboradores',
