@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.153.0',
+    date: 'Hoje',
+    title: 'Fuel360: Distinção Precisa entre PDVs na Carteira e Visitas por Ciclo e Mês',
+    changes: [
+      'Clareza de PDVs vs. Visitas: Diferenciação precisa na Grade de Ajuste Fino entre o número de clientes físicos cadastrados na carteira (PDVs) e a demanda real de atendimentos periódicos.',
+      'Badge Enriquecido no Cabeçalho: Exibição transparente de "PDVs (Carteira)" e da estimativa mensal consolidada de visitas com base na periodicidade (Semanais: 4x/mês, Quinzenais: 2x/mês), detalhando atendimentos nas Semanas 1/3 e 2/4.',
+      'Cabeçalho Sanfona Diário Contextual: Exibição da quantidade de PDVs cadastrados no dia ao lado da quantidade exata de visitas executadas em cada ciclo semanal (Sem 1/3 e Sem 2/4).',
+      'Harmonização das Métricas Operacionais: Resumos e tooltips atualizados para eliminar ambiguidades no acompanhamento comercial e supervisão de rotas.'
+    ]
+  },
+  {
     version: '3.152.0',
     date: 'Hoje',
     title: 'Fuel360: Clientes Máximos Diários Opcional e Correção de Conservação de Visitas',

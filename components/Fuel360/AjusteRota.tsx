@@ -1877,6 +1877,7 @@ export const AjusteRota: React.FC = () => {
         const diffPdvs = Math.abs(totalPdvs13 - totalPdvs24);
         const maxPdvs = Math.max(totalPdvs13, totalPdvs24);
         const imbalancePct = maxPdvs > 0 ? Math.round((diffPdvs / maxPdvs) * 100) : 0;
+        const totalVisitsMonth = (totalPdvs13 * 2) + (totalPdvs24 * 2);
 
         return {
             uniqueClientsCount: uniqueClients.length,
@@ -1887,6 +1888,7 @@ export const AjusteRota: React.FC = () => {
             dayMap,
             totalPdvs13,
             totalPdvs24,
+            totalVisitsMonth,
             totalKm13: Math.round(totalKm13 * 10) / 10,
             totalKm24: Math.round(totalKm24 * 10) / 10,
             totalTime13,
@@ -3040,7 +3042,7 @@ export const AjusteRota: React.FC = () => {
         const escopoDesc = scopeMode === 'vendedor' 
             ? 'do vendedor selecionado' 
             : (scopeMode === 'equipe' ? 'da equipe de supervisão selecionada' : 'geral');
-        alert(`Otimização e Roteirização Concluída (${escopoDesc})!\n\n• Circuito fechado diário: Base ➜ Clientes ➜ Retorno à Base.\n• Algoritmo TSP 2-Opt aplicado: eliminação de cruzamentos e menor percurso.\n• Zoneamento por microrregiões contíguas preservado.\n• Carteiras mantidas 100% blindadas por colaborador.\n• Total de visitas sequenciadas: ${result ? result.length : 0}`);
+        alert(`Otimização e Roteirização Concluída (${escopoDesc})!\n\n• Circuito fechado diário: Base ➜ Clientes ➜ Retorno à Base.\n• Algoritmo TSP 2-Opt aplicado: eliminação de cruzamentos e menor percurso.\n• Zoneamento por microrregiões contíguas preservado.\n• Carteiras mantidas 100% blindadas por colaborador.\n• Total de PDVs/clientes roteirizados: ${result ? result.length : 0}`);
     };
 
     // SIMULAÇÃO DE EXTINÇÃO E REDISTRIBUIÇÃO DE SETORES COM BALANCEAMENTO EQUILIBRADO
@@ -5441,9 +5443,20 @@ export const AjusteRota: React.FC = () => {
                                             <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center shrink-0">
                                                 <ClipboardListIcon className="w-4 h-4 mr-1.5 text-indigo-600"/> Grade de Ajuste Fino
                                             </h3>
-                                            <span className="text-[10px] font-black bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-200/60 dark:border-indigo-800">
-                                                {scopedAdjustedRoutes.length} visitas
-                                            </span>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span 
+                                                    className="text-[10px] font-black bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-200/60 dark:border-indigo-800 cursor-help"
+                                                    title={`Carteira de clientes físicos ativos: ${scopedAdjustedRoutes.length} PDVs únicos cadastrados.`}
+                                                >
+                                                    {scopedAdjustedRoutes.length} {scopedAdjustedRoutes.length === 1 ? 'PDV' : 'PDVs'} (Carteira)
+                                                </span>
+                                                <span 
+                                                    className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 cursor-help"
+                                                    title={`Demanda real de visitas: ~${operationalSummary.totalVisitsMonth} atendimentos/mês estimados com base na periodicidade (Semanais: 4x/mês, Quinzenais: 2x/mês).\n• Semanas 1 e 3: ${operationalSummary.totalPdvs13} visitas/sem\n• Semanas 2 e 4: ${operationalSummary.totalPdvs24} visitas/sem`}
+                                                >
+                                                    ~{operationalSummary.totalVisitsMonth} visitas/mês <span className="text-[9px] text-slate-400 font-normal">({operationalSummary.totalPdvs13} sem 1/3 • {operationalSummary.totalPdvs24} sem 2/4)</span>
+                                                </span>
+                                            </div>
                                         </div>
 
                                         {/* Alternador de Modo de Visualização (Sanfona por Dia vs Lista Contínua) */}
@@ -5584,7 +5597,7 @@ export const AjusteRota: React.FC = () => {
                                                                 ? 'bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-400 opacity-60 hover:opacity-100 hover:text-slate-700 dark:hover:text-slate-200'
                                                                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400'
                                                     }`}
-                                                    title={`Clique para filtrar ${day}. Total: ${count} atendimentos${displayKm ? ` • ~${displayKm} km estimados` : ''}`}
+                                                    title={`Clique para filtrar ${day}. ${selectedQuinzenaFilter === 'ALL' ? `${count} PDVs cadastrados` : `${count} visitas no ciclo ${selectedQuinzenaFilter === '1_3' ? '1/3' : '2/4'}`}${displayKm ? ` • ~${displayKm} km estimados` : ''}`}
                                                 >
                                                     <span className="uppercase font-semibold">{shortName}:</span>
                                                     <span className={isSelected ? 'text-white font-black' : 'text-indigo-600 dark:text-indigo-400 font-black'}>
@@ -5732,11 +5745,17 @@ export const AjusteRota: React.FC = () => {
                                                             {day}
                                                         </span>
                                                         <span className={`text-xs font-black ${isUnallocated ? 'text-red-700 dark:text-red-300' : 'text-slate-800 dark:text-slate-200'}`}>
-                                                            {dayRoutes.length} {dayRoutes.length === 1 ? 'visita' : 'visitas'}
+                                                            {isUnallocated 
+                                                                ? `${dayRoutes.length} ${dayRoutes.length === 1 ? 'PDV excedente' : 'PDVs excedentes'}`
+                                                                : `${dayRoutes.length} ${dayRoutes.length === 1 ? 'PDV na Carteira' : 'PDVs na Carteira'}`
+                                                            }
                                                         </span>
                                                         {!isUnallocated && dayRoutes.length > 0 && (
-                                                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200/80 dark:border-slate-700 shadow-2xs">
-                                                                Sem 1/3: <strong className="text-amber-700 dark:text-amber-400 font-black">{dayMetrics?.pdvs13 ?? 0}</strong> • Sem 2/4: <strong className="text-fuchsia-700 dark:text-fuchsia-400 font-black">{dayMetrics?.pdvs24 ?? 0}</strong>
+                                                            <span 
+                                                                className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200/80 dark:border-slate-700 shadow-2xs"
+                                                                title={`Atendimentos reais por ciclo semanal neste dia:\n• Semanas 1 e 3: ${dayMetrics?.pdvs13 ?? 0} visitas\n• Semanas 2 e 4: ${dayMetrics?.pdvs24 ?? 0} visitas`}
+                                                            >
+                                                                Sem 1/3: <strong className="text-amber-700 dark:text-amber-400 font-black">{dayMetrics?.pdvs13 ?? 0} visitas</strong> • Sem 2/4: <strong className="text-fuchsia-700 dark:text-fuchsia-400 font-black">{dayMetrics?.pdvs24 ?? 0} visitas</strong>
                                                             </span>
                                                         )}
                                                     </div>
@@ -5830,7 +5849,7 @@ export const AjusteRota: React.FC = () => {
                                                 {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
                                             </span>
                                             <span className="font-bold text-slate-500 dark:text-slate-400">
-                                                Total no Escopo: {scopedAdjustedRoutes.length} PDVs
+                                                Total no Escopo: {scopedAdjustedRoutes.length} PDVs (~{operationalSummary.totalVisitsMonth} visitas/mês)
                                             </span>
                                         </div>
                                     )}
@@ -5873,7 +5892,7 @@ export const AjusteRota: React.FC = () => {
                                                 {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
                                             </span>
                                             <span className="font-bold text-slate-500 dark:text-slate-400">
-                                                Total no Escopo: {scopedAdjustedRoutes.length} PDVs
+                                                Total no Escopo: {scopedAdjustedRoutes.length} PDVs (~{operationalSummary.totalVisitsMonth} visitas/mês)
                                             </span>
                                         </div>
                                     )}
@@ -6482,7 +6501,7 @@ export const AjusteRota: React.FC = () => {
                                     {operationalSummary.uniqueClientsCount} <span className="text-xs font-normal text-slate-500">PDVs</span>
                                 </div>
                                 <span className="text-[9px] text-slate-500">
-                                    {operationalSummary.semanalCount} Sem. • {operationalSummary.quinzenal13Count + operationalSummary.quinzenal24Count} Quinz.
+                                    {operationalSummary.semanalCount} Sem. • {operationalSummary.quinzenal13Count + operationalSummary.quinzenal24Count} Quinz. • ~{operationalSummary.totalVisitsMonth} vis/mês
                                 </span>
                             </div>
 
@@ -7522,7 +7541,7 @@ export const AjusteRota: React.FC = () => {
                                         const sellers = capacityOverflowData.sellers;
                                         setShowCapacityModal(false);
                                         const result = await runOptimizationForSellers(sellers, adjustedRoutes, true);
-                                        alert(`Otimização Concluída Flexibilizando Tempo!\n\n• 100% dos clientes foram atendidos (${result ? result.length : 0} visitas).\n• Jornada distribuída equilibradamente entre os dias ativos.\n• Microrregiões contíguas e circuitos fechados OSRM gerados com sucesso.`);
+                                        alert(`Otimização Concluída Flexibilizando Tempo!\n\n• 100% dos clientes foram atendidos (${result ? result.length : 0} PDVs).\n• Jornada distribuída equilibradamente entre os dias ativos.\n• Microrregiões contíguas e circuitos fechados OSRM gerados com sucesso.`);
                                     }}
                                     className="px-4 py-2.5 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition flex items-center justify-center space-x-1.5 cursor-pointer"
                                 >
