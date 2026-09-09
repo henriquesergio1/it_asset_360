@@ -462,7 +462,8 @@ function optimizeDayCircuit2Opt<T extends { lat: number; lng: number }>(
     return fullTour.slice(1, -1).map(stop => stop.item!);
 }
 
-// Heurística de Roteirização TSP Circuito Fechado (Base -> Clientes -> Base) com Matriz Viária Real OSRM e 2-Opt Local Search
+// Heurística Avançada de Roteirização TSP Circuito Fechado (Base -> Clientes -> Base)
+// Combina Inserção Mais Econômica (Cheapest Insertion) com Busca Local Híbrida 2-Opt + Or-Opt e Matriz Viária Real OSRM
 async function optimizeDayCircuitWithOSRM<T extends { lat: number; lng: number }>(
     base: { lat: number; lng: number },
     clients: T[]
@@ -494,44 +495,76 @@ async function optimizeDayCircuitWithOSRM<T extends { lat: number; lng: number }
         return calcDist(pA.lat, pA.lng, pB.lat, pB.lng) * 1.18;
     };
 
-    // 1. Fase de Construção: Vizinho Mais Próximo (Nearest Neighbor) a partir da Base (índice 0)
-    const unvisited = clients.map((c, i) => ({ item: c, origIdx: i + 1 }));
-    const orderedStops: { item: T; origIdx: number }[] = [];
-    let curIdx = 0;
-    let curPoint = { lat: base.lat, lng: base.lng };
+    type TourNode = {
+        lat: number;
+        lng: number;
+        origIdx: number;
+        item?: T;
+    };
+
+    // 1. Fase de Construção: Inserção Mais Econômica (Cheapest Insertion)
+    // Localiza o cliente mais distante da base como semente externa do circuito
+    let farthestIdx = 1;
+    let maxBaseDist = -1;
+    for (let i = 0; i < clients.length; i++) {
+        const d = getCost(0, i + 1, base, clients[i]);
+        if (d > maxBaseDist) {
+            maxBaseDist = d;
+            farthestIdx = i + 1;
+        }
+    }
+
+    const unvisited = clients
+        .map((c, i) => ({ item: c, origIdx: i + 1 }))
+        .filter(c => c.origIdx !== farthestIdx);
+
+    const fullTour: TourNode[] = [
+        { lat: base.lat, lng: base.lng, origIdx: 0 },
+        { lat: clients[farthestIdx - 1].lat, lng: clients[farthestIdx - 1].lng, origIdx: farthestIdx, item: clients[farthestIdx - 1] },
+        { lat: base.lat, lng: base.lng, origIdx: 0 }
+    ];
 
     while (unvisited.length > 0) {
-        let nearestPos = 0;
-        let minCost = Infinity;
+        let bestUnvisitedIdx = 0;
+        let bestInsertPos = 1;
+        let minCostIncrease = Infinity;
 
-        for (let i = 0; i < unvisited.length; i++) {
-            const cost = getCost(curIdx, unvisited[i].origIdx, curPoint, unvisited[i].item);
-            if (cost < minCost) {
-                minCost = cost;
-                nearestPos = i;
+        for (let u = 0; u < unvisited.length; u++) {
+            const candidate = unvisited[u];
+            for (let edgeIdx = 0; edgeIdx < fullTour.length - 1; edgeIdx++) {
+                const nodeA = fullTour[edgeIdx];
+                const nodeB = fullTour[edgeIdx + 1];
+
+                const currentEdgeCost = getCost(nodeA.origIdx, nodeB.origIdx, nodeA, nodeB);
+                const newEdgesCost = getCost(nodeA.origIdx, candidate.origIdx, nodeA, candidate.item) +
+                                     getCost(candidate.origIdx, nodeB.origIdx, candidate.item, nodeB);
+                const costIncrease = newEdgesCost - currentEdgeCost;
+
+                if (costIncrease < minCostIncrease) {
+                    minCostIncrease = costIncrease;
+                    bestInsertPos = edgeIdx + 1;
+                    bestUnvisitedIdx = u;
+                }
             }
         }
 
-        const next = unvisited.splice(nearestPos, 1)[0];
-        orderedStops.push(next);
-        curIdx = next.origIdx;
-        curPoint = { lat: next.item.lat, lng: next.item.lng };
+        const chosen = unvisited.splice(bestUnvisitedIdx, 1)[0];
+        fullTour.splice(bestInsertPos, 0, {
+            lat: chosen.item.lat,
+            lng: chosen.item.lng,
+            origIdx: chosen.origIdx,
+            item: chosen.item
+        });
     }
 
-    // 2. Fase de Melhoria: Busca Local 2-Opt em Circuito Fechado [Base, ...orderedStops, Base]
-    const fullTour: { lat: number; lng: number; isBase: boolean; origIdx: number; item?: T }[] = [
-        { lat: base.lat, lng: base.lng, isBase: true, origIdx: 0 },
-        ...orderedStops.map(s => ({ lat: s.item.lat, lng: s.item.lng, isBase: false, origIdx: s.origIdx, item: s.item })),
-        { lat: base.lat, lng: base.lng, isBase: true, origIdx: 0 }
-    ];
+    // 2. Fase de Melhoria: Busca Local 2-Opt em Circuito Fechado [Base, ...clientes, Base]
+    let improved2Opt = true;
+    let iter2Opt = 0;
+    const maxIter2Opt = 60;
 
-    let improved = true;
-    let iterations = 0;
-    const maxIterations = 80;
-
-    while (improved && iterations < maxIterations) {
-        improved = false;
-        iterations++;
+    while (improved2Opt && iter2Opt < maxIter2Opt) {
+        improved2Opt = false;
+        iter2Opt++;
 
         for (let i = 1; i < fullTour.length - 2; i++) {
             for (let k = i + 1; k < fullTour.length - 1; k++) {
@@ -546,11 +579,62 @@ async function optimizeDayCircuitWithOSRM<T extends { lat: number; lng: number }
                 if (newCost < currentCost - 0.0001) {
                     const segment = fullTour.slice(i, k + 1).reverse();
                     fullTour.splice(i, segment.length, ...segment);
-                    improved = true;
+                    improved2Opt = true;
                     break;
                 }
             }
-            if (improved) break;
+            if (improved2Opt) break;
+        }
+    }
+
+    // 3. Fase de Melhoria: Busca Local Or-Opt (Relocação de blocos contíguos de 3, 2 e 1 paradas)
+    const blockSizes = [3, 2, 1];
+    let improvedOrOpt = true;
+    let iterOrOpt = 0;
+    const maxIterOrOpt = 40;
+
+    while (improvedOrOpt && iterOrOpt < maxIterOrOpt) {
+        improvedOrOpt = false;
+        iterOrOpt++;
+
+        for (const blockSize of blockSizes) {
+            if (fullTour.length - 2 <= blockSize) continue;
+
+            for (let i = 1; i <= fullTour.length - 1 - blockSize; i++) {
+                const prevNode = fullTour[i - 1];
+                const firstInBlock = fullTour[i];
+                const lastInBlock = fullTour[i + blockSize - 1];
+                const nextNode = fullTour[i + blockSize];
+
+                const removeOldEdges = getCost(prevNode.origIdx, firstInBlock.origIdx, prevNode, firstInBlock) +
+                                       getCost(lastInBlock.origIdx, nextNode.origIdx, lastInBlock, nextNode);
+                const bypassEdge = getCost(prevNode.origIdx, nextNode.origIdx, prevNode, nextNode);
+                const removalSavings = removeOldEdges - bypassEdge;
+
+                for (let j = 0; j < fullTour.length - 1; j++) {
+                    // Ignora a posição de origem do bloco e suas adjacências diretas
+                    if (j >= i - 1 && j <= i + blockSize - 1) continue;
+
+                    const targetA = fullTour[j];
+                    const targetB = fullTour[j + 1];
+
+                    const oldTargetEdge = getCost(targetA.origIdx, targetB.origIdx, targetA, targetB);
+                    const newTargetEdges = getCost(targetA.origIdx, firstInBlock.origIdx, targetA, firstInBlock) +
+                                           getCost(lastInBlock.origIdx, targetB.origIdx, lastInBlock, targetB);
+                    const insertionCost = newTargetEdges - oldTargetEdge;
+                    const netGain = removalSavings - insertionCost;
+
+                    if (netGain > 0.0005) {
+                        const block = fullTour.splice(i, blockSize);
+                        const insertIdx = j < i ? j + 1 : j + 1 - blockSize;
+                        fullTour.splice(insertIdx, 0, ...block);
+                        improvedOrOpt = true;
+                        break;
+                    }
+                }
+                if (improvedOrOpt) break;
+            }
+            if (improvedOrOpt) break;
         }
     }
 
@@ -2856,6 +2940,36 @@ export const AjusteRota: React.FC = () => {
             for (let pass = 0; pass < 6; pass++) {
                 dayCentroids = dayBuckets.map(calcDayCentroid);
 
+                // 1. Refinamento de centroides para clientes Semanais de fronteira
+                for (let i = 0; i < dayBuckets.length; i++) {
+                    for (let j = i + 1; j < dayBuckets.length; j++) {
+                        const b1 = dayBuckets[i];
+                        const b2 = dayBuckets[j];
+                        const c1 = dayCentroids[i];
+                        const c2 = dayCentroids[j];
+
+                        for (let k1 = 0; k1 < b1.semanais.length; k1++) {
+                            const cli1 = b1.semanais[k1];
+                            if (!cli1.lat || !cli1.lng) continue;
+
+                            for (let k2 = 0; k2 < b2.semanais.length; k2++) {
+                                const cli2 = b2.semanais[k2];
+                                if (!cli2.lat || !cli2.lng) continue;
+
+                                const currentDist = calcDist(cli1.lat, cli1.lng, c1.lat, c1.lng) + calcDist(cli2.lat, cli2.lng, c2.lat, c2.lng);
+                                const swappedDist = calcDist(cli1.lat, cli1.lng, c2.lat, c2.lng) + calcDist(cli2.lat, cli2.lng, c1.lat, c1.lng);
+
+                                if (swappedDist < currentDist - 0.5) {
+                                    b1.semanais[k1] = cli2;
+                                    b2.semanais[k2] = cli1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Refinamento de centroides para clientes Quinzenais 1/3
                 for (let i = 0; i < dayBuckets.length; i++) {
                     for (let j = i + 1; j < dayBuckets.length; j++) {
                         const b1 = dayBuckets[i];

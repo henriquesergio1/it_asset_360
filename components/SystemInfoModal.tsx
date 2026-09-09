@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.157.0',
+    date: 'Hoje',
+    title: 'Fuel360: Otimização Avançada de Rotas (Or-Opt, Inserção Econômica e Refinamento de Fronteiras)',
+    changes: [
+      'Construção por Inserção Mais Econômica (Cheapest Insertion): Substituição do Nearest Neighbor para evitar pernas longas de retorno à base e obter circuitos viários mais compactos.',
+      'Busca Local Combinada 2-Opt + Or-Opt: Otimização do sequenciamento diário com relocação inteligente de blocos de 1 a 3 paradas consecutivas, reduzindo quilometragem e tempo em trânsito.',
+      'Refinamento de Centroides para Clientes Semanais: Intercâmbio de PDVs semanais de fronteira entre dias vizinhos, aumentando o agrupamento geográfico sem alterar o balanceamento de carga de trabalho.',
+      'Garantia Matemática de Integridade: Preservação total de 100% dos clientes e visitas da carteira sob qualquer configuração.'
+    ]
+  },
+  {
     version: '3.156.0',
     date: 'Hoje',
     title: 'Fuel360: Correção Determinística do Botão Recolher Todos nas Sanfonas',
