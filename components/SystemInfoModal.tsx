@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.145.1',
+    date: 'Hoje',
+    title: 'Fuel360: Histórico de Auditoria no Modal de Tempos por Canal',
+    changes: [
+      'Auditoria SQL Server Visível: Exibição no rodapé do modal de quem foi o último operador e a data/hora exata em que as configurações de tempo de atendimento foram alteradas no banco corporativo.',
+      'Rastreabilidade Multioperador: Integração com o usuário autenticado na gravação dos tempos no banco corporativo (FuelCanaisAtendimento e FuelLogsSistema).'
+    ]
+  },
+  {
     version: '3.145.0',
     date: 'Hoje',
     title: 'Fuel360: Tempos de Atendimento por Canal Gravados no Banco de Dados SQL Server',

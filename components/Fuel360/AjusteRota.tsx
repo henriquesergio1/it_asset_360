@@ -871,21 +871,27 @@ export const AjusteRota: React.FC = () => {
     const [channelSaveFeedback, setChannelSaveFeedback] = useState<string | null>(null);
     const [newCustomChannelName, setNewCustomChannelName] = useState('');
     const [newCustomChannelTime, setNewCustomChannelTime] = useState(15);
+    const [lastAuditInfo, setLastAuditInfo] = useState<{ usuario?: string; dataHora?: string } | null>(null);
 
     // Carregar canais de atendimento gravados no banco de dados corporativo
     const loadChannelServiceTimes = useCallback(async () => {
         try {
             const res = await fetch('/api/fuel360/canais-atendimento');
             const data = await res.json();
-            if (data.success && Array.isArray(data.canais) && data.canais.length > 0) {
-                setDbChannelRecords(data.canais);
-                const map: Record<string, number> = {};
-                data.canais.forEach((item: any) => {
-                    if (item.Canal && item.TempoMinutos) {
-                        map[String(item.Canal).trim().toUpperCase()] = Number(item.TempoMinutos);
-                    }
-                });
-                setChannelServiceTimes(prev => ({ ...prev, ...map }));
+            if (data.success) {
+                if (data.lastAudit) {
+                    setLastAuditInfo(data.lastAudit);
+                }
+                if (Array.isArray(data.canais) && data.canais.length > 0) {
+                    setDbChannelRecords(data.canais);
+                    const map: Record<string, number> = {};
+                    data.canais.forEach((item: any) => {
+                        if (item.Canal && item.TempoMinutos) {
+                            map[String(item.Canal).trim().toUpperCase()] = Number(item.TempoMinutos);
+                        }
+                    });
+                    setChannelServiceTimes(prev => ({ ...prev, ...map }));
+                }
             }
         } catch (e) {
             console.warn('[Fuel360] Erro ao carregar canais do banco:', e);
@@ -954,10 +960,16 @@ export const AjusteRota: React.FC = () => {
             const res = await fetch('/api/fuel360/canais-atendimento/batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ canais: listToSave })
+                body: JSON.stringify({ 
+                    canais: listToSave,
+                    usuario: authUser?.Nome || authUser?.Email || 'Operador Fuel'
+                })
             });
             const data = await res.json();
             if (data.success) {
+                if (data.lastAudit) {
+                    setLastAuditInfo(data.lastAudit);
+                }
                 setChannelSaveFeedback('✅ Tempos gravados com sucesso no banco de dados corporativo!');
                 await loadChannelServiceTimes();
                 setTimeout(() => {
@@ -5695,6 +5707,30 @@ export const AjusteRota: React.FC = () => {
                                     </button>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Faixa de Auditoria do Banco de Dados */}
+                        <div className="px-4 py-2.5 bg-slate-100/80 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            <div className="flex items-center space-x-1.5">
+                                <ClockIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                                <span>
+                                    <strong className="font-bold text-slate-700 dark:text-slate-300">Última alteração no banco:</strong>{' '}
+                                    {lastAuditInfo?.usuario ? (
+                                        <span>
+                                            por <strong className="text-indigo-600 dark:text-indigo-400 font-bold">{lastAuditInfo.usuario}</strong> em{' '}
+                                            <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                                {lastAuditInfo.dataHora ? new Date(lastAuditInfo.dataHora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }) : '-'}
+                                            </span>
+                                        </span>
+                                    ) : (
+                                        <span className="italic text-slate-400">Padrão inicial do sistema</span>
+                                    )}
+                                </span>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Auditoria SQL Server Ativa
+                            </span>
                         </div>
 
                         {/* Rodapé com Ações */}

@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.145.0
+// Servidor express unificado com API e SPA React - v3.145.1
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -2732,10 +2732,12 @@ app.get('/api/fuel360/canais-atendimento', async (req, res) => {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
         const result = await pool.request().query("SELECT ID_Canal, Canal, TempoMinutos, DataAtualizacao, UsuarioAtualizacao FROM FuelCanaisAtendimento ORDER BY Canal ASC");
-        res.json({ success: true, canais: result.recordset || [] });
+        const auditRes = await pool.request().query("SELECT TOP 1 UsuarioAtualizacao as usuario, DataAtualizacao as dataHora FROM FuelCanaisAtendimento WHERE DataAtualizacao IS NOT NULL ORDER BY DataAtualizacao DESC");
+        const lastAudit = auditRes.recordset && auditRes.recordset.length > 0 ? auditRes.recordset[0] : null;
+        res.json({ success: true, canais: result.recordset || [], lastAudit });
     } catch (err) {
         console.error('[Fuel360 ERROR] Falha ao buscar canais de atendimento:', err.message);
-        res.status(500).json({ success: false, error: err.message, canais: [] });
+        res.status(500).json({ success: false, error: err.message, canais: [], lastAudit: null });
     }
 });
 
@@ -2775,11 +2777,12 @@ app.post('/api/fuel360/canais-atendimento/batch', async (req, res) => {
         await pool.request()
             .input('Usuario', sql.NVarChar(255), userName)
             .input('Acao', sql.NVarChar(255), 'ATUALIZAR_CANAIS_ATENDIMENTO')
-            .input('Detalhes', sql.NVarChar(sql.MAX), `Atualizados ${canais.length} canais de atendimento no banco corporativo.`)
+            .input('Detalhes', sql.NVarChar(sql.MAX), `Atualizados ${canais.length} canais de atendimento no banco corporativo por ${userName}.`)
             .query("INSERT INTO FuelLogsSistema (DataHora, Usuario, Acao, Detalhes) VALUES (GETDATE(), @Usuario, @Acao, @Detalhes)");
 
         const updated = await pool.request().query("SELECT ID_Canal, Canal, TempoMinutos, DataAtualizacao, UsuarioAtualizacao FROM FuelCanaisAtendimento ORDER BY Canal ASC");
-        res.json({ success: true, message: 'Canais de atendimento atualizados com sucesso.', canais: updated.recordset || [] });
+        const lastAudit = { usuario: userName, dataHora: new Date().toISOString() };
+        res.json({ success: true, message: 'Canais de atendimento atualizados com sucesso.', canais: updated.recordset || [], lastAudit });
     } catch (err) {
         console.error('[Fuel360 ERROR] Falha ao salvar canais de atendimento:', err.message);
         res.status(500).json({ success: false, error: err.message });
