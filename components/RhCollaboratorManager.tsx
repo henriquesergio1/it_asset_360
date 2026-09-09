@@ -1114,12 +1114,7 @@ export const RhCollaboratorManager: React.FC = () => {
       return;
     }
 
-    if (!form.sectorId) {
-      alert('O campo Setor é obrigatório.');
-      return;
-    }
-
-    if (!form.role || !form.role.trim()) {
+    if (!form.sectorId && (!form.role || !form.role.trim())) {
       alert('O campo Cargo / Função é obrigatório.');
       return;
     }
@@ -1178,7 +1173,8 @@ export const RhCollaboratorManager: React.FC = () => {
       street: normalizeName(form.street || ''),
       neighborhood: normalizeName(form.neighborhood || ''),
       city: normalizeName(form.city || ''),
-      role: normalizeName(form.role || ''),
+      role: normalizeName(form.role || sectors.find(s => s.id === form.sectorId)?.name || ''),
+      sectorId: form.sectorId || (form.role ? (sectors.find(s => s.name?.trim().toLowerCase() === form.role?.trim().toLowerCase())?.id || '') : ''),
       emailPersonal: (form.emailPersonal || '').trim().toLowerCase(),
       emailCorporate: (form.emailCorporate || '').trim().toLowerCase(),
       cpf: cleanDocument(form.cpf || ''),
@@ -3924,29 +3920,29 @@ export const RhCollaboratorManager: React.FC = () => {
                       </select>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Setor *</label>
-                        <select
-                          value={form.sectorId || ''}
-                          onChange={e => setForm(p => ({ ...p, sectorId: e.target.value }))}
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
-                        >
-                          <option value="">Selecione...</option>
-                          {sectors.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Cargo / Função *</label>
-                        <input
-                          type="text"
-                          value={form.role || ''}
-                          onChange={e => setForm(p => ({ ...p, role: e.target.value }))}
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Cargo / Função *</label>
+                      <select
+                        value={form.sectorId || (form.role ? (sectors.find(s => s.name?.trim().toLowerCase() === form.role?.trim().toLowerCase())?.id || '') : '')}
+                        onChange={e => {
+                          const selectedSectorId = e.target.value;
+                          const found = sectors.find(s => s.id === selectedSectorId);
+                          setForm(p => ({
+                            ...p,
+                            sectorId: selectedSectorId,
+                            role: found ? found.name : (p.role || '')
+                          }));
+                        }}
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                      >
+                        <option value="">Selecione o Cargo / Função...</option>
+                        {sectors.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                        {form.role && !sectors.some(s => s.id === form.sectorId || s.name?.trim().toLowerCase() === form.role?.trim().toLowerCase()) && (
+                          <option value={form.sectorId || form.role}>{form.role} (Atual)</option>
+                        )}
+                      </select>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

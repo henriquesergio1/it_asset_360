@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.161.0',
+    date: 'Hoje',
+    title: 'RH: Unificação do Campo Cargo / Função Selecionável no Cadastro de Colaborador',
+    changes: [
+      'Campo Único Cargo / Função Selecionável: Ajuste no formulário de cadastro e edição de colaboradores do RH, unificando os campos em um único seletor inteligente.',
+      'Sincronização Automática com Setores e Cargos: O seletor vincula instantaneamente o ID e a denominação do cargo, preservando 100% da integridade relacional com relatórios, filtros e termos.',
+      'Retrocompatibilidade Preservada: Garantia de suporte e exibição segura para registros legados ou colaboradores com descrições históricas.'
+    ]
+  },
+  {
     version: '3.160.0',
     date: 'Hoje',
     title: 'Fuel360: Filtro Rápido de Dias Sobrecarregados e Sugestão Inteligente de Troca de Dia',
