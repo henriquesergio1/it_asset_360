@@ -950,6 +950,7 @@ export const AjusteRota: React.FC = () => {
 
     // Parâmetros de Roteirização
     const [optMaxClients, setOptMaxClients] = useState(15);
+    const [optLimitClients, setOptLimitClients] = useState(false);
     const [optMaxKm, setOptMaxKm] = useState(60);
     const [optLimitKm, setOptLimitKm] = useState(false);
     const [optMaxHours, setOptMaxHours] = useState(8);
@@ -2456,7 +2457,10 @@ export const AjusteRota: React.FC = () => {
             // Capacidade semanal máxima do colaborador
             let sellerWeeklyCap = 0;
             activeDays.forEach(day => {
-                let cap = (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients;
+                let cap = Infinity;
+                if (optLimitClients) {
+                    cap = (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients;
+                }
                 if (optLimitHours) {
                     const hoursForDay = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
                     const estimatedTravelMins = 60;
@@ -2470,7 +2474,9 @@ export const AjusteRota: React.FC = () => {
                 sellerWeeklyCap += cap;
             });
 
-            const sellerOverflow = Math.max(0, visitsPerCycle - sellerWeeklyCap);
+            const sellerOverflow = (optLimitClients || optLimitHours) && sellerWeeklyCap !== Infinity
+                ? Math.max(0, visitsPerCycle - sellerWeeklyCap)
+                : 0;
             if (sellerOverflow > 0) {
                 totalOverflow += sellerOverflow;
             }
@@ -2488,13 +2494,13 @@ export const AjusteRota: React.FC = () => {
             }
 
             maxVisitsNeededTotal += visitsPerCycle;
-            totalCapacityAcrossSellers += sellerWeeklyCap;
+            totalCapacityAcrossSellers += (sellerWeeklyCap === Infinity ? visitsPerCycle : sellerWeeklyCap);
 
             sellersSummary.push({
                 sellerId,
                 sellerName,
                 totalClients: uniqueClients.length,
-                capacity: sellerWeeklyCap,
+                capacity: sellerWeeklyCap === Infinity ? uniqueClients.length : sellerWeeklyCap,
                 overflow: sellerOverflow
             });
         });
@@ -2657,7 +2663,10 @@ export const AjusteRota: React.FC = () => {
 
             const dayBuckets: DayBucket[] = activeDays.map(day => {
                 const w = getDayWeight(day);
-                let cap = (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients;
+                let cap = Infinity;
+                if (optLimitClients) {
+                    cap = (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients;
+                }
                 if (optLimitHours) {
                     const hoursForDay = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
                     const estimatedTravelMins = 60;
@@ -2852,6 +2861,7 @@ export const AjusteRota: React.FC = () => {
                                 if (swappedDist < currentDist - 0.5) {
                                     b1.quinzenais13[k1] = cli2;
                                     b2.quinzenais13[k2] = cli1;
+                                    break;
                                 }
                             }
                         }
@@ -2879,6 +2889,7 @@ export const AjusteRota: React.FC = () => {
                                 if (swappedDist < currentDist - 0.5) {
                                     b1.quinzenais24[k1] = cli2;
                                     b2.quinzenais24[k2] = cli1;
+                                    break;
                                 }
                             }
                         }
@@ -2929,6 +2940,32 @@ export const AjusteRota: React.FC = () => {
                         Data_da_Visita: c.sampleVisit.Data_da_Visita || ''
                     });
                 });
+            }
+
+            // Salvaguarda matemática estrita: Quando allowOverflow = true, garante que nenhum cliente seja omitido
+            if (allowOverflow) {
+                const resultClientCodes = new Set(result.map(r => r.Cod_Cliente));
+                const missingClients = uniqueClients.filter(c => !resultClientCodes.has(c.sampleVisit.Cod_Cliente));
+                if (missingClients.length > 0) {
+                    missingClients.forEach(c => {
+                        const targetBucket = [...dayBuckets].sort((a, b) => 
+                            (a.semanais.length + a.quinzenais13.length + a.quinzenais24.length) - 
+                            (b.semanais.length + b.quinzenais13.length + b.quinzenais24.length)
+                        )[0];
+                        const isSemanal = c.tipo === 'SEMANAL';
+                        const pFinal = isSemanal 
+                            ? 'SEMANAL' 
+                            : (c.tipo === 'QUINZENAL_1_3' ? '1 3' : '2 4');
+                        result.push({
+                            ...c.sampleVisit,
+                            Cod_Vend: sellerId,
+                            Nome_Vendedor: sellerName,
+                            Dia_Semana: targetBucket ? targetBucket.day : activeDays[0],
+                            Periodicidade: pFinal,
+                            Data_da_Visita: c.sampleVisit.Data_da_Visita || ''
+                        });
+                    });
+                }
             }
 
             // Clientes excedentes deixados sem atendimento por limite estrito de capacidade/tempo
@@ -4623,16 +4660,25 @@ export const AjusteRota: React.FC = () => {
                                 ⏱️ Limites Diários por Rota
                             </span>
 
-                            {/* Clientes Máximo / Dia */}
-                            <div className="flex items-center justify-between gap-2">
-                                <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
-                                    Clientes Máx. / Dia:
+                            {/* Clientes Máximo / Dia com Liga/Desliga */}
+                            <div className="flex items-center justify-between">
+                                <label className="flex items-center space-x-1.5 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={optLimitClients} 
+                                        onChange={(e) => setOptLimitClients(e.target.checked)}
+                                        className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                    />
+                                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                                        Limitar Clientes / Dia:
+                                    </span>
                                 </label>
                                 <input 
                                     type="number" 
                                     value={optMaxClients} 
+                                    disabled={!optLimitClients}
                                     onChange={(e) => setOptMaxClients(Math.max(1, Number(e.target.value)))}
-                                    className="w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg py-1 px-2 text-xs font-black text-right outline-none text-slate-800 dark:text-white"
+                                    className={`w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg py-1 px-2 text-xs font-black text-right outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitClients ? 'opacity-30 cursor-not-allowed' : ''}`}
                                 />
                             </div>
 

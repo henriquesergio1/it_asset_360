@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.152.0',
+    date: 'Hoje',
+    title: 'Fuel360: Clientes Máximos Diários Opcional e Correção de Conservação de Visitas',
+    changes: [
+      'Limite de Clientes/Dia Opcional: Adicionado controle liga/desliga com checkbox para o parâmetro "Limitar Clientes / Dia", tornando-o flexível e desativável a critério da operação.',
+      'Correção Crítica de Conservação de Visitas: Resolução definitiva do bug de perda progressiva de visitas nas sucessivas otimizações (89 -> 83 -> 71 -> 51), garantindo permuta atômica com interrupção correta no refinamento espacial de centroides.',
+      'Cálculo Resiliente de Capacidade: Quando limites de clientes ou horas estão desativados, a roteirização distribui uniformemente a carga sem gerar alertas indevidos de estouro de capacidade.'
+    ]
+  },
+  {
     version: '3.151.0',
     date: 'Hoje',
     title: 'Fuel360: Transferência em Massa de Clientes Sem Atendimento',
