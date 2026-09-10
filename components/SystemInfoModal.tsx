@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.168.0',
+    date: 'Hoje',
+    title: 'Layout: Integração dos Títulos na Barra Superior e Maximização do Espaço de Tela',
+    changes: [
+      'Cabeçalho Integrado na Barra Superior: O título, ícone e subtítulo contextual da tela ativa agora são exibidos diretamente na barra superior do sistema (Top Header), aproveitando o espaço ocioso e uniformizando a navegação entre os módulos.',
+      'Maximização do Espaço Útil Vertical: Remoção de cards de banner volumosos no corpo das páginas (como no Fuel360), liberando quase 100px de altura vertical para tabelas, mapas, formulários e gráficos.',
+      'Identificação Dinâmica por Cores e Ícones: Cada módulo e submenu recebe estilização e ícones específicos (Esmeralda para Fuel360, Âmbar para R.H., Azul para T.I.), com total responsividade em telas menores.'
+    ]
+  },
+  {
     version: '3.167.0',
     date: 'Hoje',
     title: 'Fuel360: Particionamento Espacial Balanceado e Distribuição Homogênea no Roteirizador',

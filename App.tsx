@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { APP_VERSION } from './constants';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, FileText, CheckSquare, Package, Calendar, Loader2, Calculator, MapPin, Navigation, TrendingUp, ClipboardList, BarChart3, Sliders, ShieldAlert } from 'lucide-react';
@@ -93,6 +93,208 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   const { settings, fetchData } = useData();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Metadados dinâmicos da página atual para exibição na barra superior (Top Header)
+  const pageMeta = useMemo(() => {
+    const path = location.pathname;
+
+    // Fuel360
+    if (path.startsWith('/fuel360')) {
+      if (path.includes('/roteirizador')) {
+        return {
+          title: 'Fuel360 - Roteirizador',
+          subtitle: 'Planejamento e clusterização inteligente de rotas comerciais',
+          icon: MapPin,
+          colorClass: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+        };
+      }
+      if (path.includes('/ajuste-rota') || path.includes('/ajuste_rota')) {
+        return {
+          title: 'Fuel360 - Ajuste de Rota',
+          subtitle: 'Otimização com particionamento balanceado e sequenciamento TSP',
+          icon: Navigation,
+          colorClass: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+        };
+      }
+      if (path.includes('/comparativo')) {
+        return {
+          title: 'Fuel360 - Previsto x Realizado',
+          subtitle: 'Auditoria de aderência de rota e quilometragem executada',
+          icon: TrendingUp,
+          colorClass: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+        };
+      }
+      if (path.includes('/simulacoes')) {
+        return {
+          title: 'Fuel360 - Simulações e Cálculos',
+          subtitle: 'Histórico de fechamento e simulações financeiras',
+          icon: ClipboardList,
+          colorClass: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+        };
+      }
+      if (path.includes('/equipe')) {
+        return {
+          title: 'Fuel360 - Equipe & Setores',
+          subtitle: 'Gestão de promotores, supervisores e bases operacionais',
+          icon: Users,
+          colorClass: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+        };
+      }
+      if (path.includes('/ausencias')) {
+        return {
+          title: 'Fuel360 - Gestão de Ausências',
+          subtitle: 'Controle de férias, atestados e afastamentos para cálculo de KM',
+          icon: Calendar,
+          colorClass: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+        };
+      }
+      if (path.includes('/relatorios')) {
+        return {
+          title: 'Fuel360 - Relatórios BI',
+          subtitle: 'Visão executiva, dashboards e relatórios analíticos de combustível',
+          icon: BarChart3,
+          colorClass: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+        };
+      }
+      if (path.includes('/config')) {
+        return {
+          title: 'Fuel360 - Parâmetros KM/L',
+          subtitle: 'Configuração de valores de combustível e consumo por veículo',
+          icon: Sliders,
+          colorClass: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+        };
+      }
+      return {
+        title: 'Fuel360 - Gestão de Reembolso & Telemetria',
+        subtitle: 'Auditoria, precisão financeira, cálculo de KM por telemetria e controle de afastamentos',
+        icon: Calculator,
+        colorClass: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+      };
+    }
+
+    // Recursos Humanos
+    if (path.startsWith('/rh')) {
+      if (path.includes('/collaborators') || path.includes('/colaboradores')) {
+        return {
+          title: 'R.H. - Colaboradores',
+          subtitle: 'Cadastro central de colaboradores, admissão, cargos e dados funcionais',
+          icon: Users,
+          colorClass: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20'
+        };
+      }
+      if (path.includes('/comodato')) {
+        return {
+          title: 'R.H. - Termos de Comodato',
+          subtitle: 'Controle de empréstimos, termos digitais e custódia de equipamentos',
+          icon: FileText,
+          colorClass: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20'
+        };
+      }
+      if (path.includes('/occurrences')) {
+        return {
+          title: 'R.H. - Faltas & Ocorrências',
+          subtitle: 'Registro de faltas, atestados médicos e ocorrências disciplinares',
+          icon: Calendar,
+          colorClass: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20'
+        };
+      }
+      if (path.includes('/assets')) {
+        return {
+          title: 'R.H. - Ativos e Consumíveis',
+          subtitle: 'Gestão de uniformes, EPIs e ativos corporativos sob guarda do RH',
+          icon: Package,
+          colorClass: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20'
+        };
+      }
+      return {
+        title: 'R.H. - Dashboard Recursos Humanos',
+        subtitle: 'Indicadores de headcount, ocorrências, comodatos e movimentações',
+        icon: LayoutDashboard,
+        colorClass: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20'
+      };
+    }
+
+    // T.I. & Geral
+    if (path === '/devices') {
+      return {
+        title: 'T.I. - Dispositivos Móveis & Tablets',
+        subtitle: 'Inventário de smartphones, tablets, IMEI e integridade de ativos',
+        icon: Smartphone,
+        colorClass: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-blue-500/20'
+      };
+    }
+    if (path === '/users') {
+      return {
+        title: 'T.I. - Colaboradores & Acessos',
+        subtitle: 'Vínculos de equipamentos, contas e inventário individual',
+        icon: Users,
+        colorClass: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-blue-500/20'
+      };
+    }
+    if (path === '/sims') {
+      return {
+        title: 'T.I. - Chips & Linhas Telefônicas',
+        subtitle: 'Gestão de operadoras, linhas corporativas e associação a aparelhos',
+        icon: Cpu,
+        colorClass: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-blue-500/20'
+      };
+    }
+    if (path === '/accounts') {
+      return {
+        title: 'T.I. - Licenças & Contas',
+        subtitle: 'Licenciamento de software, e-mails corporativos e plataformas SaaS',
+        icon: Globe,
+        colorClass: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-blue-500/20'
+      };
+    }
+    if (path === '/consumables') {
+      return {
+        title: 'T.I. - Consumíveis & Periféricos',
+        subtitle: 'Controle de estoque de cabos, carregadores, fones e suprimentos',
+        icon: Package,
+        colorClass: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-blue-500/20'
+      };
+    }
+    if (path === '/tasks') {
+      return {
+        title: 'T.I. - Gestão de Tarefas',
+        subtitle: 'Acompanhamento de manutenções, chamados e ordens de serviço',
+        icon: CheckSquare,
+        colorClass: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-blue-500/20'
+      };
+    }
+    if (path === '/reports') {
+      return {
+        title: 'T.I. - Relatórios & Auditoria',
+        subtitle: 'Extração de relatórios analíticos, logs de auditoria e exportações',
+        icon: FileText,
+        colorClass: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-blue-500/20'
+      };
+    }
+    if (path === '/operations') {
+      return {
+        title: 'T.I. - Entrega & Devolução',
+        subtitle: 'Operações de entrega física, coleta, assinatura digital e checklists',
+        icon: Repeat,
+        colorClass: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-blue-500/20'
+      };
+    }
+    if (path === '/admin') {
+      return {
+        title: 'Administração do Sistema',
+        subtitle: 'Perfis de permissão, configurações globais e segurança',
+        icon: ShieldCheck,
+        colorClass: 'bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
+      };
+    }
+
+    return {
+      title: 'T.I. - Dashboard Geral de Ativos',
+      subtitle: 'Visão executiva de dispositivos, licenças, custos e disponibilidade',
+      icon: LayoutDashboard,
+      colorClass: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-blue-500/20'
+    };
+  }, [location.pathname]);
 
   const hasRhAccess = isAdmin || hasPermission(user, 'admin') || 
     hasPermission(user, 'rh_dashboard') || hasPermission(user, 'rh_dashboard_leitura') || 
@@ -356,11 +558,26 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white dark:bg-slate-800 z-40 h-16 flex items-center justify-between px-6 shrink-0 border-b border-slate-200 dark:border-slate-700">
-          <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200">
-            <Menu size={24} />
-          </button>
+          <div className="flex items-center space-x-3 min-w-0 pr-4">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200 shrink-0 mr-1">
+              <Menu size={24} />
+            </button>
+
+            <span className={`p-2 rounded-xl border shrink-0 hidden sm:flex items-center justify-center ${pageMeta.colorClass}`}>
+              <pageMeta.icon className="h-5 w-5" />
+            </span>
+
+            <div className="min-w-0 flex flex-col justify-center">
+              <h1 className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white truncate leading-tight">
+                {pageMeta.title}
+              </h1>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate hidden md:block leading-tight mt-0.5">
+                {pageMeta.subtitle}
+              </p>
+            </div>
+          </div>
           
-          <div className="flex items-center space-x-4 ml-auto">
+          <div className="flex items-center space-x-4 shrink-0 ml-auto">
             <div 
               onClick={() => setIsSystemInfoOpen(true)}
               className="text-[10px] font-black text-slate-400 dark:text-slate-400/80 hover:text-indigo-500 cursor-pointer transition-all border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-lg uppercase tracking-wider hidden sm:block"
