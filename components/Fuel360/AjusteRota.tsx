@@ -1071,6 +1071,14 @@ export const AjusteRota: React.FC = () => {
     const [optDays, setOptDays] = useState<string[]>(['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
     const [optSatHalfPeriod, setOptSatHalfPeriod] = useState(true);
     const [optBalanceWorkload, setOptBalanceWorkload] = useState(true);
+    const [optAvoidFridayDistant, setOptAvoidFridayDistant] = useState<boolean>(() => {
+        const saved = localStorage.getItem('fuel_opt_avoid_friday_distant');
+        return saved !== null ? saved === 'true' : true;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_avoid_friday_distant', String(optAvoidFridayDistant));
+    }, [optAvoidFridayDistant]);
 
     // Tempos de Atendimento por Canal de Remuneração (Persistidos no Banco SQL Server)
     const [channelServiceTimes, setChannelServiceTimes] = useState<Record<string, number>>({
@@ -3274,6 +3282,48 @@ export const AjusteRota: React.FC = () => {
                 }
             }
 
+            // 2.5.1. Otimização de Sexta-feira: Evitar rotas distantes na sexta-feira (priorizar de segunda a quinta)
+            if (optAvoidFridayDistant && activeDays.includes('SEXTA-FEIRA')) {
+                const fridayIdx = activeDays.indexOf('SEXTA-FEIRA');
+                // Considerar apenas dias úteis (Segunda a Sexta), preservando o Sábado se estiver ativo
+                const weekdayIndices = activeDays
+                    .map((day, idx) => ({ day, idx }))
+                    .filter(item => item.day !== 'SÁBADO');
+
+                if (weekdayIndices.length > 1 && fridayIdx !== -1) {
+                    const getAvgDistFromBase = (clients: typeof uniqueClients) => {
+                        if (!clients || clients.length === 0) return 0;
+                        return clients.reduce((sum, c) => sum + (c.distFromBase || 0), 0) / clients.length;
+                    };
+
+                    const fridayDist = getAvgDistFromBase(dayAssignedClients[fridayIdx]);
+
+                    // Encontrar o dia da semana útil que possui a MENOR distância média da base (rota mais próxima/local)
+                    let minWeekdayIdx = fridayIdx;
+                    let minWeekdayDist = fridayDist;
+
+                    weekdayIndices.forEach(item => {
+                        const dist = getAvgDistFromBase(dayAssignedClients[item.idx]);
+                        if (dist < minWeekdayDist) {
+                            minWeekdayDist = dist;
+                            minWeekdayIdx = item.idx;
+                        }
+                    });
+
+                    // Se houver outro dia da semana (Segunda a Quinta) com rota mais próxima da base que a sexta, permuta
+                    if (minWeekdayIdx !== fridayIdx) {
+                        const tempClients = dayAssignedClients[fridayIdx];
+                        dayAssignedClients[fridayIdx] = dayAssignedClients[minWeekdayIdx];
+                        dayAssignedClients[minWeekdayIdx] = tempClients;
+
+                        // Ajustar cotas dos buckets correspondentes
+                        const tempQuota = dayBuckets[fridayIdx].targetQuota;
+                        dayBuckets[fridayIdx].targetQuota = dayBuckets[minWeekdayIdx].targetQuota;
+                        dayBuckets[minWeekdayIdx].targetQuota = tempQuota;
+                    }
+                }
+            }
+
             // 2.6. Distribuição Interna e Equalização Quinzenal Homogênea
             for (let d = 0; d < K; d++) {
                 const bucket = dayBuckets[d];
@@ -5398,6 +5448,23 @@ export const AjusteRota: React.FC = () => {
                                             checked={optBalanceWorkload} 
                                             onChange={(e) => setOptBalanceWorkload(e.target.checked)}
                                             className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                        />
+                                    </label>
+
+                                    <label className="flex items-center justify-between cursor-pointer pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+                                        <div className="pr-2">
+                                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 block">
+                                                Evitar Rotas Distantes na Sexta
+                                            </span>
+                                            <span className="text-[8px] text-slate-400 block">
+                                                Prioriza rotas longas de Seg a Qui (evita tráfego rodoviário de sexta)
+                                            </span>
+                                        </div>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={optAvoidFridayDistant} 
+                                            onChange={(e) => setOptAvoidFridayDistant(e.target.checked)}
+                                            className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer shrink-0"
                                         />
                                     </label>
                                 </div>
