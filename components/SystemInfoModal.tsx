@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.169.0',
+    date: 'Hoje',
+    title: 'Fuel360: Reorganização e Centralização do Layout no Ajuste e Otimização de Rotas',
+    changes: [
+      'Barra de Controle Superior Unificada: Consolidação das seleções de equipe (Vendas/Promotores), escopo de roteirização (Geral, Equipe, Vendedor), seletores dinâmicos e ações em uma única barra superior moderna e compacta, liberando altura de tela.',
+      'Sidebar Inteligente com Abas e Busca de Colaboradores: Organização da coluna lateral em abas ergonômicas (Parâmetros, Colaboradores e Ambos), com campo de busca rápida instantânea por código ou nome entre todos os 55 vendedores e limite de rolagem suave.',
+      'Centralização de Parâmetros e Ações: Reagrupamento harmônico dos limites diários de jornada, quilometragem e clientes com os controles analíticos da grade de ajuste fino, eliminando redundâncias e dispersão visual.'
+    ]
+  },
+  {
     version: '3.168.0',
     date: 'Hoje',
     title: 'Layout: Integração dos Títulos na Barra Superior e Maximização do Espaço de Tela',
