@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, AlertTriangle, FileText, Users, Cake, Shield, ChevronRight, Award, FileSignature, ChevronDown, ChevronUp, ArrowRight, AlertCircle } from 'lucide-react';
+import { Calendar, AlertTriangle, FileText, Users, Cake, Shield, ChevronRight, Award, FileSignature, ChevronDown, ChevronUp, ArrowRight, AlertCircle, ShieldAlert } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { parseLocalDateParts, formatDateBR, formatBirthdayDisplay } from '../utils/rhValidation';
 
@@ -16,6 +16,7 @@ export const RhDashboard: React.FC = () => {
 
   const [isTermsExpanded, setIsTermsExpanded] = useState(false);
   const [isValidationExpanded, setIsValidationExpanded] = useState(false);
+  const [isStabilityExpanded, setIsStabilityExpanded] = useState(true);
 
   // 1. Alertas de Férias com antecedência e data exata de vencimento
   const holidayAlerts = useMemo(() => {
@@ -138,7 +139,7 @@ export const RhDashboard: React.FC = () => {
     return items.sort((a, b) => a.day - b.day);
   }, [birthdaysThisMonth, companyAnniversariesThisMonth]);
 
-  // 3. Vencimento de Documentos e Contrato de Experiência
+  // 3. Vencimento de Documentos, Contrato de Experiência e Estabilidade
   const docExpirations = useMemo(() => {
     const alerts: { collaborator: any; type: string; daysRemaining: number; date: string }[] = [];
     const now = new Date();
@@ -192,8 +193,58 @@ export const RhDashboard: React.FC = () => {
           });
         }
       }
+
+      // Estabilidade Provisória (≤ 30 dias de expirar)
+      if (c.hasStability === 'Sim' && c.stabilityEndDate && !c.stabilityEndDate.startsWith('1900-')) {
+        const cleanStab = c.stabilityEndDate.includes('T') ? c.stabilityEndDate.split('T')[0] : c.stabilityEndDate.substring(0, 10);
+        const expStab = new Date(cleanStab + 'T12:00:00');
+        if (expStab.getFullYear() > 1900) {
+          const diffStab = expStab.getTime() - now.getTime();
+          const daysStab = Math.ceil(diffStab / (1000 * 60 * 60 * 24));
+          if (daysStab >= 0 && daysStab <= 30) {
+            alerts.push({
+              collaborator: c,
+              type: `Estabilidade ${c.stabilityType || 'CAT/CIPA'}`,
+              daysRemaining: daysStab,
+              date: cleanStab
+            });
+          }
+        }
+      }
     });
     return alerts;
+  }, [rhCollaborators]);
+
+  // 4. Alertas de Vencimento de Estabilidade Provisória (≤ 30 dias)
+  const stabilityAlerts = useMemo(() => {
+    const alerts: { collaborator: any; type: string; daysRemaining: number; date: string; status: string }[] = [];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    rhCollaborators.forEach(c => {
+      if (c.status === 'Demitido' || c.hasStability !== 'Sim' || !c.stabilityEndDate) return;
+      if (c.stabilityEndDate.startsWith('1900-') || c.stabilityEndDate === '1900-01-01') return;
+
+      const cleanDate = c.stabilityEndDate.includes('T') ? c.stabilityEndDate.split('T')[0] : c.stabilityEndDate.substring(0, 10);
+      const exp = new Date(cleanDate + 'T12:00:00');
+      if (isNaN(exp.getTime()) || exp.getFullYear() <= 1900) return;
+
+      const diffTime = exp.getTime() - now.getTime();
+      const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (days >= 0 && days <= 30) {
+        const daysText = days === 0 ? 'Vence Hoje!' : `${days} dia${days > 1 ? 's' : ''} restante${days > 1 ? 's' : ''}`;
+        alerts.push({
+          collaborator: c,
+          type: `Estabilidade ${c.stabilityType || 'CAT/CIPA'}`,
+          daysRemaining: days,
+          date: cleanDate,
+          status: `${daysText} (${formatDateBR(cleanDate)})`
+        });
+      }
+    });
+
+    return alerts.sort((a, b) => a.daysRemaining - b.daysRemaining);
   }, [rhCollaborators]);
 
   const pendingTermsCount = useMemo(() => {
@@ -284,9 +335,74 @@ export const RhDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Alertas de Comodato e Assinatura Digital do R.H. */}
-      {(pendingTerms.length > 0 || pendingApprovalSignatures.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Alertas de Comodato, Assinatura Digital e Estabilidade do R.H. */}
+      {(pendingTerms.length > 0 || pendingApprovalSignatures.length > 0 || stabilityAlerts.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* Vencimento de Estabilidade (≤ 30 dias) */}
+          {stabilityAlerts.length > 0 && (
+            <div className="bg-white dark:bg-slate-800 border-l-4 border-l-amber-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-2xl p-5 animate-fade-in shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
+                  <ShieldAlert size={20} />
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white flex items-center">
+                      Vencimento de Estabilidade
+                      <span className="ml-2 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase">
+                        {stabilityAlerts.length}
+                      </span>
+                    </h3>
+                    <button 
+                      onClick={() => setIsStabilityExpanded(!isStabilityExpanded)}
+                      className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200 transition-colors"
+                    >
+                      {isStabilityExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400/80 mb-3">
+                    Colaboradores com estabilidade (CAT / CIPA) vencendo em até 30 dias.
+                  </p>
+                  
+                  <div className={`space-y-3 transition-all duration-300 ${isStabilityExpanded ? 'max-h-[300px] overflow-y-auto pr-2' : 'max-h-[140px] overflow-hidden'}`}>
+                    {stabilityAlerts.map((alert, idx) => {
+                      const colab = alert.collaborator;
+                      const sector = sectors.find(s => s.id === colab?.sectorId);
+                      return (
+                        <div 
+                          key={idx} 
+                          onClick={() => handleOpenCollaborator(colab.id)}
+                          className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-amber-200 dark:border-amber-900/30 flex items-center justify-between group hover:border-amber-500/40 cursor-pointer transition-all"
+                          title="Clique para abrir o prontuário do colaborador"
+                        >
+                          <div className="min-w-0 flex-1 mr-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="block text-xs font-black text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                                {colab?.fullName || 'Desconhecido'}
+                              </span>
+                              <span className="px-1.5 py-0.5 text-[8px] font-black uppercase rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 shrink-0">
+                                {colab?.stabilityType || 'CAT/CIPA'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate block mt-0.5">
+                              {sector?.name || 'Sem Setor'} • {colab?.role || 'Sem Cargo'} • Fim: {formatDateBR(alert.date)}
+                            </span>
+                          </div>
+                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase shrink-0 font-bold ${
+                            alert.daysRemaining <= 5 
+                              ? 'bg-rose-600 text-white animate-pulse' 
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300'
+                          }`}>
+                            {alert.daysRemaining === 0 ? 'Vence Hoje!' : `${alert.daysRemaining}d restantes`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Termos Pendentes de R.H. */}
           {pendingTerms.length > 0 && (
             <div className="bg-white dark:bg-slate-800 border-l-4 border-l-orange-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-2xl p-5 animate-fade-in shadow-sm">

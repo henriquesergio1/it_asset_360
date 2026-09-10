@@ -97,6 +97,51 @@ const getCnhExpirationStatus = (cnhExpiration?: string, cnhNumber?: string) => {
   return null;
 };
 
+const getStabilityExpirationStatus = (hasStability?: string, stabilityEndDate?: string, stabilityType?: string) => {
+  if (hasStability !== 'Sim' || !stabilityEndDate) return null;
+  const cleanExp = stabilityEndDate.includes('T') ? stabilityEndDate.split('T')[0] : stabilityEndDate.substring(0, 10);
+  if (!cleanExp || cleanExp.length < 10 || cleanExp.startsWith('1900-')) return null;
+
+  const parts = cleanExp.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return null;
+  const [year, month, day] = parts;
+  if (year <= 1900) return null;
+
+  const expDate = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffTime = expDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) {
+    const expiredDays = Math.abs(diffDays);
+    return {
+      type: 'EXPIRED' as const,
+      days: expiredDays,
+      label: expiredDays === 0 ? `Estabilidade ${stabilityType || 'CAT/CIPA'} Vence Hoje` : `Estabilidade ${stabilityType || 'CAT/CIPA'} Expirada há ${expiredDays}d`,
+      badgeClass: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 font-bold',
+      isExpiringSoon: false,
+      isExpired: true
+    };
+  }
+
+  if (diffDays <= 30) {
+    return {
+      type: 'WARNING' as const,
+      days: diffDays,
+      label: `Estabilidade ${stabilityType || 'CAT/CIPA'} Vence em ${diffDays}d`,
+      badgeClass: diffDays <= 7
+        ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-700/50 font-bold'
+        : 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50 font-bold',
+      isExpiringSoon: true,
+      isExpired: false
+    };
+  }
+
+  return null;
+};
+
 export const RhCollaboratorManager: React.FC = () => {
   const { 
     rhCollaborators, 
@@ -1783,6 +1828,15 @@ export const RhCollaboratorManager: React.FC = () => {
                             </span>
                           );
                         })()}
+                        {(() => {
+                          const stabStatus = getStabilityExpirationStatus(c.hasStability, c.stabilityEndDate, c.stabilityType);
+                          if (!stabStatus || !stabStatus.isExpiringSoon) return null;
+                          return (
+                            <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded mt-0.5 inline-flex items-center gap-1 w-fit border ${stabStatus.badgeClass}`}>
+                              <ShieldAlert size={10} /> {stabStatus.label}
+                            </span>
+                          );
+                        })()}
                         {isColabDemitido && (
                           <span className="text-[9px] font-black tracking-wider uppercase text-rose-500 mt-1 flex items-center gap-1">
                             <AlertTriangle size={10} /> Demitido em {c.terminationDate ? formatDateBR(c.terminationDate) : '---'}
@@ -2026,6 +2080,19 @@ export const RhCollaboratorManager: React.FC = () => {
                       label: `CNH: ${cnhStatus.label}`,
                       badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
                       icon: <AlertTriangle size={11} />
+                    });
+                  }
+                }
+
+                // Vencimento de Estabilidade (≤ 30 dias)
+                if (selectedColab.hasStability === 'Sim' && selectedColab.stabilityEndDate) {
+                  const stabStatus = getStabilityExpirationStatus(selectedColab.hasStability, selectedColab.stabilityEndDate, selectedColab.stabilityType);
+                  if (stabStatus && stabStatus.isExpiringSoon) {
+                    headerAlerts.push({
+                      key: 'stability',
+                      label: stabStatus.label,
+                      badgeClass: `${stabStatus.badgeClass} border`,
+                      icon: <ShieldAlert size={11} />
                     });
                   }
                 }
