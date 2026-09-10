@@ -227,6 +227,38 @@ const DB_SCHEMAS = {
         TerminationDate DATETIME,
         Salary FLOAT,
         WeeklyHours FLOAT,
+        CompanyCnpj NVARCHAR(255),
+        HasVehicle NVARCHAR(50),
+        VehicleType NVARCHAR(100),
+        VehiclePlate NVARCHAR(50),
+        TransportOption NVARCHAR(100),
+        RegistrationNumber NVARCHAR(100),
+        IsPcd NVARCHAR(50),
+        PcdDetails NVARCHAR(MAX),
+        WorkShiftStart NVARCHAR(50),
+        LunchBreakStart NVARCHAR(50),
+        LunchBreakEnd NVARCHAR(50),
+        WorkShiftEnd NVARCHAR(50),
+        EmergencyContactName NVARCHAR(255),
+        EmergencyContactPhone NVARCHAR(50),
+        EmergencyContactRelationship NVARCHAR(100),
+        VtValue FLOAT,
+        VtType NVARCHAR(50),
+        VrValue FLOAT,
+        VrType NVARCHAR(50),
+        HasStability NVARCHAR(50),
+        StabilityType NVARCHAR(50),
+        StabilityEndDate DATETIME,
+        StabilityNotes NVARCHAR(MAX),
+        ClothingVest NVARCHAR(50),
+        ClothingErgonomicBelt NVARCHAR(50),
+        ClothingJacket NVARCHAR(50),
+        ClothingBoots NVARCHAR(50),
+        ClothingTshirt NVARCHAR(50),
+        ClothingShirt NVARCHAR(50),
+        ClothingShorts NVARCHAR(50),
+        ClothingPants NVARCHAR(50),
+        ClothingLabCoat NVARCHAR(50),
         Status NVARCHAR(50) DEFAULT 'Ativo',
         Documents NVARCHAR(MAX),
         Photo NVARCHAR(MAX)
@@ -978,7 +1010,34 @@ async function initializeDatabase() {
             { name: 'HasVehicle', type: 'NVARCHAR(50) NULL' },
             { name: 'VehicleType', type: 'NVARCHAR(100) NULL' },
             { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
-            { name: 'TransportOption', type: 'NVARCHAR(100) NULL' }
+            { name: 'TransportOption', type: 'NVARCHAR(100) NULL' },
+            { name: 'RegistrationNumber', type: 'NVARCHAR(100) NULL' },
+            { name: 'IsPcd', type: 'NVARCHAR(50) NULL' },
+            { name: 'PcdDetails', type: 'NVARCHAR(MAX) NULL' },
+            { name: 'WorkShiftStart', type: 'NVARCHAR(50) NULL' },
+            { name: 'LunchBreakStart', type: 'NVARCHAR(50) NULL' },
+            { name: 'LunchBreakEnd', type: 'NVARCHAR(50) NULL' },
+            { name: 'WorkShiftEnd', type: 'NVARCHAR(50) NULL' },
+            { name: 'EmergencyContactName', type: 'NVARCHAR(255) NULL' },
+            { name: 'EmergencyContactPhone', type: 'NVARCHAR(50) NULL' },
+            { name: 'EmergencyContactRelationship', type: 'NVARCHAR(100) NULL' },
+            { name: 'VtValue', type: 'FLOAT NULL' },
+            { name: 'VtType', type: 'NVARCHAR(50) NULL' },
+            { name: 'VrValue', type: 'FLOAT NULL' },
+            { name: 'VrType', type: 'NVARCHAR(50) NULL' },
+            { name: 'HasStability', type: 'NVARCHAR(50) NULL' },
+            { name: 'StabilityType', type: 'NVARCHAR(50) NULL' },
+            { name: 'StabilityEndDate', type: 'DATETIME NULL' },
+            { name: 'StabilityNotes', type: 'NVARCHAR(MAX) NULL' },
+            { name: 'ClothingVest', type: 'NVARCHAR(50) NULL' },
+            { name: 'ClothingErgonomicBelt', type: 'NVARCHAR(50) NULL' },
+            { name: 'ClothingJacket', type: 'NVARCHAR(50) NULL' },
+            { name: 'ClothingBoots', type: 'NVARCHAR(50) NULL' },
+            { name: 'ClothingTshirt', type: 'NVARCHAR(50) NULL' },
+            { name: 'ClothingShirt', type: 'NVARCHAR(50) NULL' },
+            { name: 'ClothingShorts', type: 'NVARCHAR(50) NULL' },
+            { name: 'ClothingPants', type: 'NVARCHAR(50) NULL' },
+            { name: 'ClothingLabCoat', type: 'NVARCHAR(50) NULL' }
         ];
 
         for (const col of rhCollsCols) {
@@ -1027,9 +1086,19 @@ async function initializeDatabase() {
                     Cpf NVARCHAR(50) NULL,
                     BirthDate NVARCHAR(50) NULL,
                     Notes NVARCHAR(500) NULL,
+                    IsIrDependent NVARCHAR(50) NULL,
                     CreatedAt DATETIME DEFAULT GETDATE()
                 )
             `);
+        } else {
+            // Garante coluna IsIrDependent se a tabela já existir
+            try {
+                const checkIr = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhDependents' AND COLUMN_NAME = 'IsIrDependent'");
+                if (checkIr.recordset.length === 0) {
+                    console.log('- Adicionando coluna IsIrDependent em RhDependents...');
+                    await pool.request().query("ALTER TABLE RhDependents ADD IsIrDependent NVARCHAR(50) NULL");
+                }
+            } catch (irErr) {}
         }
 
         // Garante que a tabela de ExternalDbConfig tenha pelo menos uma linha
@@ -5825,6 +5894,33 @@ async function updateUserPendingStatus(pool, userId) {
                 { name: 'VehicleType', type: 'NVARCHAR(100) NULL' },
                 { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
                 { name: 'TransportOption', type: 'NVARCHAR(100) NULL' },
+                { name: 'RegistrationNumber', type: 'NVARCHAR(100) NULL' },
+                { name: 'IsPcd', type: 'NVARCHAR(50) NULL' },
+                { name: 'PcdDetails', type: 'NVARCHAR(MAX) NULL' },
+                { name: 'WorkShiftStart', type: 'NVARCHAR(50) NULL' },
+                { name: 'LunchBreakStart', type: 'NVARCHAR(50) NULL' },
+                { name: 'LunchBreakEnd', type: 'NVARCHAR(50) NULL' },
+                { name: 'WorkShiftEnd', type: 'NVARCHAR(50) NULL' },
+                { name: 'EmergencyContactName', type: 'NVARCHAR(255) NULL' },
+                { name: 'EmergencyContactPhone', type: 'NVARCHAR(50) NULL' },
+                { name: 'EmergencyContactRelationship', type: 'NVARCHAR(100) NULL' },
+                { name: 'VtValue', type: 'FLOAT NULL' },
+                { name: 'VtType', type: 'NVARCHAR(50) NULL' },
+                { name: 'VrValue', type: 'FLOAT NULL' },
+                { name: 'VrType', type: 'NVARCHAR(50) NULL' },
+                { name: 'HasStability', type: 'NVARCHAR(50) NULL' },
+                { name: 'StabilityType', type: 'NVARCHAR(50) NULL' },
+                { name: 'StabilityEndDate', type: 'DATETIME NULL' },
+                { name: 'StabilityNotes', type: 'NVARCHAR(MAX) NULL' },
+                { name: 'ClothingVest', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingErgonomicBelt', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingJacket', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingBoots', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingTshirt', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingShirt', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingShorts', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingPants', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingLabCoat', type: 'NVARCHAR(50) NULL' },
                 { name: 'Photo', type: 'NVARCHAR(MAX) NULL' },
                 { name: 'HasPhoto', type: 'INT DEFAULT 0' },
                 { name: 'Documents', type: 'NVARCHAR(MAX) NULL' }
@@ -5852,7 +5948,7 @@ async function updateUserPendingStatus(pool, userId) {
                 if (typeof val === 'object' && val !== null) {
                     val = JSON.stringify(val);
                 }
-                const dateCols = ['BirthDate', 'HireDate', 'TerminationDate', 'CnhExpiration'];
+                const dateCols = ['BirthDate', 'HireDate', 'TerminationDate', 'CnhExpiration', 'StabilityEndDate'];
                 if (dateCols.includes(dbKey)) {
                     if (val === null || val === undefined || String(val).trim() === '' || String(val).startsWith('1900-')) {
                         val = null;
@@ -5907,6 +6003,33 @@ async function updateUserPendingStatus(pool, userId) {
                 { name: 'VehicleType', type: 'NVARCHAR(100) NULL' },
                 { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
                 { name: 'TransportOption', type: 'NVARCHAR(100) NULL' },
+                { name: 'RegistrationNumber', type: 'NVARCHAR(100) NULL' },
+                { name: 'IsPcd', type: 'NVARCHAR(50) NULL' },
+                { name: 'PcdDetails', type: 'NVARCHAR(MAX) NULL' },
+                { name: 'WorkShiftStart', type: 'NVARCHAR(50) NULL' },
+                { name: 'LunchBreakStart', type: 'NVARCHAR(50) NULL' },
+                { name: 'LunchBreakEnd', type: 'NVARCHAR(50) NULL' },
+                { name: 'WorkShiftEnd', type: 'NVARCHAR(50) NULL' },
+                { name: 'EmergencyContactName', type: 'NVARCHAR(255) NULL' },
+                { name: 'EmergencyContactPhone', type: 'NVARCHAR(50) NULL' },
+                { name: 'EmergencyContactRelationship', type: 'NVARCHAR(100) NULL' },
+                { name: 'VtValue', type: 'FLOAT NULL' },
+                { name: 'VtType', type: 'NVARCHAR(50) NULL' },
+                { name: 'VrValue', type: 'FLOAT NULL' },
+                { name: 'VrType', type: 'NVARCHAR(50) NULL' },
+                { name: 'HasStability', type: 'NVARCHAR(50) NULL' },
+                { name: 'StabilityType', type: 'NVARCHAR(50) NULL' },
+                { name: 'StabilityEndDate', type: 'DATETIME NULL' },
+                { name: 'StabilityNotes', type: 'NVARCHAR(MAX) NULL' },
+                { name: 'ClothingVest', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingErgonomicBelt', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingJacket', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingBoots', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingTshirt', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingShirt', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingShorts', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingPants', type: 'NVARCHAR(50) NULL' },
+                { name: 'ClothingLabCoat', type: 'NVARCHAR(50) NULL' },
                 { name: 'Photo', type: 'NVARCHAR(MAX) NULL' },
                 { name: 'HasPhoto', type: 'INT DEFAULT 0' },
                 { name: 'Documents', type: 'NVARCHAR(MAX) NULL' }
@@ -5934,7 +6057,7 @@ async function updateUserPendingStatus(pool, userId) {
                 if (typeof val === 'object' && val !== null) {
                     val = JSON.stringify(val);
                 }
-                const dateCols = ['BirthDate', 'HireDate', 'TerminationDate', 'CnhExpiration'];
+                const dateCols = ['BirthDate', 'HireDate', 'TerminationDate', 'CnhExpiration', 'StabilityEndDate'];
                 if (dateCols.includes(dbKey)) {
                     if (val === null || val === undefined || String(val).trim() === '' || String(val).startsWith('1900-')) {
                         val = null;
@@ -6285,13 +6408,18 @@ async function updateUserPendingStatus(pool, userId) {
                             Cpf NVARCHAR(50) NULL,
                             BirthDate NVARCHAR(50) NULL,
                             Notes NVARCHAR(500) NULL,
+                            IsIrDependent NVARCHAR(50) NULL,
                             CreatedAt DATETIME DEFAULT GETDATE()
                         );
+                    END
+                    ELSE IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhDependents' AND COLUMN_NAME = 'IsIrDependent')
+                    BEGIN
+                        ALTER TABLE RhDependents ADD IsIrDependent NVARCHAR(50) NULL;
                     END
                 `);
             } catch (tblErr) {}
 
-            const { id, collaboratorId, name, relationshipType, cpf, birthDate, notes, _adminUser } = req.body;
+            const { id, collaboratorId, name, relationshipType, cpf, birthDate, notes, isIrDependent, _adminUser } = req.body;
             const depId = id || `dep-${Date.now()}`;
             await pool.request()
                 .input('Id', sql.NVarChar, depId)
@@ -6301,9 +6429,10 @@ async function updateUserPendingStatus(pool, userId) {
                 .input('Cpf', sql.NVarChar, cpf || null)
                 .input('BirthDate', sql.NVarChar, birthDate || null)
                 .input('Notes', sql.NVarChar, notes || null)
+                .input('IsIrDependent', sql.NVarChar, isIrDependent || 'Não')
                 .query(`
-                    INSERT INTO RhDependents (Id, CollaboratorId, Name, RelationshipType, Cpf, BirthDate, Notes, CreatedAt)
-                    VALUES (@Id, @ColabId, @Name, @RelType, @Cpf, @BirthDate, @Notes, GETDATE())
+                    INSERT INTO RhDependents (Id, CollaboratorId, Name, RelationshipType, Cpf, BirthDate, Notes, IsIrDependent, CreatedAt)
+                    VALUES (@Id, @ColabId, @Name, @RelType, @Cpf, @BirthDate, @Notes, @IsIrDependent, GETDATE())
                 `);
             
             const colabRes = await pool.request().input('Cid', sql.NVarChar, collaboratorId).query("SELECT FullName FROM RhCollaborators WHERE Id=@Cid");
@@ -6320,7 +6449,14 @@ async function updateUserPendingStatus(pool, userId) {
     app.put('/api/rh-dependents/:id', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
-            const { name, relationshipType, cpf, birthDate, notes, _adminUser } = req.body;
+            try {
+                const checkCol = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhDependents' AND COLUMN_NAME = 'IsIrDependent'");
+                if (checkCol.recordset.length === 0) {
+                    await pool.request().query("ALTER TABLE RhDependents ADD IsIrDependent NVARCHAR(50) NULL");
+                }
+            } catch (colE) {}
+
+            const { name, relationshipType, cpf, birthDate, notes, isIrDependent, _adminUser } = req.body;
             await pool.request()
                 .input('Id', sql.NVarChar, req.params.id)
                 .input('Name', sql.NVarChar, name)
@@ -6328,9 +6464,10 @@ async function updateUserPendingStatus(pool, userId) {
                 .input('Cpf', sql.NVarChar, cpf || null)
                 .input('BirthDate', sql.NVarChar, birthDate || null)
                 .input('Notes', sql.NVarChar, notes || null)
+                .input('IsIrDependent', sql.NVarChar, isIrDependent || 'Não')
                 .query(`
                     UPDATE RhDependents 
-                    SET Name=@Name, RelationshipType=@RelType, Cpf=@Cpf, BirthDate=@BirthDate, Notes=@Notes
+                    SET Name=@Name, RelationshipType=@RelType, Cpf=@Cpf, BirthDate=@BirthDate, Notes=@Notes, IsIrDependent=@IsIrDependent
                     WHERE Id=@Id
                 `);
             res.json({ success: true });

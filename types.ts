@@ -585,6 +585,47 @@ export interface RhCollaborator {
   // Opção de Benefício de Transporte
   transportOption?: 'Vale Transporte' | 'Auxílio Combustível' | 'Não Optante';
 
+  // Número de Registro do Colaborador
+  registrationNumber?: string;
+
+  // PCD (Pessoa com Deficiência)
+  isPcd?: 'Sim' | 'Não';
+  pcdDetails?: string;
+
+  // Horário de Expediente
+  workShiftStart?: string;
+  lunchBreakStart?: string;
+  lunchBreakEnd?: string;
+  workShiftEnd?: string;
+
+  // Contato de Emergência
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelationship?: string;
+
+  // Benefícios VT e VR
+  vtValue?: number;
+  vtType?: 'Diário' | 'Fixo Mensal';
+  vrValue?: number;
+  vrType?: 'Diário' | 'Fixo Mensal';
+
+  // Estabilidade (CAT / CIPA)
+  hasStability?: 'Sim' | 'Não';
+  stabilityType?: 'CAT' | 'CIPA' | 'Outro';
+  stabilityEndDate?: string;
+  stabilityNotes?: string;
+
+  // Tamanhos de Vestuário
+  clothingVest?: string;
+  clothingErgonomicBelt?: string;
+  clothingJacket?: string;
+  clothingBoots?: string;
+  clothingTshirt?: string;
+  clothingShirt?: string;
+  clothingShorts?: string;
+  clothingPants?: string;
+  clothingLabCoat?: string;
+
   // Relacionados
   documents: RhDocument[];
   photo?: string;
@@ -602,6 +643,7 @@ export interface RhDependent {
   cpf?: string;
   birthDate?: string;
   notes?: string;
+  isIrDependent?: 'Sim' | 'Não';
 }
 
 export interface RhAssetItem {

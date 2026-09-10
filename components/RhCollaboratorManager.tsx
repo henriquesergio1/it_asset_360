@@ -12,7 +12,8 @@ import {
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
   SlidersHorizontal, AlertTriangle, Copy, Printer, ExternalLink, Map,
   FileSignature, RefreshCw, Share2, Camera, CheckSquare, History, User as UserIcon, Users as UsersIcon, Building2,
-  GraduationCap, DollarSign, Award, BookOpen, FileSpreadsheet, Paperclip, Cake
+  GraduationCap, DollarSign, Award, BookOpen, FileSpreadsheet, Paperclip, Cake,
+  ShieldAlert, Clock, Shirt, PhoneCall, ShieldCheck
 } from 'lucide-react';
 import FilePreviewModal from './FilePreviewModal';
 import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
@@ -51,7 +52,8 @@ const normalizeColabDates = (c: any) => c ? ({
   birthDate: formatDateForInput(c.birthDate),
   hireDate: formatDateForInput(c.hireDate),
   cnhExpiration: formatDateForInput(c.cnhExpiration),
-  terminationDate: formatDateForInput(c.terminationDate)
+  terminationDate: formatDateForInput(c.terminationDate),
+  stabilityEndDate: formatDateForInput(c.stabilityEndDate)
 }) : c;
 
 const getCnhExpirationStatus = (cnhExpiration?: string, cnhNumber?: string) => {
@@ -293,6 +295,7 @@ export const RhCollaboratorManager: React.FC = () => {
   const [depCpf, setDepCpf] = useState('');
   const [depBirthDate, setDepBirthDate] = useState('');
   const [depNotes, setDepNotes] = useState('');
+  const [depIsIrDependent, setDepIsIrDependent] = useState<'Sim' | 'Não'>('Não');
 
   const calculateAge = (birthDateStr?: string) => {
     if (!birthDateStr) return '';
@@ -687,6 +690,10 @@ export const RhCollaboratorManager: React.FC = () => {
   const [dismissReason, setDismissReason] = useState('Demissão sem Justa Causa');
   const [dismissCustomNote, setDismissCustomNote] = useState('');
   const [confirmDismissWithPending, setConfirmDismissWithPending] = useState(false);
+  const [confirmDismissWithStability, setConfirmDismissWithStability] = useState(false);
+  const [dismissTermDoc, setDismissTermDoc] = useState<{ fileName: string; fileBase64: string } | null>(null);
+  const [dismissLetterDoc, setDismissLetterDoc] = useState<{ fileName: string; fileBase64: string } | null>(null);
+  const [dismissInterviewDoc, setDismissInterviewDoc] = useState<{ fileName: string; fileBase64: string } | null>(null);
 
   // Quick Occurrence form states
   const [quickOccType, setQuickOccType] = useState<string>('Atestado Médico');
@@ -747,6 +754,33 @@ export const RhCollaboratorManager: React.FC = () => {
     vehicleType: 'Carro',
     vehiclePlate: '',
     transportOption: 'Não Optante',
+    registrationNumber: '',
+    isPcd: 'Não',
+    pcdDetails: '',
+    workShiftStart: '',
+    lunchBreakStart: '',
+    lunchBreakEnd: '',
+    workShiftEnd: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    emergencyContactRelationship: '',
+    vtValue: 0,
+    vtType: 'Diário',
+    vrValue: 0,
+    vrType: 'Diário',
+    hasStability: 'Não',
+    stabilityType: 'CAT',
+    stabilityEndDate: '',
+    stabilityNotes: '',
+    clothingVest: '',
+    clothingErgonomicBelt: '',
+    clothingJacket: '',
+    clothingBoots: '',
+    clothingTshirt: '',
+    clothingShirt: '',
+    clothingShorts: '',
+    clothingPants: '',
+    clothingLabCoat: '',
     documents: [],
     photo: ''
   });
@@ -903,7 +937,8 @@ export const RhCollaboratorManager: React.FC = () => {
       relationshipType: depRelationship,
       cpf: depCpf.trim() || undefined,
       birthDate: depBirthDate || undefined,
-      notes: depNotes.trim() || undefined
+      notes: depNotes.trim() || undefined,
+      isIrDependent: depIsIrDependent || 'Não'
     };
 
     addRhDependent(newDep, adminName);
@@ -911,6 +946,7 @@ export const RhCollaboratorManager: React.FC = () => {
     setDepCpf('');
     setDepBirthDate('');
     setDepNotes('');
+    setDepIsIrDependent('Não');
     showToast('Dependente cadastrado com sucesso!', 'success');
   };
 
@@ -1290,17 +1326,54 @@ export const RhCollaboratorManager: React.FC = () => {
   const handleDismissColab = () => {
     if (!selectedColab) return;
     
+    const newDismissDocs: RhDocument[] = [];
+    if (dismissTermDoc) {
+      newDismissDocs.push({
+        id: `doc-term-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        category: 'Termo de Rescisão',
+        fileName: dismissTermDoc.fileName,
+        fileUrl: dismissTermDoc.fileBase64,
+        uploadDate: new Date().toISOString()
+      });
+    }
+    if (dismissLetterDoc) {
+      newDismissDocs.push({
+        id: `doc-letter-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        category: 'Carta de Demissão',
+        fileName: dismissLetterDoc.fileName,
+        fileUrl: dismissLetterDoc.fileBase64,
+        uploadDate: new Date().toISOString()
+      });
+    }
+    if (dismissInterviewDoc) {
+      newDismissDocs.push({
+        id: `doc-interview-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        category: 'Entrevista de Desligamento',
+        fileName: dismissInterviewDoc.fileName,
+        fileUrl: dismissInterviewDoc.fileBase64,
+        uploadDate: new Date().toISOString()
+      });
+    }
+
     const updatedColab: RhCollaborator = {
       ...selectedColab,
       terminationDate: new Date().toISOString().split('T')[0],
       terminationReason: `${dismissReason}${dismissCustomNote ? ` - ${dismissCustomNote}` : ''}`,
-      status: 'Demitido'
+      status: 'Demitido',
+      documents: [...(selectedColab.documents || []), ...newDismissDocs]
     };
 
     updateRhCollaborator(updatedColab, adminName);
     setSelectedColab(updatedColab);
     setIsDismissModalOpen(false);
     setIsDetailModalOpen(false);
+    setConfirmDismissWithPending(false);
+    setConfirmDismissWithStability(false);
+    setDismissCustomNote('');
+    setDismissTermDoc(null);
+    setDismissLetterDoc(null);
+    setDismissInterviewDoc(null);
+    showToast('Colaborador desligado com sucesso!', 'success');
   };
 
   const checkIsColabDemitido = (c: RhCollaborator) => {
@@ -1503,7 +1576,16 @@ export const RhCollaboratorManager: React.FC = () => {
                 complement: '', neighborhood: '', city: '', state: '', rg: '', cpf: '',
                 pis: '', electorTitle: '', ctps: '', cnhNumber: '', cnhCategory: '',
                 cnhExpiration: '', role: '', sectorId: '', contractType: 'CLT',
-                hireDate: '', salary: 0, weeklyHours: 44, documents: []
+                hireDate: '', salary: 0, weeklyHours: 44,
+                companyCnpj: '', hasVehicle: 'Não', vehicleType: 'Carro', vehiclePlate: '', transportOption: 'Não Optante',
+                registrationNumber: '', isPcd: 'Não', pcdDetails: '',
+                workShiftStart: '', lunchBreakStart: '', lunchBreakEnd: '', workShiftEnd: '',
+                emergencyContactName: '', emergencyContactPhone: '', emergencyContactRelationship: '',
+                vtValue: 0, vtType: 'Diário', vrValue: 0, vrType: 'Diário',
+                hasStability: 'Não', stabilityType: 'CAT', stabilityEndDate: '', stabilityNotes: '',
+                clothingVest: '', clothingErgonomicBelt: '', clothingJacket: '', clothingBoots: '',
+                clothingTshirt: '', clothingShirt: '', clothingShorts: '', clothingPants: '', clothingLabCoat: '',
+                documents: [], photo: ''
               });
               setIsCreating(true);
             }}
@@ -2223,6 +2305,64 @@ export const RhCollaboratorManager: React.FC = () => {
                           {selectedColab.hasVehicle === 'Sim' && renderDocQuickAction('VEICULO', 'Doc. Veículo')}
                         </div>
                       </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Nº de Registro</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{selectedColab.registrationNumber || 'Não informado'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Benefícios VT / VR</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                          VT: {selectedColab.vtValue ? `R$ ${selectedColab.vtValue.toFixed(2)} (${selectedColab.vtType || 'Diário'})` : 'R$ 0,00'} • VR: {selectedColab.vrValue ? `R$ ${selectedColab.vrValue.toFixed(2)} (${selectedColab.vrType || 'Diário'})` : 'R$ 0,00'}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Horário de Expediente</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                          {selectedColab.workShiftStart || selectedColab.workShiftEnd ? (
+                            <>
+                              Entrada: {selectedColab.workShiftStart || '--:--'} • Almoço: {selectedColab.lunchBreakStart || '--:--'} às {selectedColab.lunchBreakEnd || '--:--'} • Saída: {selectedColab.workShiftEnd || '--:--'}
+                            </>
+                          ) : (
+                            'Não informado'
+                          )}
+                        </span>
+                      </div>
+                      {selectedColab.hasStability === 'Sim' && (
+                        <div className="col-span-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                              <ShieldAlert size={12} /> Estabilidade de Emprego ({selectedColab.stabilityType || 'CAT/CIPA'})
+                            </span>
+                            {(() => {
+                              if (!selectedColab.stabilityEndDate) {
+                                return (
+                                  <span className="px-2 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black text-[9px] uppercase tracking-wider rounded-lg">
+                                    Ativa
+                                  </span>
+                                );
+                              }
+                              const todayStr = new Date().toISOString().split('T')[0];
+                              const isAtiva = selectedColab.stabilityEndDate >= todayStr;
+                              return (
+                                <span className={`px-2 py-0.5 font-black text-[9px] uppercase tracking-wider rounded-lg ${
+                                  isAtiva ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                                }`}>
+                                  {isAtiva ? 'Estabilidade Ativa' : 'Expirada'}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                          <div className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-3 flex-wrap">
+                            {selectedColab.stabilityEndDate && (
+                              <span>Data Fim: <strong>{formatDateBR(selectedColab.stabilityEndDate)}</strong></span>
+                            )}
+                            {selectedColab.stabilityNotes && (
+                              <span className="italic">"{selectedColab.stabilityNotes}"</span>
+                            )}
+                            {renderDocQuickAction('Estabilidade', 'Ver Comprovante')}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -2357,6 +2497,24 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="font-bold text-slate-800 dark:text-slate-200 font-sans truncate block" title={selectedColab.fatherName}>{selectedColab.fatherName || '---'}</span>
                       </div>
 
+                      <div>
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">PCD (Deficiência)</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">
+                          {selectedColab.isPcd === 'Sim' ? `Sim (${selectedColab.pcdDetails || 'Não especificado'})` : 'Não'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Contato de Emergência</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans truncate block" title={selectedColab.emergencyContactName ? `${selectedColab.emergencyContactName} - ${selectedColab.emergencyContactPhone}` : ''}>
+                          {selectedColab.emergencyContactName ? (
+                            `${selectedColab.emergencyContactName}${selectedColab.emergencyContactRelationship ? ` (${selectedColab.emergencyContactRelationship})` : ''} - ${selectedColab.emergencyContactPhone || ''}`
+                          ) : (
+                            'Não informado'
+                          )}
+                        </span>
+                      </div>
+
                     </div>
                   </div>
 
@@ -2420,6 +2578,38 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Cartão 4: Tamanhos de Vestuário e Uniformes */}
+                  {(() => {
+                    const c = selectedColab;
+                    const hasAnyClothing = c.clothingVest || c.clothingErgonomicBelt || c.clothingJacket || c.clothingBoots || c.clothingTshirt || c.clothingShirt || c.clothingShorts || c.clothingPants || c.clothingLabCoat;
+                    if (!hasAnyClothing) return null;
+                    return (
+                      <div className="col-span-1 lg:col-span-2 bg-slate-50/70 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm">
+                        <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-2.5">
+                          <Shirt size={15} /> 4. Tamanhos de Vestuário e Uniformes
+                        </h3>
+                        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2 text-center">
+                          {[
+                            { label: 'Camiseta', val: c.clothingTshirt },
+                            { label: 'Camisa', val: c.clothingShirt },
+                            { label: 'Calça', val: c.clothingPants },
+                            { label: 'Bermuda', val: c.clothingShorts },
+                            { label: 'Bota', val: c.clothingBoots },
+                            { label: 'Colete', val: c.clothingVest },
+                            { label: 'Cinta', val: c.clothingErgonomicBelt },
+                            { label: 'Jaqueta', val: c.clothingJacket },
+                            { label: 'Jaleco', val: c.clothingLabCoat }
+                          ].map(item => (
+                            <div key={item.label} className="p-2 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                              <span className="text-[9px] font-bold uppercase text-slate-400 block">{item.label}</span>
+                              <span className="text-xs font-black text-slate-800 dark:text-white uppercase">{item.val || '---'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -2454,10 +2644,17 @@ export const RhCollaboratorManager: React.FC = () => {
                       return deps.map(dep => (
                         <div key={dep.id} className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-3 shadow-xs">
                           <div className="space-y-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-bold text-xs text-slate-800 dark:text-white truncate">{dep.name}</span>
                               <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-[9px] uppercase tracking-wider rounded-lg border border-indigo-200 dark:border-indigo-500/20 shrink-0">
                                 {dep.relationshipType}
+                              </span>
+                              <span className={`px-2 py-0.5 font-bold text-[9px] uppercase tracking-wider rounded-lg border shrink-0 ${
+                                dep.isIrDependent === 'Sim'
+                                  ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
+                                  : 'bg-slate-100 dark:bg-slate-700/50 text-slate-400 border-slate-200 dark:border-slate-700'
+                              }`}>
+                                IR: {dep.isIrDependent || 'Não'}
                               </span>
                             </div>
                             <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
@@ -3733,6 +3930,111 @@ export const RhCollaboratorManager: React.FC = () => {
                         className="w-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 font-medium cursor-not-allowed select-none opacity-80"
                       />
                     </div>
+
+                    {/* PCD (Pessoa com Deficiência) */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Possui Deficiência (PCD)?</label>
+                          <select
+                            value={form.isPcd || 'Não'}
+                            onChange={e => {
+                              const val = e.target.value as 'Sim' | 'Não';
+                              setForm(p => ({
+                                ...p,
+                                isPcd: val,
+                                pcdDetails: val === 'Não' ? '' : p.pcdDetails
+                              }));
+                            }}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          >
+                            <option value="Não">Não</option>
+                            <option value="Sim">Sim</option>
+                          </select>
+                        </div>
+                        {form.isPcd === 'Sim' && (
+                          <div>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Especificar Deficiência *</label>
+                            <input
+                              type="text"
+                              placeholder="Ex: Física, Auditiva, etc."
+                              value={form.pcdDetails || ''}
+                              onChange={e => setForm(p => ({ ...p, pcdDetails: e.target.value }))}
+                              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Contato de Emergência */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[10px] font-black uppercase text-slate-400 flex items-center gap-1">
+                          <PhoneCall size={11} className="text-indigo-500" /> Contato de Emergência
+                        </label>
+                        {(() => {
+                          const targetId = selectedColab?.id || form.id;
+                          const availableDeps = rhDependents.filter(d => d.collaboratorId === targetId);
+                          if (availableDeps.length === 0) return null;
+                          return (
+                            <select
+                              defaultValue=""
+                              onChange={e => {
+                                const dep = availableDeps.find(d => d.id === e.target.value);
+                                if (dep) {
+                                  setForm(p => ({
+                                    ...p,
+                                    emergencyContactName: dep.name,
+                                    emergencyContactRelationship: dep.relationshipType,
+                                    emergencyContactPhone: p.emergencyContactPhone || dep.cpf || ''
+                                  }));
+                                }
+                                e.target.value = '';
+                              }}
+                              className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-transparent border-0 cursor-pointer outline-none hover:underline"
+                            >
+                              <option value="" disabled>+ Puxar de dependente...</option>
+                              {availableDeps.map(d => (
+                                <option key={d.id} value={d.id}>{d.name} ({d.relationshipType})</option>
+                              ))}
+                            </select>
+                          );
+                        })()}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Nome do Contato</label>
+                          <input
+                            type="text"
+                            placeholder="Nome de parente"
+                            value={form.emergencyContactName || ''}
+                            onChange={e => setForm(p => ({ ...p, emergencyContactName: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Parentesco</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Esposa, Pai"
+                            value={form.emergencyContactRelationship || ''}
+                            onChange={e => setForm(p => ({ ...p, emergencyContactRelationship: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Telefone</label>
+                          <input
+                            type="text"
+                            placeholder="(00) 00000-0000"
+                            value={form.emergencyContactPhone || ''}
+                            onChange={e => setForm(p => ({ ...p, emergencyContactPhone: formatPhone(e.target.value) }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Seção 2: Documentos e Endereço */}
@@ -3894,30 +4196,43 @@ export const RhCollaboratorManager: React.FC = () => {
                       Contratação e Cargo
                     </h3>
 
-                    {/* Empresa de Registro (No TOPO) */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[10px] font-black uppercase text-slate-400">Empresa de Registro (CNPJ) *</label>
-                        <button
-                          type="button"
-                          onClick={() => setShowCompanyModal(true)}
-                          className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                    {/* Empresa de Registro e Nº de Registro */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[10px] font-black uppercase text-slate-400">Empresa de Registro (CNPJ) *</label>
+                          <button
+                            type="button"
+                            onClick={() => setShowCompanyModal(true)}
+                            className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                          >
+                            + Nova Empresa
+                          </button>
+                        </div>
+                        <select
+                          value={form.companyCnpj || ''}
+                          onChange={e => setForm(p => ({ ...p, companyCnpj: e.target.value }))}
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                         >
-                          + Nova Empresa
-                        </button>
+                          <option value="">-- Selecione a Empresa de Registro --</option>
+                          {rhCompanies.map(c => (
+                            <option key={c.id} value={c.cnpj}>
+                              {c.companyName} - CNPJ: {c.cnpj}
+                            </option>
+                          ))}
+                        </select>
                       </div>
-                      <select
-                        value={form.companyCnpj || ''}
-                        onChange={e => setForm(p => ({ ...p, companyCnpj: e.target.value }))}
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
-                      >
-                        <option value="">-- Selecione a Empresa de Registro --</option>
-                        {rhCompanies.map(c => (
-                          <option key={c.id} value={c.cnpj}>
-                            {c.companyName} - CNPJ: {c.cnpj}
-                          </option>
-                        ))}
-                      </select>
+
+                      <div>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Nº de Registro (Matrícula R.H.)</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: REG-10492 ou 12345"
+                          value={form.registrationNumber || ''}
+                          onChange={e => setForm(p => ({ ...p, registrationNumber: e.target.value }))}
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white font-mono"
+                        />
+                      </div>
                     </div>
 
                     <div>
@@ -3992,6 +4307,51 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Horário de Expediente */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 space-y-2">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                        <Clock size={12} className="text-indigo-500" /> Horário de Expediente / Intervalo
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Entrada</label>
+                          <input
+                            type="time"
+                            value={form.workShiftStart || ''}
+                            onChange={e => setForm(p => ({ ...p, workShiftStart: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Início Almoço</label>
+                          <input
+                            type="time"
+                            value={form.lunchBreakStart || ''}
+                            onChange={e => setForm(p => ({ ...p, lunchBreakStart: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Retorno Almoço</label>
+                          <input
+                            type="time"
+                            value={form.lunchBreakEnd || ''}
+                            onChange={e => setForm(p => ({ ...p, lunchBreakEnd: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Saída</label>
+                          <input
+                            type="time"
+                            value={form.workShiftEnd || ''}
+                            onChange={e => setForm(p => ({ ...p, workShiftEnd: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Veículo e Benefício de Transporte */}
                     <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50">
                       <div className="grid grid-cols-2 gap-3">
@@ -4062,6 +4422,268 @@ export const RhCollaboratorManager: React.FC = () => {
                         </div>
                       )}
                     </div>
+
+                    {/* Benefícios VT e VR */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 space-y-2">
+                      <label className="block text-[10px] font-black uppercase text-slate-400">Valores Recebidos em VT e VR</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* VT */}
+                        <div className="p-3 bg-slate-100/50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                          <span className="text-[10px] font-bold uppercase text-indigo-500 block">Vale Transporte (VT)</span>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[9px] text-slate-400 mb-0.5">Valor (R$)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                placeholder="0,00"
+                                value={form.vtValue || ''}
+                                onChange={e => setForm(p => ({ ...p, vtValue: parseFloat(e.target.value) || 0 }))}
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] text-slate-400 mb-0.5">Tipo</label>
+                              <select
+                                value={form.vtType || 'Diário'}
+                                onChange={e => setForm(p => ({ ...p, vtType: e.target.value as any }))}
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs font-medium text-slate-900 dark:text-white"
+                              >
+                                <option value="Diário">Por Dia</option>
+                                <option value="Fixo Mensal">Fixo Mensal</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* VR */}
+                        <div className="p-3 bg-slate-100/50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                          <span className="text-[10px] font-bold uppercase text-indigo-500 block">Vale Refeição (VR)</span>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[9px] text-slate-400 mb-0.5">Valor (R$)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                placeholder="0,00"
+                                value={form.vrValue || ''}
+                                onChange={e => setForm(p => ({ ...p, vrValue: parseFloat(e.target.value) || 0 }))}
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] text-slate-400 mb-0.5">Tipo</label>
+                              <select
+                                value={form.vrType || 'Diário'}
+                                onChange={e => setForm(p => ({ ...p, vrType: e.target.value as any }))}
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs font-medium text-slate-900 dark:text-white"
+                              >
+                                <option value="Diário">Por Dia</option>
+                                <option value="Fixo Mensal">Fixo Mensal</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Estabilidade de Emprego */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                          <ShieldAlert size={13} className="text-amber-500" /> Estabilidade de Emprego (CAT / CIPA)
+                        </label>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Possui Estabilidade?</label>
+                          <select
+                            value={form.hasStability || 'Não'}
+                            onChange={e => {
+                              const val = e.target.value as 'Sim' | 'Não';
+                              setForm(p => ({ ...p, hasStability: val }));
+                            }}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white"
+                          >
+                            <option value="Não">Não</option>
+                            <option value="Sim">Sim</option>
+                          </select>
+                        </div>
+                        {form.hasStability === 'Sim' && (
+                          <>
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Tipo de Estabilidade</label>
+                              <select
+                                value={form.stabilityType || 'CAT'}
+                                onChange={e => setForm(p => ({ ...p, stabilityType: e.target.value as any }))}
+                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white"
+                              >
+                                <option value="CAT">CAT (Acidente de Trabalho)</option>
+                                <option value="CIPA">CIPA (Comissão Interna)</option>
+                                <option value="Outro">Outro Motivo Legal</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Data Fim da Estabilidade</label>
+                              <input
+                                type="date"
+                                value={formatDateForInput(form.stabilityEndDate)}
+                                onChange={e => setForm(p => ({ ...p, stabilityEndDate: e.target.value }))}
+                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white"
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {form.hasStability === 'Sim' && (
+                        <div className="space-y-2 p-3 bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                          <div>
+                            <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Duração / Detalhes da Estabilidade</label>
+                            <input
+                              type="text"
+                              placeholder="Ex: 12 meses após alta do INSS / Gestão CIPA 2025"
+                              value={form.stabilityNotes || ''}
+                              onChange={e => setForm(p => ({ ...p, stabilityNotes: e.target.value }))}
+                              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-bold text-slate-400 mb-1 flex items-center justify-between">
+                              <span>Anexar Documento Comprobatório de Estabilidade</span>
+                              {form.documents?.some(d => d.category === 'Estabilidade') && (
+                                <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">✓ Documento anexado</span>
+                              )}
+                            </label>
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg"
+                              onChange={e => {
+                                const f = e.target.files?.[0];
+                                if (f) {
+                                  const r = new FileReader();
+                                  r.onload = ev => {
+                                    const b64 = ev.target?.result as string;
+                                    const newDoc: RhDocument = {
+                                      id: `doc-stab-${Date.now()}`,
+                                      category: 'Estabilidade',
+                                      fileName: f.name,
+                                      fileUrl: b64,
+                                      uploadDate: new Date().toISOString()
+                                    };
+                                    setForm(p => ({
+                                      ...p,
+                                      documents: [...(p.documents || []).filter(d => d.category !== 'Estabilidade'), newDoc]
+                                    }));
+                                    showToast(`Documento de estabilidade "${f.name}" anexado!`, 'success');
+                                  };
+                                  r.readAsDataURL(f);
+                                }
+                              }}
+                              className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-amber-100 dark:file:bg-amber-900/40 file:text-amber-800 dark:file:text-amber-200 file:cursor-pointer hover:file:opacity-90 cursor-pointer"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Tamanhos de Vestuário */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 space-y-2">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 flex items-center gap-1.5">
+                        <Shirt size={13} className="text-indigo-500" /> Tamanhos de Vestuário / Uniformes & EPIs
+                      </label>
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Camiseta</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: M, G"
+                            value={form.clothingTshirt || ''}
+                            onChange={e => setForm(p => ({ ...p, clothingTshirt: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Camisa</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: 3, 4, G"
+                            value={form.clothingShirt || ''}
+                            onChange={e => setForm(p => ({ ...p, clothingShirt: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Calça</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: 40, 42"
+                            value={form.clothingPants || ''}
+                            onChange={e => setForm(p => ({ ...p, clothingPants: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Bermuda</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: 40, 42"
+                            value={form.clothingShorts || ''}
+                            onChange={e => setForm(p => ({ ...p, clothingShorts: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Bota / Calçado</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: 41, 42"
+                            value={form.clothingBoots || ''}
+                            onChange={e => setForm(p => ({ ...p, clothingBoots: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Colete</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: G, GG"
+                            value={form.clothingVest || ''}
+                            onChange={e => setForm(p => ({ ...p, clothingVest: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Cinta Ergonômica</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: M, G"
+                            value={form.clothingErgonomicBelt || ''}
+                            onChange={e => setForm(p => ({ ...p, clothingErgonomicBelt: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Jaqueta</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: G, GG"
+                            value={form.clothingJacket || ''}
+                            onChange={e => setForm(p => ({ ...p, clothingJacket: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white uppercase"
+                          />
+                        </div>
+                        <div className="col-span-2 sm:col-span-2">
+                          <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Jaleco</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: M, G"
+                            value={form.clothingLabCoat || ''}
+                            onChange={e => setForm(p => ({ ...p, clothingLabCoat: e.target.value }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-center font-bold text-slate-900 dark:text-white uppercase"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -4075,7 +4697,7 @@ export const RhCollaboratorManager: React.FC = () => {
                       <span className="text-[10px] text-slate-400 font-normal lowercase">(filho, esposa, pai, etc)</span>
                     </h3>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Grau de Parentesco / Tipo *</label>
                         <select
@@ -4090,7 +4712,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         </select>
                       </div>
 
-                      <div className="md:col-span-2">
+                      <div className="sm:col-span-2">
                         <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Nome Completo do Dependente *</label>
                         <input
                           type="text"
@@ -4123,6 +4745,18 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
 
                       <div>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Dependente para IR?</label>
+                        <select
+                          value={depIsIrDependent}
+                          onChange={e => setDepIsIrDependent(e.target.value as 'Sim' | 'Não')}
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                        >
+                          <option value="Não">Não</option>
+                          <option value="Sim">Sim (Deduz IR)</option>
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-2 md:col-span-3">
                         <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Observações / Notas</label>
                         <input
                           type="text"
@@ -4166,10 +4800,17 @@ export const RhCollaboratorManager: React.FC = () => {
                         return deps.map(dep => (
                           <div key={dep.id} className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-3 shadow-xs">
                             <div className="space-y-1 min-w-0">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-bold text-xs text-slate-800 dark:text-white truncate">{dep.name}</span>
                                 <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-[9px] uppercase tracking-wider rounded-lg border border-indigo-200 dark:border-indigo-500/20 shrink-0">
                                   {dep.relationshipType}
+                                </span>
+                                <span className={`px-2 py-0.5 font-bold text-[9px] uppercase tracking-wider rounded-lg border shrink-0 ${
+                                  dep.isIrDependent === 'Sim'
+                                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
+                                    : 'bg-slate-100 dark:bg-slate-700/50 text-slate-400 border-slate-200 dark:border-slate-700'
+                                }`}>
+                                  IR: {dep.isIrDependent || 'Não'}
                                 </span>
                               </div>
                               <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
@@ -4701,7 +5342,11 @@ export const RhCollaboratorManager: React.FC = () => {
                 onClick={() => {
                   setIsDismissModalOpen(false);
                   setConfirmDismissWithPending(false);
+                  setConfirmDismissWithStability(false);
                   setDismissCustomNote('');
+                  setDismissTermDoc(null);
+                  setDismissLetterDoc(null);
+                  setDismissInterviewDoc(null);
                 }}
                 className="h-8 w-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-700 dark:text-white transition-all"
               >
@@ -4741,6 +5386,190 @@ export const RhCollaboratorManager: React.FC = () => {
                   rows={3}
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white"
                 />
+              </div>
+
+              {/* Verificação de Estabilidade Ativa */}
+              {(() => {
+                const isStabilityActive = selectedColab.hasStability === 'Sim' && (
+                  !selectedColab.stabilityEndDate || 
+                  selectedColab.stabilityEndDate >= new Date().toISOString().split('T')[0]
+                );
+
+                if (!isStabilityActive) return null;
+
+                return (
+                  <div className="bg-rose-50 dark:bg-rose-950/30 border-2 border-rose-300 dark:border-rose-800/80 p-4 rounded-2xl space-y-3">
+                    <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-black">
+                      <ShieldAlert size={20} className="shrink-0" />
+                      <span className="uppercase tracking-wider text-xs">Atenção: Colaborador com Estabilidade Ativa!</span>
+                    </div>
+                    <div className="bg-white/70 dark:bg-slate-900/60 p-3 rounded-xl border border-rose-200 dark:border-rose-900/40 text-[11px] space-y-1.5 text-rose-900 dark:text-rose-200">
+                      <p>
+                        <strong>Tipo de Estabilidade:</strong> <span className="uppercase font-bold text-rose-600 dark:text-rose-400">{selectedColab.stabilityType || 'CAT / CIPA'}</span>
+                      </p>
+                      <p>
+                        <strong>Vigência / Término:</strong>{' '}
+                        {selectedColab.stabilityEndDate ? (
+                          <span className="font-bold">{new Date(selectedColab.stabilityEndDate + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                        ) : (
+                          <span className="font-bold text-amber-600 dark:text-amber-400">Tempo Indeterminado / Não Informado</span>
+                        )}
+                      </p>
+                      {selectedColab.stabilityNotes && (
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 italic">
+                          "{selectedColab.stabilityNotes}"
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-rose-700 dark:text-rose-300 font-medium leading-relaxed">
+                      A rescisão contratual durante o período de estabilidade provisória (CAT, CIPA ou Acordo) acarreta passivo trabalhista e obrigatoriedade de reintegração ou indenização.
+                    </p>
+                    <label className="flex items-start gap-2.5 p-2.5 bg-rose-100/70 dark:bg-rose-900/30 rounded-xl cursor-pointer border border-rose-200 dark:border-rose-800/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={confirmDismissWithStability}
+                        onChange={e => setConfirmDismissWithStability(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-rose-400 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                      />
+                      <span className="text-[11px] text-rose-950 dark:text-rose-100 font-bold leading-tight">
+                        Estou ciente da estabilidade provisória ativa e confirmo a demissão (Dupla confirmação obrigatória).
+                      </span>
+                    </label>
+                  </div>
+                );
+              })()}
+
+              {/* Anexos de Desligamento */}
+              <div className="bg-slate-50 dark:bg-slate-900/30 p-4 rounded-xl border border-slate-150 dark:border-slate-700/40 space-y-3">
+                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold">
+                  <FileText size={16} className="text-indigo-500" />
+                  <span className="uppercase text-[11px] font-black tracking-wider">Documentos do Desligamento (Opcional)</span>
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  Anexe os arquivos rescisórios para arquivamento direto no prontuário do colaborador.
+                </p>
+
+                <div className="grid grid-cols-1 gap-2 pt-1">
+                  {/* Termo de Rescisão */}
+                  <div className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Termo de Rescisão (TRCT)</span>
+                      {dismissTermDoc ? (
+                        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate block">
+                          ✓ {dismissTermDoc.fileName}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Nenhum arquivo anexado</span>
+                      )}
+                    </div>
+                    {dismissTermDoc ? (
+                      <button
+                        type="button"
+                        onClick={() => setDismissTermDoc(null)}
+                        className="text-[10px] font-bold text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      >
+                        Remover
+                      </button>
+                    ) : (
+                      <label className="cursor-pointer px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold text-[10px] uppercase border border-indigo-200 dark:border-indigo-800 transition-colors shrink-0">
+                        Anexar
+                        <input
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                          className="hidden"
+                          onChange={e => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              const r = new FileReader();
+                              r.onload = ev => setDismissTermDoc({ fileName: f.name, fileBase64: ev.target?.result as string });
+                              r.readAsDataURL(f);
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Carta de Demissão */}
+                  <div className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Carta de Demissão / Notificação</span>
+                      {dismissLetterDoc ? (
+                        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate block">
+                          ✓ {dismissLetterDoc.fileName}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Nenhum arquivo anexado</span>
+                      )}
+                    </div>
+                    {dismissLetterDoc ? (
+                      <button
+                        type="button"
+                        onClick={() => setDismissLetterDoc(null)}
+                        className="text-[10px] font-bold text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      >
+                        Remover
+                      </button>
+                    ) : (
+                      <label className="cursor-pointer px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold text-[10px] uppercase border border-indigo-200 dark:border-indigo-800 transition-colors shrink-0">
+                        Anexar
+                        <input
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                          className="hidden"
+                          onChange={e => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              const r = new FileReader();
+                              r.onload = ev => setDismissLetterDoc({ fileName: f.name, fileBase64: ev.target?.result as string });
+                              r.readAsDataURL(f);
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Entrevista de Desligamento */}
+                  <div className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Entrevista de Desligamento</span>
+                      {dismissInterviewDoc ? (
+                        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate block">
+                          ✓ {dismissInterviewDoc.fileName}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Nenhum arquivo anexado</span>
+                      )}
+                    </div>
+                    {dismissInterviewDoc ? (
+                      <button
+                        type="button"
+                        onClick={() => setDismissInterviewDoc(null)}
+                        className="text-[10px] font-bold text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      >
+                        Remover
+                      </button>
+                    ) : (
+                      <label className="cursor-pointer px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold text-[10px] uppercase border border-indigo-200 dark:border-indigo-800 transition-colors shrink-0">
+                        Anexar
+                        <input
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                          className="hidden"
+                          onChange={e => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              const r = new FileReader();
+                              r.onload = ev => setDismissInterviewDoc({ fileName: f.name, fileBase64: ev.target?.result as string });
+                              r.readAsDataURL(f);
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Verificação de comodatos pendentes */}
@@ -4798,7 +5627,11 @@ export const RhCollaboratorManager: React.FC = () => {
                 onClick={() => {
                   setIsDismissModalOpen(false);
                   setConfirmDismissWithPending(false);
+                  setConfirmDismissWithStability(false);
                   setDismissCustomNote('');
+                  setDismissTermDoc(null);
+                  setDismissLetterDoc(null);
+                  setDismissInterviewDoc(null);
                 }}
                 className="px-4 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-300 font-black text-xs rounded-xl uppercase tracking-wider"
               >
@@ -4814,15 +5647,19 @@ export const RhCollaboratorManager: React.FC = () => {
 
                 const entregasSemDevolucao = entregas.filter(e => !devolucoesAssinadasIds.includes(e.id));
                 const temPendencia = entregasSemDevolucao.length > 0;
-                const canSubmit = !temPendencia || confirmDismissWithPending;
+
+                const isStabilityActive = selectedColab.hasStability === 'Sim' && (
+                  !selectedColab.stabilityEndDate || 
+                  selectedColab.stabilityEndDate >= new Date().toISOString().split('T')[0]
+                );
+
+                const canSubmit = (!temPendencia || confirmDismissWithPending) && (!isStabilityActive || confirmDismissWithStability);
 
                 return (
                   <button
                     disabled={!canSubmit}
                     onClick={() => {
                       handleDismissColab();
-                      setConfirmDismissWithPending(false);
-                      setDismissCustomNote('');
                     }}
                     className={`px-5 py-2.5 font-black text-xs rounded-xl uppercase tracking-wider shadow-md transition-all ${
                       canSubmit
