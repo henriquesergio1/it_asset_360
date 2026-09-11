@@ -1925,9 +1925,13 @@ export const AjusteRota: React.FC = () => {
             pdvs13: number;
             km13: number;
             time13: number;
+            travelTime13: number;
+            serviceTime13: number;
             pdvs24: number;
             km24: number;
             time24: number;
+            travelTime24: number;
+            serviceTime24: number;
             avgPdvs: number;
         }> = [];
 
@@ -1936,11 +1940,17 @@ export const AjusteRota: React.FC = () => {
             pdvs13: number;
             km13: number;
             time13: number;
+            travelTime13: number;
+            serviceTime13: number;
             pdvs24: number;
             km24: number;
             time24: number;
+            travelTime24: number;
+            serviceTime24: number;
             totalKm: number;
             totalTime: number;
+            totalTravelTime: number;
+            totalServiceTime: number;
         }> = {};
 
         let totalPdvs13 = 0;
@@ -1949,6 +1959,10 @@ export const AjusteRota: React.FC = () => {
         let totalKm24 = 0;
         let totalTime13 = 0;
         let totalTime24 = 0;
+        let totalTravelTime13 = 0;
+        let totalServiceTime13 = 0;
+        let totalTravelTime24 = 0;
+        let totalServiceTime24 = 0;
 
         WEEKDAYS.forEach(day => {
             const dayVisits = scopedAdjustedRoutes.filter(r => r.Dia_Semana === day);
@@ -1981,15 +1995,23 @@ export const AjusteRota: React.FC = () => {
             totalKm24 += metrics24.totalKm;
             totalTime13 += totalDayTime13;
             totalTime24 += totalDayTime24;
+            totalTravelTime13 += metrics13.travelMinutes;
+            totalServiceTime13 += serviceMins13;
+            totalTravelTime24 += metrics24.travelMinutes;
+            totalServiceTime24 += serviceMins24;
 
             const dayObj = {
                 day,
                 pdvs13,
                 km13: metrics13.totalKm,
                 time13: totalDayTime13,
+                travelTime13: metrics13.travelMinutes,
+                serviceTime13: serviceMins13,
                 pdvs24,
                 km24: metrics24.totalKm,
                 time24: totalDayTime24,
+                travelTime24: metrics24.travelMinutes,
+                serviceTime24: serviceMins24,
                 avgPdvs: Math.round(((pdvs13 + pdvs24) / 2) * 10) / 10
             };
 
@@ -1999,11 +2021,17 @@ export const AjusteRota: React.FC = () => {
                 pdvs13,
                 km13: metrics13.totalKm,
                 time13: totalDayTime13,
+                travelTime13: metrics13.travelMinutes,
+                serviceTime13: serviceMins13,
                 pdvs24,
                 km24: metrics24.totalKm,
                 time24: totalDayTime24,
+                travelTime24: metrics24.travelMinutes,
+                serviceTime24: serviceMins24,
                 totalKm: metrics13.totalKm + metrics24.totalKm,
-                totalTime: totalDayTime13 + totalDayTime24
+                totalTime: totalDayTime13 + totalDayTime24,
+                totalTravelTime: metrics13.travelMinutes + metrics24.travelMinutes,
+                totalServiceTime: serviceMins13 + serviceMins24
             };
         });
 
@@ -2029,6 +2057,12 @@ export const AjusteRota: React.FC = () => {
             totalKm24: Math.round(totalKm24 * 10) / 10,
             totalTime13,
             totalTime24,
+            totalTravelTime13,
+            totalServiceTime13,
+            totalTravelTime24,
+            totalServiceTime24,
+            totalTravelTimeMonth: (totalTravelTime13 * 2) + (totalTravelTime24 * 2),
+            totalServiceTimeMonth: (totalServiceTime13 * 2) + (totalServiceTime24 * 2),
             imbalancePct,
             isBalanced: imbalancePct <= 15,
             unallocatedCount
@@ -6700,13 +6734,47 @@ export const AjusteRota: React.FC = () => {
                                                     </div>
 
                                                     {/* Lado Direito: Resumo de KM, Tempo e Sequência */}
-                                                    <div className="flex items-center gap-2.5 sm:gap-3.5 text-[11px] shrink-0">
+                                                    <div className="flex items-center gap-2 sm:gap-3 text-[11px] shrink-0">
                                                         {!isUnallocated && dayMetrics ? (
                                                             <>
-                                                                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 whitespace-nowrap" title="Tempo total diário estimado (visitas nos canais + deslocamento viário OSRM)">
+                                                                {/* Tempo de Percurso */}
+                                                                <div 
+                                                                    className="flex items-center gap-1 text-slate-600 dark:text-slate-400 whitespace-nowrap bg-slate-100/70 dark:bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60 shadow-2xs" 
+                                                                    title={`🚗 Tempo em trânsito / percurso viário OSRM (Base ↔ PDVs ↔ Base):\n• Semanas 1 e 3: ${formatDuration(dayMetrics.travelTime13)}\n• Semanas 2 e 4: ${formatDuration(dayMetrics.travelTime24)}`}
+                                                                >
+                                                                    <span className="text-[12px]">🚗</span>
+                                                                    <span className="text-slate-400 dark:text-slate-500 font-normal">Percurso:</span>
+                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                                                                        {dayMetrics.travelTime13 === dayMetrics.travelTime24 
+                                                                            ? formatDuration(dayMetrics.travelTime13) 
+                                                                            : `${formatDuration(dayMetrics.travelTime13)} (1/3) • ${formatDuration(dayMetrics.travelTime24)} (2/4)`
+                                                                        }
+                                                                    </span>
+                                                                </div>
+
+                                                                {/* Tempo de Atendimento */}
+                                                                <div 
+                                                                    className="flex items-center gap-1 text-slate-600 dark:text-slate-400 whitespace-nowrap bg-slate-100/70 dark:bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60 shadow-2xs" 
+                                                                    title={`🏢 Tempo presencial de atendimento em loja (conforme canais de remuneração):\n• Semanas 1 e 3: ${formatDuration(dayMetrics.serviceTime13)}\n• Semanas 2 e 4: ${formatDuration(dayMetrics.serviceTime24)}`}
+                                                                >
+                                                                    <span className="text-[12px]">🏢</span>
+                                                                    <span className="text-slate-400 dark:text-slate-500 font-normal">Atend:</span>
+                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                                                                        {dayMetrics.serviceTime13 === dayMetrics.serviceTime24 
+                                                                            ? formatDuration(dayMetrics.serviceTime13) 
+                                                                            : `${formatDuration(dayMetrics.serviceTime13)} (1/3) • ${formatDuration(dayMetrics.serviceTime24)} (2/4)`
+                                                                        }
+                                                                    </span>
+                                                                </div>
+
+                                                                {/* Tempo Total */}
+                                                                <div 
+                                                                    className="flex items-center gap-1 text-slate-800 dark:text-slate-200 whitespace-nowrap bg-indigo-50/70 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-200/70 dark:border-indigo-800/50 shadow-2xs" 
+                                                                    title={`⏱️ Tempo Total da Jornada Diária (Percurso + Atendimento):\n• Semanas 1 e 3: ${formatDuration(dayMetrics.travelTime13)} percurso + ${formatDuration(dayMetrics.serviceTime13)} atend = ${formatDuration(dayMetrics.time13)}\n• Semanas 2 e 4: ${formatDuration(dayMetrics.travelTime24)} percurso + ${formatDuration(dayMetrics.serviceTime24)} atend = ${formatDuration(dayMetrics.time24)}`}
+                                                                >
                                                                     <ClockIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                                                                    <span className="text-slate-400 dark:text-slate-500 font-normal">Tempo:</span>
-                                                                    <span className="font-black">
+                                                                    <span className="text-indigo-600/80 dark:text-indigo-400 font-normal">Total:</span>
+                                                                    <span className="font-black text-indigo-900 dark:text-indigo-200">
                                                                         {dayMetrics.time13 === dayMetrics.time24 
                                                                             ? formatDuration(dayMetrics.time13) 
                                                                             : `${formatDuration(dayMetrics.time13)} (1/3) • ${formatDuration(dayMetrics.time24)} (2/4)`
@@ -7592,9 +7660,12 @@ export const AjusteRota: React.FC = () => {
                                 <div className="text-lg font-black text-slate-800 dark:text-white mt-0.5">
                                     {operationalSummary.totalPdvs13} <span className="text-xs font-normal text-slate-500">visitas</span>
                                 </div>
-                                <span className="text-[9px] font-bold text-slate-500">
-                                    ~{operationalSummary.totalKm13} km • {Math.floor(operationalSummary.totalTime13 / 60)}h {operationalSummary.totalTime13 % 60}m
-                                </span>
+                                <div className="text-[9px] font-bold text-slate-500 flex flex-col gap-0.5 mt-0.5">
+                                    <span>~{operationalSummary.totalKm13} km • ⏱️ {Math.floor(operationalSummary.totalTime13 / 60)}h {operationalSummary.totalTime13 % 60}m Total</span>
+                                    <span className="text-[8.5px] font-normal text-slate-400">
+                                        🚗 {Math.floor(operationalSummary.totalTravelTime13 / 60)}h {operationalSummary.totalTravelTime13 % 60}m • 🏢 {Math.floor(operationalSummary.totalServiceTime13 / 60)}h {operationalSummary.totalServiceTime13 % 60}m
+                                    </span>
+                                </div>
                             </div>
 
                             <div className="bg-white dark:bg-slate-800/90 p-3 rounded-xl border border-fuchsia-200 dark:border-fuchsia-800/50 shadow-2xs">
@@ -7605,9 +7676,12 @@ export const AjusteRota: React.FC = () => {
                                 <div className="text-lg font-black text-slate-800 dark:text-white mt-0.5">
                                     {operationalSummary.totalPdvs24} <span className="text-xs font-normal text-slate-500">visitas</span>
                                 </div>
-                                <span className="text-[9px] font-bold text-slate-500">
-                                    ~{operationalSummary.totalKm24} km • {Math.floor(operationalSummary.totalTime24 / 60)}h {operationalSummary.totalTime24 % 60}m
-                                </span>
+                                <div className="text-[9px] font-bold text-slate-500 flex flex-col gap-0.5 mt-0.5">
+                                    <span>~{operationalSummary.totalKm24} km • ⏱️ {Math.floor(operationalSummary.totalTime24 / 60)}h {operationalSummary.totalTime24 % 60}m Total</span>
+                                    <span className="text-[8.5px] font-normal text-slate-400">
+                                        🚗 {Math.floor(operationalSummary.totalTravelTime24 / 60)}h {operationalSummary.totalTravelTime24 % 60}m • 🏢 {Math.floor(operationalSummary.totalServiceTime24 / 60)}h {operationalSummary.totalServiceTime24 % 60}m
+                                    </span>
+                                </div>
                             </div>
 
                             <div className="bg-white dark:bg-slate-800/90 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs">
@@ -7655,7 +7729,16 @@ export const AjusteRota: React.FC = () => {
                                                     {item.km13 > 0 ? `${item.km13} km` : '—'}
                                                 </td>
                                                 <td className="py-3 text-center text-slate-500 dark:text-slate-400 bg-amber-50/30 dark:bg-amber-950/10 font-medium">
-                                                    {item.time13 > 0 ? `${Math.floor(item.time13 / 60)}h ${item.time13 % 60}m` : '—'}
+                                                    {item.time13 > 0 ? (
+                                                        <div className="flex flex-col items-center leading-tight">
+                                                            <span className="font-bold text-amber-900 dark:text-amber-200">
+                                                                {Math.floor(item.time13 / 60)}h {item.time13 % 60}m
+                                                            </span>
+                                                            <span className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5" title={`🚗 Percurso: ${formatDuration(item.travelTime13)} | 🏢 Atendimento: ${formatDuration(item.serviceTime13)}`}>
+                                                                🚗 {formatDuration(item.travelTime13)} • 🏢 {formatDuration(item.serviceTime13)}
+                                                            </span>
+                                                        </div>
+                                                    ) : '—'}
                                                 </td>
                                                 <td className="py-3 text-center font-black text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-50/30 dark:bg-fuchsia-950/10">
                                                     {item.pdvs24}
@@ -7664,7 +7747,16 @@ export const AjusteRota: React.FC = () => {
                                                     {item.km24 > 0 ? `${item.km24} km` : '—'}
                                                 </td>
                                                 <td className="py-3 text-center text-slate-500 dark:text-slate-400 bg-fuchsia-50/30 dark:bg-fuchsia-950/10 font-medium">
-                                                    {item.time24 > 0 ? `${Math.floor(item.time24 / 60)}h ${item.time24 % 60}m` : '—'}
+                                                    {item.time24 > 0 ? (
+                                                        <div className="flex flex-col items-center leading-tight">
+                                                            <span className="font-bold text-fuchsia-900 dark:text-fuchsia-200">
+                                                                {Math.floor(item.time24 / 60)}h {item.time24 % 60}m
+                                                            </span>
+                                                            <span className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5" title={`🚗 Percurso: ${formatDuration(item.travelTime24)} | 🏢 Atendimento: ${formatDuration(item.serviceTime24)}`}>
+                                                                🚗 {formatDuration(item.travelTime24)} • 🏢 {formatDuration(item.serviceTime24)}
+                                                            </span>
+                                                        </div>
+                                                    ) : '—'}
                                                 </td>
                                                 <td className="py-3 text-center font-black text-indigo-600 dark:text-indigo-400">
                                                     {item.avgPdvs} PDVs
@@ -7683,7 +7775,12 @@ export const AjusteRota: React.FC = () => {
                                             {operationalSummary.totalKm13} km
                                         </td>
                                         <td className="py-3 text-center text-amber-700 dark:text-amber-400 bg-amber-100/50 dark:bg-amber-950/40">
-                                            {Math.floor(operationalSummary.totalTime13 / 60)}h {operationalSummary.totalTime13 % 60}m
+                                            <div className="flex flex-col items-center leading-tight">
+                                                <span>{Math.floor(operationalSummary.totalTime13 / 60)}h {operationalSummary.totalTime13 % 60}m</span>
+                                                <span className="text-[9px] font-normal text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                                                    🚗 {Math.floor(operationalSummary.totalTravelTime13 / 60)}h {operationalSummary.totalTravelTime13 % 60}m • 🏢 {Math.floor(operationalSummary.totalServiceTime13 / 60)}h {operationalSummary.totalServiceTime13 % 60}m
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="py-3 text-center text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-100/50 dark:bg-fuchsia-950/40">
                                             {operationalSummary.totalPdvs24} PDVs
@@ -7692,7 +7789,12 @@ export const AjusteRota: React.FC = () => {
                                             {operationalSummary.totalKm24} km
                                         </td>
                                         <td className="py-3 text-center text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-100/50 dark:bg-fuchsia-950/40">
-                                            {Math.floor(operationalSummary.totalTime24 / 60)}h {operationalSummary.totalTime24 % 60}m
+                                            <div className="flex flex-col items-center leading-tight">
+                                                <span>{Math.floor(operationalSummary.totalTime24 / 60)}h {operationalSummary.totalTime24 % 60}m</span>
+                                                <span className="text-[9px] font-normal text-fuchsia-800/80 dark:text-fuchsia-300/80 mt-0.5">
+                                                    🚗 {Math.floor(operationalSummary.totalTravelTime24 / 60)}h {operationalSummary.totalTravelTime24 % 60}m • 🏢 {Math.floor(operationalSummary.totalServiceTime24 / 60)}h {operationalSummary.totalServiceTime24 % 60}m
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="py-3 text-center text-indigo-600 dark:text-indigo-400 font-black">
                                             {Math.round(((operationalSummary.totalPdvs13 + operationalSummary.totalPdvs24) / 2) * 10) / 10} / sem
