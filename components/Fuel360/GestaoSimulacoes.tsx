@@ -1,8 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { getRotaPrevistaHistory, getRotaPrevistaDetails, deleteRotaPrevista, updateRotaPrevistaDiario, getCalculoHistory, getCalculoDetails, updateCalculoDiario } from './services/apiService';
+import { getRotaPrevistaHistory, getRotaPrevistaDetails, deleteRotaPrevista, updateRotaPrevistaDiario, getCalculoHistory, getCalculoDetails, updateCalculoDiario, getSimulacaoSugestoes, updateSugestaoStatus } from './services/apiService';
 import { RotaPrevistaSaved, RotaPrevistaItem, CalculoSaved, CalculoItem } from './types';
 import { ClipboardListIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon, SpinnerIcon, ExclamationIcon, PencilIcon, CheckCircleIcon, XCircleIcon, CalculatorIcon, LocationMarkerIcon } from './icons';
+import { Share2, MessageSquare, ExternalLink, Check, X } from 'lucide-react';
+import { ShareSimulationModal } from './ShareSimulationModal';
 
 // --- HELPER VISUAL PARA DATA ---
 // Evita o problema de D-1 convertendo a string ISO (YYYY-MM-DD) para uma data ao meio-dia local
@@ -186,6 +188,14 @@ export const GestaoSimulacoes: React.FC = () => {
     const [editData, setEditData] = useState<{ id: number, km: number, date: string, name: string } | null>(null);
     const [isEditing, setIsEditing] = useState(false);
 
+    // Modal de Compartilhamento para Supervisor
+    const [shareModalData, setShareModalData] = useState<{ isOpen: boolean; simId: number; periodo: string; totalKm?: number } | null>(null);
+
+    // Modal de Sugestões de Supervisores
+    const [viewingSuggestions, setViewingSuggestions] = useState<{ simId: number; periodo: string; list: any[] } | null>(null);
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+    const [updatingSugestaoId, setUpdatingSugestaoId] = useState<number | null>(null);
+
     useEffect(() => {
         if (activeTab === 'SIMULACAO') loadSimHistory();
         else loadCalcHistory();
@@ -222,6 +232,38 @@ export const GestaoSimulacoes: React.FC = () => {
             alert(e.message || "Erro ao excluir");
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    // --- LOGICA SUGESTÕES DO SUPERVISOR ---
+    const handleOpenSuggestionsModal = async (simId: number, periodo: string) => {
+        setViewingSuggestions({ simId, periodo, list: [] });
+        setLoadingSuggestions(true);
+        try {
+            const list = await getSimulacaoSugestoes(simId);
+            setViewingSuggestions({ simId, periodo, list: list || [] });
+        } catch (err: any) {
+            alert('Erro ao carregar sugestões: ' + err.message);
+        } finally {
+            setLoadingSuggestions(false);
+        }
+    };
+
+    const handleUpdateStatus = async (sugestaoId: number, newStatus: 'PENDENTE' | 'APLICADO' | 'REJEITADO') => {
+        setUpdatingSugestaoId(sugestaoId);
+        try {
+            await updateSugestaoStatus(sugestaoId, newStatus);
+            setViewingSuggestions(prev => {
+                if (!prev) return null;
+                return {
+                    ...prev,
+                    list: prev.list.map(s => s.ID_Sugestao === sugestaoId ? { ...s, Status: newStatus } : s)
+                };
+            });
+        } catch (err: any) {
+            alert('Erro ao atualizar status da sugestão: ' + err.message);
+        } finally {
+            setUpdatingSugestaoId(null);
         }
     };
 
@@ -433,17 +475,46 @@ export const GestaoSimulacoes: React.FC = () => {
                                                     }
                                                 </td>
                                                 <td className="p-5 text-right">
-                                                    {!sim.JaCalculado ? (
+                                                    <div className="flex items-center justify-end gap-1">
                                                         <button 
-                                                            onClick={(e) => { e.stopPropagation(); setDeleteId(sim.ID_RotaHist); }} 
-                                                            className="text-slate-400 hover:text-red-600 p-2 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition"
-                                                            title="Excluir Simulação"
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); 
+                                                                setShareModalData({ 
+                                                                    isOpen: true, 
+                                                                    simId: sim.ID_RotaHist, 
+                                                                    periodo: sim.Periodo, 
+                                                                    totalKm: Number(sim.TotalKM) || 0 
+                                                                }); 
+                                                            }} 
+                                                            className="text-slate-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition"
+                                                            title="Link de Revisão para Supervisor"
                                                         >
-                                                            <TrashIcon className="w-5 h-5"/>
+                                                            <Share2 className="w-4 h-4"/>
                                                         </button>
-                                                    ) : (
-                                                        <span className="text-slate-300 dark:text-slate-600 text-xs cursor-not-allowed" title="Não pode excluir pois já foi calculada">Bloqueado</span>
-                                                    )}
+
+                                                        <button 
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); 
+                                                                handleOpenSuggestionsModal(sim.ID_RotaHist, sim.Periodo); 
+                                                            }} 
+                                                            className="text-slate-400 hover:text-amber-600 p-2 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition"
+                                                            title="Ver Sugestões do Supervisor"
+                                                        >
+                                                            <MessageSquare className="w-4 h-4"/>
+                                                        </button>
+
+                                                        {!sim.JaCalculado ? (
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); setDeleteId(sim.ID_RotaHist); }} 
+                                                                className="text-slate-400 hover:text-red-600 p-2 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition"
+                                                                title="Excluir Simulação"
+                                                            >
+                                                                <TrashIcon className="w-4 h-4"/>
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-slate-300 dark:text-slate-600 text-xs cursor-not-allowed ml-1" title="Não pode excluir pois já foi calculada">Bloqueado</span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                             {expandedSim === sim.ID_RotaHist && (
@@ -488,6 +559,198 @@ export const GestaoSimulacoes: React.FC = () => {
                     </>
                 )}
             </div>
+
+            {/* Modal de Compartilhamento para Supervisor */}
+            {shareModalData && (
+                <ShareSimulationModal
+                    isOpen={shareModalData.isOpen}
+                    onClose={() => setShareModalData(null)}
+                    simId={shareModalData.simId}
+                    periodo={shareModalData.periodo}
+                    totalKm={shareModalData.totalKm}
+                />
+            )}
+
+            {/* Modal de Sugestões de Supervisores */}
+            {viewingSuggestions && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 rounded-t-2xl">
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <MessageSquare className="w-5 h-5 text-indigo-500" />
+                                    Sugestões do Supervisor
+                                </h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Simulação #{viewingSuggestions.simId} &bull; {viewingSuggestions.periodo}
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => setViewingSuggestions(null)} 
+                                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 overflow-y-auto space-y-4 flex-1">
+                            {loadingSuggestions ? (
+                                <div className="py-12 text-center text-slate-400 dark:text-slate-500">
+                                    <SpinnerIcon className="w-8 h-8 mx-auto mb-2 text-indigo-500 animate-spin" />
+                                    Carregando apontamentos dos supervisores...
+                                </div>
+                            ) : viewingSuggestions.list.length === 0 ? (
+                                <div className="py-12 text-center text-slate-400 dark:text-slate-500">
+                                    <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                                    <p className="font-medium text-sm">Nenhum apontamento ou sugestão registrada pelo supervisor para esta simulação.</p>
+                                    <p className="text-xs text-slate-400 mt-1">Compartilhe o link da rota com o supervisor para que ele possa enviar sugestões.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {viewingSuggestions.list.map((sug: any) => {
+                                        const isPendente = (sug.Status || 'PENDENTE') === 'PENDENTE';
+                                        const isAplicado = sug.Status === 'APLICADO';
+                                        const isRejeitado = sug.Status === 'REJEITADO';
+
+                                        return (
+                                            <div 
+                                                key={sug.ID_Sugestao} 
+                                                className={`p-4 rounded-xl border transition-all ${
+                                                    isAplicado ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/50' :
+                                                    isRejeitado ? 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 opacity-60' :
+                                                    'bg-white dark:bg-slate-850 border-amber-200 dark:border-amber-900/60 shadow-sm'
+                                                }`}
+                                            >
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-bold text-slate-800 dark:text-white text-sm">
+                                                            {sug.SupervisorNome || 'Supervisor'}
+                                                        </span>
+                                                        <span className="text-xs text-slate-400">
+                                                            {sug.DataCriacao ? new Date(sug.DataCriacao).toLocaleString('pt-BR') : '-'}
+                                                        </span>
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                                            sug.TipoAjuste === 'MUDANCA_DIA' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' :
+                                                            sug.TipoAjuste === 'MUDANCA_SEMANA' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' :
+                                                            sug.TipoAjuste === 'CLIENTE_EXCLUSIVO' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' :
+                                                            'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                                        }`}>
+                                                            {sug.TipoAjuste === 'MUDANCA_DIA' ? 'Mudança de Dia' :
+                                                             sug.TipoAjuste === 'MUDANCA_SEMANA' ? 'Mudança de Semana' :
+                                                             sug.TipoAjuste === 'CLIENTE_EXCLUSIVO' ? 'Dia Específico' : sug.TipoAjuste || 'Geral'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                                            isAplicado ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' :
+                                                            isRejeitado ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' :
+                                                            'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                                                        }`}>
+                                                            {sug.Status || 'PENDENTE'}
+                                                        </span>
+
+                                                        <div className="flex items-center gap-1">
+                                                            {!isAplicado && (
+                                                                <button
+                                                                    onClick={() => handleUpdateStatus(sug.ID_Sugestao, 'APLICADO')}
+                                                                    disabled={updatingSugestaoId === sug.ID_Sugestao}
+                                                                    className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:hover:bg-emerald-900 dark:text-emerald-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                                                                    title="Marcar como Aplicado"
+                                                                >
+                                                                    <Check className="w-3.5 h-3.5" />
+                                                                    <span className="hidden sm:inline">Aplicar</span>
+                                                                </button>
+                                                            )}
+                                                            {!isRejeitado && (
+                                                                <button
+                                                                    onClick={() => handleUpdateStatus(sug.ID_Sugestao, 'REJEITADO')}
+                                                                    disabled={updatingSugestaoId === sug.ID_Sugestao}
+                                                                    className="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/50 dark:hover:bg-red-900 dark:text-red-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                                                                    title="Rejeitar Sugestão"
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" />
+                                                                    <span className="hidden sm:inline">Rejeitar</span>
+                                                                </button>
+                                                            )}
+                                                            {!isPendente && (
+                                                                <button
+                                                                    onClick={() => handleUpdateStatus(sug.ID_Sugestao, 'PENDENTE')}
+                                                                    disabled={updatingSugestaoId === sug.ID_Sugestao}
+                                                                    className="p-1.5 text-slate-400 hover:text-slate-600 text-xs font-semibold transition"
+                                                                    title="Reverter para Pendente"
+                                                                >
+                                                                    Reabrir
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Detalhes do Cliente e Vendedor */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs mb-2">
+                                                    <div>
+                                                        <span className="text-slate-400">Cliente: </span>
+                                                        <span className="font-bold text-slate-700 dark:text-slate-200">
+                                                            {sug.Cod_Cliente ? `#${sug.Cod_Cliente} - ` : ''}{sug.ClienteNome || 'Geral do Setor'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400">Vendedor: </span>
+                                                        <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                                            {sug.VendedorNome || '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* De -> Para de Dias / Semanas */}
+                                                {(sug.DiaAtual || sug.DiaSugerido || sug.SemanaAtual || sug.SemanaSugerida) && (
+                                                    <div className="flex items-center gap-3 text-xs bg-slate-50 dark:bg-slate-800/70 p-2 rounded-lg mb-2">
+                                                        {sug.DiaSugerido && (
+                                                            <div>
+                                                                <span className="text-slate-400">Dia: </span>
+                                                                <span className="line-through text-slate-400 mr-1">{sug.DiaAtual || 'Não inf.'}</span>
+                                                                <span className="font-bold text-blue-600 dark:text-blue-400">&rarr; {sug.DiaSugerido}</span>
+                                                            </div>
+                                                        )}
+                                                        {sug.SemanaSugerida && (
+                                                            <div>
+                                                                <span className="text-slate-400">Semana: </span>
+                                                                <span className="line-through text-slate-400 mr-1">{sug.SemanaAtual || 'Não inf.'}</span>
+                                                                <span className="font-bold text-purple-600 dark:text-purple-400">&rarr; {sug.SemanaSugerida}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Observação */}
+                                                <div className="text-xs text-slate-600 dark:text-slate-300 bg-amber-50/50 dark:bg-amber-950/20 p-2.5 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                                                    <p className="font-medium">{sug.Observacao}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 rounded-b-2xl flex justify-between items-center">
+                            <span className="text-xs text-slate-400">
+                                Total: {viewingSuggestions.list.length} sugestão(ões)
+                            </span>
+                            <button
+                                onClick={() => setViewingSuggestions(null)}
+                                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-bold transition"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

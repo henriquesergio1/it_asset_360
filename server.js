@@ -2246,6 +2246,31 @@ async function ensureFuelTablesExist(pool) {
             if (!cols.includes('descricao')) {
                 await pool.request().query("ALTER TABLE FuelSimulacoesHistorico ADD Descricao NVARCHAR(500) NULL");
             }
+            if (!cols.includes('snapshotdata')) {
+                await pool.request().query("ALTER TABLE FuelSimulacoesHistorico ADD SnapshotData NVARCHAR(MAX) NULL");
+            }
+        }
+
+        const checkSugestoes = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelSimulacaoSugestoes'");
+        if (checkSugestoes.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelSimulacaoSugestoes (
+                    ID_Sugestao INT IDENTITY(1,1) PRIMARY KEY,
+                    ID_RotaHist INT NOT NULL,
+                    SupervisorNome NVARCHAR(255) NULL,
+                    Cod_Cliente INT NULL,
+                    ClienteNome NVARCHAR(255) NULL,
+                    VendedorNome NVARCHAR(255) NULL,
+                    DiaAtual NVARCHAR(50) NULL,
+                    DiaSugerido NVARCHAR(50) NULL,
+                    SemanaAtual NVARCHAR(50) NULL,
+                    SemanaSugerida NVARCHAR(50) NULL,
+                    TipoAjuste NVARCHAR(50) NOT NULL,
+                    Observacao NVARCHAR(1000) NOT NULL,
+                    DataCriacao DATETIME DEFAULT GETDATE(),
+                    Status NVARCHAR(50) DEFAULT 'PENDENTE'
+                )
+            `);
         }
 
         const checkSimDet = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelSimulacoesDetalhe'");
@@ -3655,7 +3680,7 @@ app.get('/api/fuel360/roteiro/historico', async (req, res) => {
 });
 
 app.post('/api/fuel360/roteiro/historico', async (req, res) => {
-    const { Periodo, TotalKM, Descricao, overwriteId, Itens, UsuarioSimulacao, criadoPor, usuario, _adminUser } = req.body;
+    const { Periodo, TotalKM, Descricao, overwriteId, Itens, UsuarioSimulacao, criadoPor, usuario, _adminUser, SnapshotData } = req.body;
     const userSim = UsuarioSimulacao || criadoPor || usuario || _adminUser || 'Operador';
     try {
         const pool = await sql.connect(dbConfig);
@@ -3663,20 +3688,24 @@ app.post('/api/fuel360/roteiro/historico', async (req, res) => {
 
         // Se o operador optou por sobrescrever uma simulação existente com mesmo período e KM
         if (overwriteId) {
+            await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacaoSugestoes WHERE ID_RotaHist = @OID');
             await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacoesDiario WHERE ID_RotaHist = @OID');
             await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacoesDetalhe WHERE ID_RotaHist = @OID');
             await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacoesHistorico WHERE ID_RotaHist = @OID');
         }
+
+        const snapshotStr = typeof SnapshotData === 'object' ? JSON.stringify(SnapshotData) : (SnapshotData || null);
 
         const histRes = await pool.request()
             .input('Periodo', sql.NVarChar, Periodo || 'Simulação sem Título')
             .input('Descricao', sql.NVarChar, Descricao || null)
             .input('TotalKM', sql.Float, TotalKM || 0)
             .input('UsuarioSimulacao', sql.NVarChar, userSim)
+            .input('SnapshotData', sql.NVarChar, snapshotStr)
             .query(`
-                INSERT INTO FuelSimulacoesHistorico (Periodo, Descricao, TotalKM, UsuarioSimulacao)
+                INSERT INTO FuelSimulacoesHistorico (Periodo, Descricao, TotalKM, UsuarioSimulacao, SnapshotData)
                 OUTPUT INSERTED.ID_RotaHist
-                VALUES (@Periodo, @Descricao, @TotalKM, @UsuarioSimulacao)
+                VALUES (@Periodo, @Descricao, @TotalKM, @UsuarioSimulacao, @SnapshotData)
             `);
 
         const idRotaHist = histRes.recordset[0].ID_RotaHist;
@@ -3720,6 +3749,127 @@ app.post('/api/fuel360/roteiro/historico', async (req, res) => {
     } catch (err) {
         console.error('Erro ao salvar simulação de roteiro:', err);
         res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// Endpoint público para revisão da simulação pelo supervisor
+app.get('/api/fuel360/roteiro/simulacao/:id/public', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const simId = parseInt(req.params.id, 10);
+        const result = await pool.request()
+            .input('ID', sql.Int, simId)
+            .query('SELECT ID_RotaHist, Periodo, Descricao, DataSimulacao, TotalKM, UsuarioSimulacao, SnapshotData FROM FuelSimulacoesHistorico WHERE ID_RotaHist = @ID');
+        
+        if (!result.recordset || result.recordset.length === 0) {
+            return res.status(404).json({ error: 'Simulação não encontrada' });
+        }
+        const sim = result.recordset[0];
+        let snapshot = null;
+        if (sim.SnapshotData) {
+            try {
+                snapshot = JSON.parse(sim.SnapshotData);
+            } catch (e) {
+                snapshot = null;
+            }
+        }
+        res.json({
+            id: sim.ID_RotaHist,
+            periodo: sim.Periodo,
+            descricao: sim.Descricao,
+            dataSimulacao: sim.DataSimulacao,
+            totalKm: sim.TotalKM,
+            usuarioSimulacao: sim.UsuarioSimulacao,
+            snapshot
+        });
+    } catch (err) {
+        console.error('Erro em GET /api/fuel360/roteiro/simulacao/:id/public:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Registrar sugestão de ajuste de rota enviada pelo supervisor
+app.post('/api/fuel360/roteiro/simulacao/:id/sugestoes', async (req, res) => {
+    try {
+        const simId = parseInt(req.params.id, 10);
+        const {
+            supervisorNome,
+            codCliente,
+            clienteNome,
+            vendedorNome,
+            diaAtual,
+            diaSugerido,
+            semanaAtual,
+            semanaSugerida,
+            tipoAjuste,
+            observacao
+        } = req.body;
+
+        if (!observacao || !tipoAjuste) {
+            return res.status(400).json({ error: 'Tipo de ajuste e observação são obrigatórios' });
+        }
+
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+
+        const result = await pool.request()
+            .input('ID_RotaHist', sql.Int, simId)
+            .input('SupervisorNome', sql.NVarChar, supervisorNome || 'Supervisor')
+            .input('Cod_Cliente', sql.Int, codCliente || null)
+            .input('ClienteNome', sql.NVarChar, clienteNome || null)
+            .input('VendedorNome', sql.NVarChar, vendedorNome || null)
+            .input('DiaAtual', sql.NVarChar, diaAtual || null)
+            .input('DiaSugerido', sql.NVarChar, diaSugerido || null)
+            .input('SemanaAtual', sql.NVarChar, semanaAtual || null)
+            .input('SemanaSugerida', sql.NVarChar, semanaSugerida || null)
+            .input('TipoAjuste', sql.NVarChar, tipoAjuste)
+            .input('Observacao', sql.NVarChar, observacao)
+            .query(`
+                INSERT INTO FuelSimulacaoSugestoes 
+                (ID_RotaHist, SupervisorNome, Cod_Cliente, ClienteNome, VendedorNome, DiaAtual, DiaSugerido, SemanaAtual, SemanaSugerida, TipoAjuste, Observacao)
+                OUTPUT INSERTED.ID_Sugestao
+                VALUES (@ID_RotaHist, @SupervisorNome, @Cod_Cliente, @ClienteNome, @VendedorNome, @DiaAtual, @DiaSugerido, @SemanaAtual, @SemanaSugerida, @TipoAjuste, @Observacao)
+            `);
+
+        res.json({ success: true, id: result.recordset[0].ID_Sugestao });
+    } catch (err) {
+        console.error('Erro ao salvar sugestao:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Listar sugestões de uma simulação
+app.get('/api/fuel360/roteiro/simulacao/:id/sugestoes', async (req, res) => {
+    try {
+        const simId = parseInt(req.params.id, 10);
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request()
+            .input('ID', sql.Int, simId)
+            .query('SELECT * FROM FuelSimulacaoSugestoes WHERE ID_RotaHist = @ID ORDER BY DataCriacao DESC');
+        res.json(result.recordset || []);
+    } catch (err) {
+        console.error('Erro ao buscar sugestoes:', err);
+        res.json([]);
+    }
+});
+
+// Atualizar status de uma sugestão (ex: PENDENTE -> APLICADO / REJEITADO)
+app.put('/api/fuel360/roteiro/sugestoes/:id/status', async (req, res) => {
+    try {
+        const sugId = parseInt(req.params.id, 10);
+        const { status } = req.body;
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        await pool.request()
+            .input('ID', sql.Int, sugId)
+            .input('Status', sql.NVarChar, status || 'PENDENTE')
+            .query('UPDATE FuelSimulacaoSugestoes SET Status = @Status WHERE ID_Sugestao = @ID');
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Erro ao atualizar status da sugestao:', err);
+        res.status(500).json({ error: err.message });
     }
 });
 

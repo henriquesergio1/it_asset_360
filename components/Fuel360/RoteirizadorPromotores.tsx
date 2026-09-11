@@ -7,6 +7,7 @@ import { useAuth } from './context/AuthContext';
 import { getPromoterClients, saveRotaPrevista, checkRotaPrevistaExists, getOSRMData } from './services/apiService';
 import { VisitaPrevista, Colaborador } from './types';
 import { LocationMarkerIcon, SpinnerIcon, CalculatorIcon, ChevronRightIcon, ChevronDownIcon, ArrowLeftIcon, GlobeIcon, RefreshIcon, UsersIcon, ExclamationIcon, CheckCircleIcon, TrashIcon, CalendarIcon, PlusCircleIcon, XCircleIcon, UserGroupIcon } from './icons';
+import { ShareSimulationModal } from './ShareSimulationModal';
 import L from 'leaflet';
 
 // --- CONFIGURAÇÃO DE ÍCONES NATIVOS EM SVG (ISENTO DE MIXED CONTENT E ERROS DE REDE) ---
@@ -1155,6 +1156,13 @@ export const RoteirizadorPromotores: React.FC = () => {
         existingDescricao?: string;
     } | null>(null);
 
+    const [shareModalData, setShareModalData] = useState<{
+        isOpen: boolean;
+        simId: number;
+        periodo: string;
+        totalKm?: number;
+    } | null>(null);
+
     const handleOpenSaveModal = async () => {
         const sellersToSave = groupedData.filter(s => selectedSellerIds.has(s.id));
         
@@ -1194,12 +1202,38 @@ export const RoteirizadorPromotores: React.FC = () => {
         const sellersToSave = groupedData.filter(s => selectedSellerIds.has(s.id));
         setSaving(true);
         try {
+            const snapshotData = {
+                teamType: 'promotores',
+                periodo: saveModalData.periodo,
+                totalKm: saveModalData.totalKm,
+                sellers: sellersToSave.map(seller => ({
+                    id: seller.id,
+                    name: seller.name,
+                    totalKm: seller.totalKmReal || seller.totalKm,
+                    clients: (seller.clients || []).map((c: any) => ({
+                        Cod_Cliente: c.Cod_Cliente,
+                        Razao_Social: c.Razao_Social,
+                        Endereco: c.Endereco,
+                        Bairro: c.Bairro,
+                        Cidade: c.Cidade,
+                        CEP: c.CEP,
+                        Lat: c.Lat,
+                        Long: c.Long,
+                        Dia_Semana: c.Dia_Semana,
+                        Periodicidade: c.Periodicidade,
+                        Sequencia_13: c.Sequencia_13,
+                        Sequencia_24: c.Sequencia_24
+                    }))
+                }))
+            };
+
             const payload = {
                 Periodo: saveModalData.periodo,
                 TotalKM: saveModalData.totalKm,
                 Descricao: userDesc.trim() || undefined,
                 overwriteId: saveModalData.overwriteId,
                 UsuarioSimulacao: authUser?.Nome || 'Operador',
+                SnapshotData: snapshotData,
                 Itens: sellersToSave.map(seller => ({
                     ID_Pulsus: seller.colabRef.ID_Pulsus || seller.id,
                     Nome: seller.name,
@@ -1213,9 +1247,22 @@ export const RoteirizadorPromotores: React.FC = () => {
                 })).filter(i => i.TotalKM > 0)
             };
 
-            await saveRotaPrevista(payload);
+            const res = await saveRotaPrevista(payload);
+            const savedId = res && typeof res === 'object' && res.id ? res.id : saveModalData.overwriteId || 0;
+            const periodSaved = saveModalData.periodo;
+            const kmSaved = saveModalData.totalKm;
             setSaveModalData(null);
-            alert("Simulação salva com sucesso!");
+
+            if (savedId) {
+                setShareModalData({
+                    isOpen: true,
+                    simId: savedId,
+                    periodo: periodSaved,
+                    totalKm: kmSaved
+                });
+            } else {
+                alert("Simulação salva com sucesso!");
+            }
         } catch (e: any) {
             alert("Erro ao salvar: " + e.message);
         } finally {
@@ -1300,6 +1347,16 @@ export const RoteirizadorPromotores: React.FC = () => {
                     existingDescricao={saveModalData.existingDescricao}
                     isSaving={saving}
                     groupType="EQUIPE DE MERCHANDISING (PROMOTORES)"
+                />
+            )}
+
+            {shareModalData && (
+                <ShareSimulationModal
+                    isOpen={shareModalData.isOpen}
+                    onClose={() => setShareModalData(null)}
+                    simId={shareModalData.simId}
+                    periodo={shareModalData.periodo}
+                    totalKm={shareModalData.totalKm}
                 />
             )}
             

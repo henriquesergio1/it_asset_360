@@ -176,11 +176,15 @@ const RealService = {
     // Rota Prevista (Simulações)
     checkRotaPrevistaExists: (periodo: string, totalKm: number): Promise<{ exists: boolean; id?: number; periodo?: string; totalKm?: number; descricao?: string }> => 
         apiRequest(`/roteiro/exists?periodo=${encodeURIComponent(periodo)}&totalKm=${totalKm}`),
-    saveRotaPrevista: (payload: any): Promise<void> => apiRequest('/roteiro/historico', 'POST', payload),
+    saveRotaPrevista: (payload: any): Promise<{ success: boolean; id?: number }> => apiRequest('/roteiro/historico', 'POST', payload),
     getRotaPrevistaHistory: (): Promise<RotaPrevistaSaved[]> => apiRequest('/roteiro/historico'),
     getRotaPrevistaDetails: (id: number): Promise<RotaPrevistaItem[]> => apiRequest(`/roteiro/historico/${id}`),
     deleteRotaPrevista: (id: number, reason: string): Promise<void> => apiRequest(`/roteiro/historico/${id}`, 'DELETE', { reason }),
     updateRotaPrevistaDiario: (id: number, km: number, reason: string): Promise<void> => apiRequest(`/roteiro/diario/${id}`, 'PUT', { km, reason }),
+    getSimulacaoPublica: (id: number): Promise<any> => apiRequest(`/roteiro/simulacao/${id}/public`),
+    getSimulacaoSugestoes: (id: number): Promise<any[]> => apiRequest(`/roteiro/simulacao/${id}/sugestoes`),
+    saveSimulacaoSugestao: (id: number, payload: any): Promise<{ success: boolean; id: number }> => apiRequest(`/roteiro/simulacao/${id}/sugestoes`, 'POST', payload),
+    updateSugestaoStatus: (id: number, status: string): Promise<{ success: boolean }> => apiRequest(`/roteiro/sugestoes/${id}/status`, 'PUT', { status }),
 
     // Gestão de Cálculos Fechados
     getCalculoHistory: (): Promise<CalculoSaved[]> => apiRequest('/calculo/historico'),
@@ -454,11 +458,15 @@ const MockService = {
         ];
     },
     checkRotaPrevistaExists: async (): Promise<{ exists: boolean; id?: number; periodo?: string; totalKm?: number; descricao?: string }> => ({ exists: false }),
-    saveRotaPrevista: async () => {},
+    saveRotaPrevista: async (): Promise<{ success: boolean; id?: number }> => ({ success: true, id: 1 }),
     getRotaPrevistaHistory: async () => [],
     getRotaPrevistaDetails: async () => [],
     deleteRotaPrevista: async () => {},
     updateRotaPrevistaDiario: async () => {},
+    getSimulacaoPublica: async (id: number) => null,
+    getSimulacaoSugestoes: async (id: number) => [],
+    saveSimulacaoSugestao: async () => ({ success: true, id: 1 }),
+    updateSugestaoStatus: async () => ({ success: true }),
     getCalculoHistory: async () => [],
     getCalculoDetails: async () => [],
     updateCalculoDiario: async () => {},
@@ -498,6 +506,7 @@ export const {
     getRelatorioReembolso, getRelatorioAnalitico, logAction, getSystemLogs, getVisitasPrevistas, getPromoterClients,
     saveRotaPrevista, checkRotaPrevistaExists, getRotaPrevistaHistory, getRotaPrevistaDetails,
     deleteRotaPrevista, updateRotaPrevistaDiario, getCalculoHistory, getCalculoDetails, updateCalculoDiario,
+    getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, updateSugestaoStatus,
     moveColaboradoresToGroup, bulkUpdateColaboradores, corrigirAusenciasHistorico, getSugestoesVinculo, batchUpdateColaboradoresAddress,
     geocodeAddress, getOSRMData, getOSRMTable, calcDistance
 } = Service;

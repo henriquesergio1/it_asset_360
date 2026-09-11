@@ -34,6 +34,7 @@ import { RhOccurrenceManager } from './components/RhOccurrenceManager';
 import { RhAssetManager } from './components/RhAssetManager';
 import SystemInfoModal from './components/SystemInfoModal';
 const FuelManager = lazy(() => import('./components/FuelManager'));
+const RevisaoRoteiroSupervisor = lazy(() => import('./components/Fuel360/RevisaoRoteiroSupervisor').then(m => ({ default: m.RevisaoRoteiroSupervisor })));
 
 const getDefaultTiPath = (user: any, isAdmin?: boolean): string => {
   if (isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'dashboard_leitura') || hasPermission(user, 'dispositivos_leitura')) {
@@ -752,6 +753,7 @@ const AppRoutes = () => {
 
             {/* Módulo Fuel360 Routes */}
             <Route path="/fuel360" element={<Navigate to="/fuel360/calculo" replace />} />
+            <Route path="/fuel360/revisao/:id" element={<RevisaoRoteiroSupervisor />} />
             <Route path="/fuel360/:subView" element={<ProtectedRoute module="FUEL"><FuelManager /></ProtectedRoute>} />
 
             <Route path="/sign-term/:token" element={<DigitalSignature />} />

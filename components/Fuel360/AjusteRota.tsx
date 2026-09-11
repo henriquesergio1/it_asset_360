@@ -6,6 +6,7 @@ import { VisitaPrevista, Colaborador, SequenceStrategy } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import * as XLSX from 'xlsx';
+import { ShareSimulationModal } from './ShareSimulationModal';
 import {
     CogIcon,
     SpinnerIcon,
@@ -1160,6 +1161,7 @@ export const AjusteRota: React.FC = () => {
     const [itinerarySeller, setItinerarySeller] = useState<string>('');
     const [itineraryQuinzena, setItineraryQuinzena] = useState<'1_3' | '2_4'>('1_3');
     const [copiedItinerary, setCopiedItinerary] = useState(false);
+    const [shareModalData, setShareModalData] = useState<{ isOpen: boolean; simId: number; periodo: string; totalKm?: number } | null>(null);
 
     // Modal de Diagnóstico e Reequilíbrio de Dias Sobrecarregados
     const [rebalanceDay, setRebalanceDay] = useState<string | null>(null);
@@ -4684,10 +4686,35 @@ export const AjusteRota: React.FC = () => {
                 groups.get(v.Cod_Vend)?.push(v);
             });
 
+            const snapshotData = {
+                teamType,
+                periodo: periodName,
+                totalKm: kpis.adjusted.totalKm,
+                sellers: Array.from(groups.entries()).map(([vendedorId, visits]) => ({
+                    id: vendedorId,
+                    name: visits[0]?.Nome_Vendedor || `Vendedor ${vendedorId}`,
+                    clients: visits.map(c => ({
+                        Cod_Cliente: c.Cod_Cliente,
+                        Razao_Social: c.Razao_Social,
+                        Endereco: c.Endereco,
+                        Bairro: c.Bairro,
+                        Cidade: c.Cidade,
+                        CEP: c.CEP,
+                        Lat: c.Lat,
+                        Long: c.Long,
+                        Dia_Semana: c.Dia_Semana,
+                        Periodicidade: c.Periodicidade,
+                        Sequencia_13: c.Sequencia_13,
+                        Sequencia_24: c.Sequencia_24
+                    }))
+                }))
+            };
+
             const payload = {
                 Periodo: periodName,
                 TotalKM: kpis.adjusted.totalKm,
                 UsuarioSimulacao: authUser?.Nome || 'Operador',
+                SnapshotData: snapshotData,
                 Itens: Array.from(groups.entries()).map(([vendedorId, visits]) => {
                     const colab = getColabBySectorOrName(vendedorId, visits[0]?.Nome_Vendedor);
                     
@@ -4724,8 +4751,18 @@ export const AjusteRota: React.FC = () => {
                 })
             };
 
-            await saveRotaPrevista(payload);
-            alert("Ajuste de Rota salvo com sucesso na base de Simulações do Fuel360!");
+            const res = await saveRotaPrevista(payload);
+            const savedId = res && typeof res === 'object' && res.id ? res.id : 0;
+            if (savedId) {
+                setShareModalData({
+                    isOpen: true,
+                    simId: savedId,
+                    periodo: periodName,
+                    totalKm: kpis.adjusted.totalKm
+                });
+            } else {
+                alert("Ajuste de Rota salvo com sucesso na base de Simulações do Fuel360!");
+            }
         } catch (e: any) {
             alert("Erro ao salvar: " + e.message);
         } finally {
@@ -9364,6 +9401,17 @@ export const AjusteRota: React.FC = () => {
                         ✕
                     </button>
                 </div>
+            )}
+
+            {/* MODAL DE COMPARTILHAMENTO DE LINK COM SUPERVISOR */}
+            {shareModalData && (
+                <ShareSimulationModal
+                    isOpen={shareModalData.isOpen}
+                    onClose={() => setShareModalData(null)}
+                    simId={shareModalData.simId}
+                    periodo={shareModalData.periodo}
+                    totalKm={shareModalData.totalKm}
+                />
             )}
         </div>
     );
