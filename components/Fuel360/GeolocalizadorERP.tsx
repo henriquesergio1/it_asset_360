@@ -411,6 +411,76 @@ export const GeolocalizadorERP: React.FC = () => {
         }
     };
 
+    // --- APROVAR COORDENADA DO ERP COMO CORRETA ---
+    const handleApproveErpCoord = (client: ClienteAuditado) => {
+        if (!client.HasValidERPCoords) return;
+        saveToLocalCache(client.Cod_Cliente, client.Lat_ERP, client.Long_ERP);
+        const updated: ClienteAuditado = {
+            ...client,
+            Lat_Geocode: client.Lat_ERP,
+            Long_Geocode: client.Long_ERP,
+            Divergencia_Metros: 0,
+            Status: 'OK',
+            GeocodedAt: new Date().toISOString()
+        };
+        setClientes(prev => prev.map(c => c.Cod_Cliente === updated.Cod_Cliente ? updated : c));
+        if (selectedClientModal && selectedClientModal.Cod_Cliente === updated.Cod_Cliente) {
+            setSelectedClientModal(updated);
+        }
+    };
+
+    // --- FORÇAR GEOCODIFICAÇÃO POR CEP ---
+    const handleGeocodeByCep = async (client: ClienteAuditado) => {
+        if (!client.CEP || String(client.CEP).trim() === '') {
+            alert('Este cliente não possui CEP cadastrado.');
+            return;
+        }
+        try {
+            const res = await geocodeAddress({
+                address: client.CEP,
+                street: client.Endereco,
+                number: client.Numero,
+                neighborhood: client.Bairro,
+                city: client.Cidade,
+                cep: client.CEP,
+                forceCepOnly: true
+            });
+            if (res && res.lat && res.lon && !isNaN(res.lat) && !isNaN(res.lon)) {
+                saveToLocalCache(client.Cod_Cliente, res.lat, res.lon);
+                let divergencia: number | null = null;
+                let status: StatusAuditoria = 'SEM_COORDENADAS_ERP';
+
+                if (client.HasValidERPCoords) {
+                    divergencia = calcDistanceMeters(client.Lat_ERP, client.Long_ERP, res.lat, res.lon);
+                    if (divergencia <= toleranciaOkMetros) {
+                        status = 'OK';
+                    } else if (divergencia <= toleranciaCriticaMetros) {
+                        status = 'DIVERGENCIA_LEVE';
+                    } else {
+                        status = 'DIVERGENCIA_CRITICA';
+                    }
+                }
+
+                const updated: ClienteAuditado = {
+                    ...client,
+                    Lat_Geocode: res.lat,
+                    Long_Geocode: res.lon,
+                    Divergencia_Metros: divergencia,
+                    Status: status,
+                    GeocodedAt: new Date().toISOString()
+                };
+                setClientes(prev => prev.map(c => c.Cod_Cliente === updated.Cod_Cliente ? updated : c));
+                if (selectedClientModal && selectedClientModal.Cod_Cliente === updated.Cod_Cliente) {
+                    setSelectedClientModal(updated);
+                }
+            } else {
+                alert('Não foi possível obter localização para o CEP deste cliente.');
+            }
+        } catch (e: any) {
+            alert(`Erro ao geocodificar por CEP: ${e.message}`);
+        }
+    };
+
     // --- MOTOR DE PROCESSAMENTO EM LOTE (MASSA) ---
     const handleStartBatch = async () => {
         if (clientes.length === 0) {
@@ -1451,12 +1521,37 @@ export const GeolocalizadorERP: React.FC = () => {
                             </div>
 
                             <div className="flex items-center gap-2">
+                                {/* Aprovar Posição do ERP */}
+                                {selectedClientModal.HasValidERPCoords && (
+                                    <button
+                                        onClick={() => handleApproveErpCoord(selectedClientModal)}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider transition-all active:scale-95 text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm shadow-blue-900/20"
+                                        title="Aprovar e adotar a coordenada do ERP como a localização correta deste cliente"
+                                    >
+                                        <Check size={14} />
+                                        Aprovar Posição ERP
+                                    </button>
+                                )}
+
+                                {/* Geocodificar por CEP */}
+                                {selectedClientModal.CEP && (
+                                    <button
+                                        onClick={() => handleGeocodeByCep(selectedClientModal)}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold uppercase tracking-wider transition-all active:scale-95 text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm shadow-purple-900/20"
+                                        title="Forçar localização utilizando estritamente o CEP municipal"
+                                    >
+                                        <Compass size={14} />
+                                        Geocodificar por CEP
+                                    </button>
+                                )}
+
                                 <button
                                     onClick={() => handleGeocodeIndividual(selectedClientModal)}
                                     className={`${UI_BUTTON_PRIMARY} text-xs py-2 px-4 flex items-center gap-1.5`}
+                                    title="Reprocessar busca completa do endereço"
                                 >
                                     <RefreshCw size={13} />
-                                    Reprocessar Geocodificação
+                                    Reprocessar Completo
                                 </button>
                                 <button
                                     onClick={() => setSelectedClientModal(null)}

@@ -196,7 +196,7 @@ const RealService = {
     corrigirAusenciasHistorico: (ids: number[]): Promise<void> => apiRequest('/relatorios/fix-conflicts', 'POST', { ids }),
     getSugestoesVinculo: (ids: number[]): Promise<any[]> => apiRequest('/colaboradores/smart-suggestions', 'POST', { ids }),
     batchUpdateColaboradoresAddress: (items: any[], reason: string): Promise<void> => apiRequest('/colaboradores/batch-address', 'POST', { items, reason }),
-    geocodeAddress: async (input: string | { address?: string; street?: string; number?: string; neighborhood?: string; city?: string; state?: string; cep?: string }): Promise<{lat: number, lon: number}> => {
+    geocodeAddress: async (input: string | { address?: string; street?: string; number?: string; neighborhood?: string; city?: string; state?: string; cep?: string; forceCepOnly?: boolean }): Promise<{lat: number, lon: number}> => {
         let street = '';
         let num = '';
         let neighborhood = '';
@@ -205,6 +205,7 @@ const RealService = {
         let zip = '';
         let overrideAddress = '';
         let rawStr = '';
+        let forceCep = false;
 
         if (typeof input === 'string') {
             rawStr = (input || '').trim();
@@ -217,6 +218,7 @@ const RealService = {
             state = (input.state || '').trim();
             zip = (input.cep || '').replace(/\D/g, '');
             overrideAddress = (input.address || '').trim();
+            forceCep = Boolean(input.forceCepOnly);
             rawStr = overrideAddress || (street && city ? `${street}${num ? `, ${num}` : ''}${neighborhood ? ` - ${neighborhood}` : ''}, ${city}${state ? ` - ${state}` : ''}` : '');
         }
 
@@ -234,6 +236,72 @@ const RealService = {
             if (cepMatch) {
                 zip = `${cepMatch[1]}${cepMatch[2]}`;
             }
+        }
+
+        const cleanZip = zip.replace(/\D/g, '');
+
+        // Função interna para resolver coordenadas pelo CEP (AwesomeAPI -> Google Maps CEP -> Nominatim)
+        const resolveCoordsByCep = async (targetCep: string): Promise<{ lat: number; lon: number } | null> => {
+            if (!targetCep || targetCep.length !== 8) return null;
+
+            // 1. AwesomeAPI
+            try {
+                const resCep = await fetch(`https://cep.awesomeapi.com.br/json/${targetCep}`);
+                if (resCep.ok) {
+                    const cData = await resCep.json();
+                    if (cData && cData.lat && cData.lng) {
+                        const lat = parseFloat(cData.lat);
+                        const lon = parseFloat(cData.lng);
+                        if (!isNaN(lat) && !isNaN(lon)) return { lat, lon };
+                    }
+                }
+            } catch (eCep) {
+                console.warn('[Fuel360] Fallback AwesomeAPI falhou:', eCep);
+            }
+
+            // 2. Google Maps com o CEP formatado
+            try {
+                const formattedCep = `${targetCep.substring(0, 5)}-${targetCep.substring(5)}`;
+                const gCepRes = await fetch('/api/geocode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: `${formattedCep}, Brasil` })
+                });
+                if (gCepRes.ok) {
+                    const gData = await gCepRes.json();
+                    if (gData && gData.success && gData.lat && gData.lon) {
+                        const lat = Number(gData.lat);
+                        const lon = Number(gData.lon);
+                        if (!isNaN(lat) && !isNaN(lon)) return { lat, lon };
+                    }
+                }
+            } catch (eGCep) {
+                console.warn('[Fuel360] Fallback Google Maps CEP falhou:', eGCep);
+            }
+
+            // 3. Nominatim por Postalcode
+            try {
+                const urlZipNom = `https://nominatim.openstreetmap.org/search?format=json&postalcode=${targetCep}&country=Brazil&limit=1`;
+                const resNomZip = await fetch(urlZipNom, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+                if (resNomZip.ok) {
+                    const nomZipData = await resNomZip.json();
+                    if (nomZipData && nomZipData.length > 0) {
+                        const lat = parseFloat(nomZipData[0].lat);
+                        const lon = parseFloat(nomZipData[0].lon);
+                        if (!isNaN(lat) && !isNaN(lon)) return { lat, lon };
+                    }
+                }
+            } catch (eNomZip) {
+                console.warn('[Fuel360] Fallback Nominatim CEP falhou:', eNomZip);
+            }
+
+            return null;
+        };
+
+        // Se o usuário solicitou especificamente a geocodificação por CEP
+        if (forceCep && cleanZip.length === 8) {
+            const cepResult = await resolveCoordsByCep(cleanZip);
+            if (cepResult) return cepResult;
         }
 
         // Montagem da query completa de alta precisão (Logradouro, Número, Bairro, Cidade, CEP)
@@ -267,6 +335,20 @@ const RealService = {
                     const lat = Number(gRes.lat);
                     const lon = Number(gRes.lon);
                     if (!isNaN(lat) && !isNaN(lon)) {
+                        // Guarda de consistência geográfica para rodovias interestaduais/estaduais
+                        const isHighway = /rodovia|rod\.|sp\s*-?\s*\d+|br\s*-?\s*\d+|km\s*\d+/i.test(fullQuery);
+                        if (isHighway && cleanZip.length === 8 && city) {
+                            const cepPoint = await resolveCoordsByCep(cleanZip);
+                            if (cepPoint) {
+                                const distFromCep = RealService.calcDistance(lat, lon, cepPoint.lat, cepPoint.lon);
+                                // Se a busca genérica por rodovia colocou o pino em outro município (> 10 km do CEP oficial da rodovia)
+                                if (distFromCep > 10) {
+                                    console.warn(`[Fuel360] Ponto do Google Maps divergiu ${distFromCep.toFixed(1)}km do CEP setorial de ${city} (típico em rodovias interestaduais). Adotando coordenada de alta precisão do CEP do município.`);
+                                    return cepPoint;
+                                }
+                            }
+                        }
+
                         return { lat, lon };
                     }
                 }
@@ -292,7 +374,6 @@ const RealService = {
         }
 
         const numVal = parseInt(num, 10);
-        const cleanZip = zip.replace(/\D/g, '');
         const zipPrefix = cleanZip.length >= 5 ? cleanZip.substring(0, 5) : '';
 
         for (const attempt of attempts) {
@@ -357,40 +438,10 @@ const RealService = {
             }
         }
 
-        // 3ª Prioridade (Fallback de Último Recurso): AwesomeAPI ou Nominatim por CEP (Apenas se logradouro e número falharem)
+        // 3ª Prioridade (Fallback de Último Recurso): CEP (Apenas se logradouro e número falharem)
         if (cleanZip.length === 8) {
-            try {
-                const resCep = await fetch(`https://cep.awesomeapi.com.br/json/${cleanZip}`);
-                if (resCep.ok) {
-                    const cData = await resCep.json();
-                    if (cData && cData.lat && cData.lng) {
-                        let lat = parseFloat(cData.lat);
-                        let lon = parseFloat(cData.lng);
-                        if (!isNaN(lat) && !isNaN(lon)) {
-                            return { lat, lon };
-                        }
-                    }
-                }
-            } catch (eCep) {
-                console.warn('[Fuel360] Fallback AwesomeAPI falhou:', eCep);
-            }
-
-            try {
-                const urlZipNom = `https://nominatim.openstreetmap.org/search?format=json&postalcode=${cleanZip}&country=Brazil&limit=1`;
-                const resNomZip = await fetch(urlZipNom, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
-                if (resNomZip.ok) {
-                    const nomZipData = await resNomZip.json();
-                    if (nomZipData && nomZipData.length > 0) {
-                        const lat = parseFloat(nomZipData[0].lat);
-                        const lon = parseFloat(nomZipData[0].lon);
-                        if (!isNaN(lat) && !isNaN(lon)) {
-                            return { lat, lon };
-                        }
-                    }
-                }
-            } catch (eNomZip) {
-                console.warn('[Fuel360] Fallback Nominatim CEP falhou:', eNomZip);
-            }
+            const cepFallback = await resolveCoordsByCep(cleanZip);
+            if (cepFallback) return cepFallback;
         }
 
         throw new Error('Endereço ou CEP não localizado no mapa. Verifique se o logradouro, número e cidade estão corretos.');
