@@ -1884,7 +1884,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
 });
 
 // Endpoint de Geocodificação de Alta Precisão (Google Maps Engine Proxy)
-app.post('/api/geocode', async (req, res) => {
+app.post(['/api/geocode', '/api/fuel360/geocode'], async (req, res) => {
     const { address } = req.body;
     if (!address || typeof address !== 'string' || !address.trim()) {
         return res.status(400).json({ success: false, message: 'Endereço não informado.' });

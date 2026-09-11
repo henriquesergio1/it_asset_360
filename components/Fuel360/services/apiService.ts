@@ -199,10 +199,24 @@ const RealService = {
     geocodeAddress: async (address: string): Promise<{lat: number, lon: number}> => {
         const addrStr = (address || '').trim();
 
-        // 1ª Prioridade Absoluta: Google Maps Engine via Backend Proxy (/api/geocode)
+        // 1ª Prioridade Absoluta: Google Maps Engine via Backend Proxy (/api/fuel360/geocode ou /api/geocode)
         if (addrStr) {
             try {
-                const gRes = await apiRequest<{ success: boolean; lat: number; lon: number }>('/geocode', 'POST', { address: addrStr });
+                let gRes: { success: boolean; lat: number; lon: number } | null = null;
+                try {
+                    gRes = await apiRequest<{ success: boolean; lat: number; lon: number }>('/geocode', 'POST', { address: addrStr });
+                } catch (eRel) {
+                    // Fallback para rota direta no proxy caso o endpoint com prefixo não responda
+                    const fallbackRes = await fetch('/api/geocode', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ address: addrStr })
+                    });
+                    if (fallbackRes.ok) {
+                        gRes = await fallbackRes.json();
+                    }
+                }
+
                 if (gRes && gRes.success && gRes.lat && gRes.lon) {
                     const lat = Number(gRes.lat);
                     const lon = Number(gRes.lon);
@@ -215,8 +229,10 @@ const RealService = {
             }
         }
 
-        const zipMatch = addrStr.replace(/\D/g, '').match(/\d{8}/);
-        const cleanZip = zipMatch ? zipMatch[0] : '';
+        // Extração precisa de CEP brasileiro (formato 00000-000 ou 00000000)
+        const cepRegex = /(?:CEP\s*[:\-]?\s*|\b)(\d{5})[\s\-]?(\d{3})\b/i;
+        const cepMatch = addrStr.match(cepRegex);
+        const cleanZip = cepMatch ? `${cepMatch[1]}${cepMatch[2]}` : '';
         const zipPrefix = cleanZip.substring(0, 5);
 
         const numMatch = addrStr.match(/(?:,|\b)\s*(\d{1,5})\s*(?:,|\b|$)/);
@@ -270,7 +286,7 @@ const RealService = {
             console.warn('[Fuel360] Busca Nominatim falhou, tentando fallback CEP:', eNom);
         }
 
-        // 2ª Opção (Fallback de Último Recurso): AwesomeAPI por CEP
+        // 3ª Opção (Fallback de Último Recurso): AwesomeAPI ou Nominatim Postalcode
         if (cleanZip.length === 8) {
             try {
                 const resCep = await fetch(`https://cep.awesomeapi.com.br/json/${cleanZip}`);
@@ -286,6 +302,23 @@ const RealService = {
                 }
             } catch (eCep) {
                 console.warn('[Fuel360] Fallback AwesomeAPI falhou:', eCep);
+            }
+
+            try {
+                const urlZipNom = `https://nominatim.openstreetmap.org/search?format=json&postalcode=${cleanZip}&country=Brazil&limit=1`;
+                const resNomZip = await fetch(urlZipNom, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+                if (resNomZip.ok) {
+                    const nomZipData = await resNomZip.json();
+                    if (nomZipData && nomZipData.length > 0) {
+                        const lat = parseFloat(nomZipData[0].lat);
+                        const lon = parseFloat(nomZipData[0].lon);
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            return { lat, lon };
+                        }
+                    }
+                }
+            } catch (eNomZip) {
+                console.warn('[Fuel360] Fallback Nominatim CEP falhou:', eNomZip);
             }
         }
 
