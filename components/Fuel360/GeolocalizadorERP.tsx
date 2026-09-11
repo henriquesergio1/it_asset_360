@@ -282,15 +282,15 @@ export const GeolocalizadorERP: React.FC = () => {
 
                     clientMap.set(v.Cod_Cliente, {
                         Cod_Cliente: v.Cod_Cliente,
-                        Razao_Social: v.Razao_Social || `Cliente ${v.Cod_Cliente}`,
+                        Razao_Social: String(v.Razao_Social || `Cliente ${v.Cod_Cliente}`).trim(),
                         Cod_Vend: v.Cod_Vend || 0,
-                        Nome_Vendedor: v.Nome_Vendedor || 'Vendedor Não Informado',
+                        Nome_Vendedor: String(v.Nome_Vendedor || 'Vendedor Não Informado').trim(),
                         Cod_Supervisor: v.Cod_Supervisor || 0,
-                        Nome_Supervisor: v.Nome_Supervisor || 'Supervisor Não Informado',
-                        Endereco: (v.Endereco || '').trim(),
-                        Bairro: (v.Bairro || '').trim(),
-                        Cidade: (v.Cidade || '').trim(),
-                        CEP: (v.CEP || '').trim(),
+                        Nome_Supervisor: String(v.Nome_Supervisor || 'Supervisor Não Informado').trim(),
+                        Endereco: String(v.Endereco || '').trim(),
+                        Bairro: String(v.Bairro || '').trim(),
+                        Cidade: String(v.Cidade || '').trim(),
+                        CEP: String(v.CEP || '').trim(),
                         Canal_Remuneracao: v.Canal_Remuneracao,
                         Lat_ERP: latErp,
                         Long_ERP: longErp,
@@ -343,7 +343,7 @@ export const GeolocalizadorERP: React.FC = () => {
         if (c.Endereco) parts.push(c.Endereco);
         if (c.Bairro && !c.Endereco.toLowerCase().includes(c.Bairro.toLowerCase())) parts.push(c.Bairro);
         if (c.Cidade && !c.Endereco.toLowerCase().includes(c.Cidade.toLowerCase())) parts.push(c.Cidade);
-        if (c.CEP) parts.push(`CEP ${c.CEP}`);
+        if (c.CEP && String(c.CEP).trim() !== '') parts.push(`CEP ${String(c.CEP).trim()}`);
         return parts.join(', ');
     };
 
@@ -551,7 +551,7 @@ export const GeolocalizadorERP: React.FC = () => {
                     c.Endereco.toLowerCase().includes(term) ||
                     c.Bairro.toLowerCase().includes(term) ||
                     c.Cidade.toLowerCase().includes(term) ||
-                    c.CEP.toLowerCase().includes(term) ||
+                    String(c.CEP || '').toLowerCase().includes(term) ||
                     c.Nome_Vendedor.toLowerCase().includes(term) ||
                     c.Nome_Supervisor.toLowerCase().includes(term);
                 if (!match) return false;
