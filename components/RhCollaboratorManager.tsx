@@ -944,15 +944,20 @@ export const RhCollaboratorManager: React.FC = () => {
       return;
     }
 
+    const start = new Date(occStartDate);
+    const end = new Date(occEndDate || occStartDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const computedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
     const newOcc: RhOccurrence = {
       id: `occ-${Date.now()}`,
       collaboratorId: selectedColab.id,
       type: occType,
       startDate: occStartDate,
       endDate: occEndDate || occStartDate,
+      daysCount: isNaN(computedDays) ? 1 : computedDays,
       notes: occNotes,
-      fileUrl: occFileBase64 || undefined,
-      createdAt: new Date().toISOString()
+      fileUrl: occFileBase64 || undefined
     };
 
     addRhOccurrence(newOcc, adminName);

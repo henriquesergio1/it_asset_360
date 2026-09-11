@@ -584,6 +584,29 @@ async function initializeDatabase() {
                         }
                     }
                 }
+                if (table === 'RhOccurrences') {
+                    const occColsNeeded = [
+                        { name: 'CollaboratorId', type: 'NVARCHAR(255) NULL' },
+                        { name: 'Type', type: 'NVARCHAR(100) NULL' },
+                        { name: 'StartDate', type: 'DATETIME NULL' },
+                        { name: 'EndDate', type: 'DATETIME NULL' },
+                        { name: 'DaysCount', type: 'INT NULL' },
+                        { name: 'Cid', type: 'NVARCHAR(50) NULL' },
+                        { name: 'Crm', type: 'NVARCHAR(100) NULL' },
+                        { name: 'Notes', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'FileUrl', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'CreatedAt', type: 'DATETIME DEFAULT GETDATE()' }
+                    ];
+
+                    for (const col of occColsNeeded) {
+                        try {
+                            const check = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhOccurrences' AND COLUMN_NAME = '${col.name}'`);
+                            if (check.recordset.length === 0) {
+                                await pool.request().query(`ALTER TABLE RhOccurrences ADD ${col.name} ${col.type}`);
+                            }
+                        } catch (err) {}
+                    }
+                }
                 if (table === 'SoftwareAccounts') {
                     const checkUserId = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SoftwareAccounts' AND COLUMN_NAME = 'UserId'`);
                     if (checkUserId.recordset.length > 0) {
@@ -4307,15 +4330,31 @@ app.get('/api/rh-occurrences/:id/file/raw', async (req, res) => {
         const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileUrl FROM RhOccurrences WHERE Id=@Id");
         const row = result.recordset[0];
         if (!row || !row.FileUrl) return res.status(404).send('Not found');
-        const match = row.FileUrl.match(/^data:(.+?);base64,(.+)$/);
-        if (match) {
-            const buffer = Buffer.from(match[2], 'base64');
-            res.setHeader('Content-Type', match[1]);
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-            res.send(buffer);
+
+        let docStr = String(row.FileUrl).trim();
+        let mime = 'application/pdf';
+        if (docStr.startsWith('data:')) {
+            const commaIdx = docStr.indexOf(',');
+            if (commaIdx !== -1) {
+                const header = docStr.substring(0, commaIdx);
+                const mimeMatch = header.match(/^data:([a-zA-Z0-9\+\-\.\/]+);/);
+                if (mimeMatch) {
+                    mime = mimeMatch[1];
+                }
+                docStr = docStr.substring(commaIdx + 1);
+            }
         } else {
-            res.status(400).send('Invalid format');
+            if (docStr.startsWith('iVBORw0KG')) mime = 'image/png';
+            else if (docStr.startsWith('/9j/')) mime = 'image/jpeg';
+            else if (docStr.startsWith('JVBERi0')) mime = 'application/pdf';
         }
+
+        const cleanBase64 = docStr.replace(/[\r\n\s]/g, '');
+        const buffer = Buffer.from(cleanBase64, 'base64');
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Content-Disposition', 'inline; filename="comprovante"');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return res.send(buffer);
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -4328,7 +4367,7 @@ app.put('/api/rh-occurrences/file/:id', async (req, res) => {
         if (!occ) return res.status(404).send("Ocorrência não encontrada");
         await pool.request()
             .input('Id', sql.NVarChar, req.params.id)
-            .input('FileUrl', sql.NVarChar, fileUrl)
+            .input('FileUrl', sql.NVarChar(sql.MAX), fileUrl)
             .query("UPDATE RhOccurrences SET FileUrl=@FileUrl WHERE Id=@Id");
         
         const userRes = await pool.request().input('Uid', sql.NVarChar, occ.CollaboratorId).query("SELECT FullName FROM RhCollaborators WHERE Id=@Uid");
@@ -4409,15 +4448,32 @@ app.get('/api/rh-collaborators/:colabId/document/:docId/raw', async (req, res) =
         const doc = docs.find(d => d.id === req.params.docId);
         if (!doc || !doc.fileUrl) return res.status(404).send('Not found');
         
-        const match = doc.fileUrl.match(/^data:(.+?);base64,(.+)$/);
-        if (match) {
-            const buffer = Buffer.from(match[2], 'base64');
-            res.setHeader('Content-Type', match[1]);
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-            res.send(buffer);
+        let docStr = String(doc.fileUrl).trim();
+        let fileName = doc.fileName || 'documento.pdf';
+        let mime = 'application/pdf';
+        if (docStr.startsWith('data:')) {
+            const commaIdx = docStr.indexOf(',');
+            if (commaIdx !== -1) {
+                const header = docStr.substring(0, commaIdx);
+                const mimeMatch = header.match(/^data:([a-zA-Z0-9\+\-\.\/]+);/);
+                if (mimeMatch) {
+                    mime = mimeMatch[1];
+                }
+                docStr = docStr.substring(commaIdx + 1);
+            }
         } else {
-            res.status(400).send('Invalid format');
+            if (fileName.endsWith('.png') || docStr.startsWith('iVBORw0KG')) mime = 'image/png';
+            else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || docStr.startsWith('/9j/')) mime = 'image/jpeg';
+            else if (fileName.endsWith('.webp')) mime = 'image/webp';
+            else if (fileName.endsWith('.pdf') || docStr.startsWith('JVBERi0')) mime = 'application/pdf';
         }
+
+        const cleanBase64 = docStr.replace(/[\r\n\s]/g, '');
+        const buffer = Buffer.from(cleanBase64, 'base64');
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return res.send(buffer);
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -4753,6 +4809,9 @@ async function updateUserPendingStatus(pool, userId) {
         try {
             const pool = await sql.connect(dbConfig);
             const request = pool.request();
+            const colSchemaRes = await pool.request().query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${table}'`);
+            const realCols = new Set(colSchemaRes.recordset.map(r => r.COLUMN_NAME.toLowerCase()));
+
             let columns = [];
             let values = [];
             const processedKeys = new Set();
@@ -4769,6 +4828,9 @@ async function updateUserPendingStatus(pool, userId) {
                 else if (key === 'imageUrl') dbKey = 'ImageBinary';
                 else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
                 else if (key === 'fileUrl') dbKey = (table === 'RhOccurrences' || table === 'RhTerms') ? 'FileUrl' : 'FileBinary';
+
+                // Descarta chaves que não correspondem a colunas reais na tabela do banco de dados
+                if (realCols.size > 0 && !realCols.has(dbKey.toLowerCase())) continue;
 
                 if (processedKeys.has(dbKey)) continue;
                 processedKeys.add(dbKey);
@@ -4791,6 +4853,8 @@ async function updateUserPendingStatus(pool, userId) {
 
                 if (dbKey === 'Cost' || dbKey === 'PurchaseCost') {
                     request.input(dbKey, sql.Float, val ? parseFloat(val) : 0);
+                } else if (dbKey === 'FileUrl') {
+                    request.input(dbKey, sql.NVarChar(sql.MAX), val || null);
                 } else {
                     request.input(dbKey, val);
                 }
@@ -4882,6 +4946,8 @@ async function updateUserPendingStatus(pool, userId) {
 
                 if (dbKey === 'Cost' || dbKey === 'PurchaseCost') {
                     request.input(dbKey, sql.Float, val ? parseFloat(val) : 0);
+                } else if (dbKey === 'FileUrl') {
+                    request.input(dbKey, sql.NVarChar(sql.MAX), val || null);
                 } else {
                     request.input(dbKey, val);
                 }
