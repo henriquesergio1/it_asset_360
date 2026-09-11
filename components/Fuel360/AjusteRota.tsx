@@ -3396,15 +3396,38 @@ export const AjusteRota: React.FC = () => {
                         }
                     });
 
-                    // Cidades satélites inteiras no mesmo ciclo quinzenal para evitar viagem repetida
-                    satGroups.forEach(sList => {
-                        if (q13.length <= q24.length) {
-                            q13.push(...sList);
+                    // Cidades satélites: se a cidade for a única do dia ou contiver volume suficiente,
+                    // subdivide equilibradamente para evitar que um ciclo fique zerado ou com sobrecarga
+                    satGroups.forEach((sList) => {
+                        const totalInDayWithoutSat = semanais.length + nonSat.length;
+                        const wouldEmptyOtherCycle = (semanais.length === 0 && satGroups.size === 1);
+                        const isLargeGroup = sList.length >= 4;
+
+                        if (wouldEmptyOtherCycle || (isLargeGroup && sList.length > (totalInDayWithoutSat + 2))) {
+                            // Subdivide a cidade entre os dois ciclos de forma geograficamente contígua
+                            sList.sort((a, b) => a.polarAngle - b.polarAngle);
+                            const half = Math.ceil(sList.length / 2);
+                            const part1 = sList.slice(0, half);
+                            const part2 = sList.slice(half);
+
+                            if (q13.length <= q24.length) {
+                                q13.push(...part1);
+                                q24.push(...part2);
+                            } else {
+                                q24.push(...part1);
+                                q13.push(...part2);
+                            }
                         } else {
-                            q24.push(...sList);
+                            if (q13.length <= q24.length) {
+                                q13.push(...sList);
+                            } else {
+                                q24.push(...sList);
+                            }
                         }
                     });
 
+                    // Clientes não-satélites: distribui alternadamente equilibrando as quinzenas
+                    nonSat.sort((a, b) => a.polarAngle - b.polarAngle);
                     nonSat.forEach(c => {
                         if (q13.length <= q24.length) {
                             q13.push(c);
@@ -3412,6 +3435,15 @@ export const AjusteRota: React.FC = () => {
                             q24.push(c);
                         }
                     });
+
+                    // Equalização fina: garante que a diferença entre q13 e q24 seja no máximo 1 cliente
+                    while (Math.abs(q13.length - q24.length) > 1) {
+                        if (q13.length > q24.length + 1) {
+                            q24.push(q13.pop()!);
+                        } else if (q24.length > q13.length + 1) {
+                            q13.push(q24.pop()!);
+                        }
+                    }
 
                     q13.forEach(c => {
                         c.tipo = 'QUINZENAL_1_3';
@@ -3432,6 +3464,26 @@ export const AjusteRota: React.FC = () => {
                             bucket.quinzenais13.push(c);
                         }
                     });
+                }
+
+                // Salvaguarda Rígida de Não-Vacância Diária (Antivazio):
+                // Se qualquer ciclo ativo (1/3 ou 2/4) ficou com 0 visitas mas o outro tem >= 2 visitas, equilibra imediatamente
+                if (bucket.semanais.length + bucket.quinzenais13.length === 0 && bucket.quinzenais24.length >= 2) {
+                    const moveCount = Math.floor(bucket.quinzenais24.length / 2);
+                    const moved = bucket.quinzenais24.splice(0, moveCount);
+                    moved.forEach(c => {
+                        c.tipo = 'QUINZENAL_1_3';
+                        c.originalPeriodicidade = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (1,3)' : '1 3';
+                    });
+                    bucket.quinzenais13.push(...moved);
+                } else if (bucket.semanais.length + bucket.quinzenais24.length === 0 && bucket.quinzenais13.length >= 2) {
+                    const moveCount = Math.floor(bucket.quinzenais13.length / 2);
+                    const moved = bucket.quinzenais13.splice(0, moveCount);
+                    moved.forEach(c => {
+                        c.tipo = 'QUINZENAL_2_4';
+                        c.originalPeriodicidade = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
+                    });
+                    bucket.quinzenais24.push(...moved);
                 }
             }
 
