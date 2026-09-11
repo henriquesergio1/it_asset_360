@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } 
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
 import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress } from './services/apiService';
-import { VisitaPrevista, Colaborador } from './types';
+import { VisitaPrevista, Colaborador, SequenceStrategy } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import * as XLSX from 'xlsx';
@@ -462,13 +462,134 @@ function optimizeDayCircuit2Opt<T extends { lat: number; lng: number }>(
     return fullTour.slice(1, -1).map(stop => stop.item!);
 }
 
+// Sequenciamento Multiestratégia de Visitas Diárias (Far-to-Near, Snake/Sweep, Menor KM TSP, Near-to-Far)
+function sequenceDayStops<T extends { lat: number; lng: number }>(
+    base: { lat: number; lng: number },
+    clients: T[],
+    strategy: SequenceStrategy = 'FAR_TO_NEAR'
+): T[] {
+    if (clients.length <= 1) return clients;
+
+    // Se temos exatamente 2 paradas
+    if (clients.length === 2) {
+        const d0 = calcDist(base.lat, base.lng, clients[0].lat, clients[0].lng);
+        const d1 = calcDist(base.lat, base.lng, clients[1].lat, clients[1].lng);
+        if (strategy === 'FAR_TO_NEAR') {
+            return d0 >= d1 ? [clients[0], clients[1]] : [clients[1], clients[0]];
+        }
+        if (strategy === 'NEAR_TO_FAR') {
+            return d0 <= d1 ? [clients[0], clients[1]] : [clients[1], clients[0]];
+        }
+        return clients;
+    }
+
+    if (strategy === 'SNAKE_SWEEP') {
+        // Coordenadas polares relativas à base: ângulo [-PI, PI] e distância radial
+        const withPolar = clients.map(c => {
+            const dy = (c.lat || 0) - (base.lat || 0);
+            const dx = (c.lng || 0) - (base.lng || 0);
+            const angle = Math.atan2(dy, dx);
+            const dist = calcDist(base.lat, base.lng, c.lat, c.lng);
+            return { client: c, angle, dist };
+        });
+
+        withPolar.sort((a, b) => a.angle - b.angle);
+
+        // Localizar a maior lacuna angular para definir o ponto de transição suave do percurso
+        let maxGap = 0;
+        let cutIdx = 0;
+        for (let i = 0; i < withPolar.length; i++) {
+            const nextIdx = (i + 1) % withPolar.length;
+            let gap = withPolar[nextIdx].angle - withPolar[i].angle;
+            if (gap < 0) gap += 2 * Math.PI;
+            if (gap > maxGap) {
+                maxGap = gap;
+                cutIdx = nextIdx;
+            }
+        }
+
+        const rotated = [...withPolar.slice(cutIdx), ...withPolar.slice(0, cutIdx)].map(p => p.client);
+        return optimizeDayCircuit2Opt(base, rotated);
+    }
+
+    // Para FAR_TO_NEAR, NEAR_TO_FAR e CIRCUIT_TSP:
+    const closedTour = optimizeDayCircuit2Opt(base, clients);
+    if (closedTour.length <= 2 || strategy === 'CIRCUIT_TSP') {
+        return closedTour;
+    }
+
+    if (strategy === 'FAR_TO_NEAR') {
+        // Encontra o cliente com maior distância da base para iniciar o dia
+        let farthestIdx = 0;
+        let maxDist = -1;
+        for (let i = 0; i < closedTour.length; i++) {
+            const d = calcDist(base.lat, base.lng, closedTour[i].lat, closedTour[i].lng);
+            if (d > maxDist) {
+                maxDist = d;
+                farthestIdx = i;
+            }
+        }
+
+        // Duas orientações possíveis do circuito a partir do cliente mais distante
+        const opt1 = [
+            ...closedTour.slice(farthestIdx),
+            ...closedTour.slice(0, farthestIdx)
+        ];
+        const opt2 = [
+            closedTour[farthestIdx],
+            ...closedTour.slice(0, farthestIdx).reverse(),
+            ...closedTour.slice(farthestIdx + 1).reverse()
+        ];
+
+        // Escolhe a direção cuja última parada seja a MAIS PRÓXIMA da base (para terminar o expediente perto de casa)
+        const last1 = opt1[opt1.length - 1];
+        const last2 = opt2[opt2.length - 1];
+        const distLast1 = calcDist(base.lat, base.lng, last1.lat, last1.lng);
+        const distLast2 = calcDist(base.lat, base.lng, last2.lat, last2.lng);
+
+        return distLast1 <= distLast2 ? opt1 : opt2;
+    }
+
+    if (strategy === 'NEAR_TO_FAR') {
+        let nearestIdx = 0;
+        let minDist = Infinity;
+        for (let i = 0; i < closedTour.length; i++) {
+            const d = calcDist(base.lat, base.lng, closedTour[i].lat, closedTour[i].lng);
+            if (d < minDist) {
+                minDist = d;
+                nearestIdx = i;
+            }
+        }
+
+        const opt1 = [
+            ...closedTour.slice(nearestIdx),
+            ...closedTour.slice(0, nearestIdx)
+        ];
+        const opt2 = [
+            closedTour[nearestIdx],
+            ...closedTour.slice(0, nearestIdx).reverse(),
+            ...closedTour.slice(nearestIdx + 1).reverse()
+        ];
+
+        const last1 = opt1[opt1.length - 1];
+        const last2 = opt2[opt2.length - 1];
+        const distLast1 = calcDist(base.lat, base.lng, last1.lat, last1.lng);
+        const distLast2 = calcDist(base.lat, base.lng, last2.lat, last2.lng);
+
+        return distLast1 >= distLast2 ? opt1 : opt2;
+    }
+
+    return closedTour;
+}
+
 // Heurística Avançada de Roteirização TSP Circuito Fechado (Base -> Clientes -> Base)
 // Combina Inserção Mais Econômica (Cheapest Insertion) com Busca Local Híbrida 2-Opt + Or-Opt e Matriz Viária Real OSRM
 async function optimizeDayCircuitWithOSRM<T extends { lat: number; lng: number }>(
     base: { lat: number; lng: number },
-    clients: T[]
+    clients: T[],
+    strategy: SequenceStrategy = 'FAR_TO_NEAR'
 ): Promise<T[]> {
-    if (clients.length <= 2) return clients;
+    if (clients.length <= 2) return sequenceDayStops(base, clients, strategy);
 
     // Monta todos os pontos do dia incluindo a base no índice 0
     const allPoints = [{ lat: base.lat, lng: base.lng }, ...clients.map(c => ({ lat: c.lat, lng: c.lng }))];
@@ -638,7 +759,7 @@ async function optimizeDayCircuitWithOSRM<T extends { lat: number; lng: number }
         }
     }
 
-    return fullTour.slice(1, -1).map(stop => stop.item!);
+    return sequenceDayStops(base, fullTour.slice(1, -1).map(stop => stop.item!), strategy);
 }
 
 const WEEKDAYS = ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'];
@@ -1080,6 +1201,15 @@ export const AjusteRota: React.FC = () => {
         localStorage.setItem('fuel_opt_avoid_friday_distant', String(optAvoidFridayDistant));
     }, [optAvoidFridayDistant]);
 
+    const [optSequenceStrategy, setOptSequenceStrategy] = useState<SequenceStrategy>(() => {
+        const saved = localStorage.getItem('fuel_opt_sequence_strategy');
+        return (saved as SequenceStrategy) || 'FAR_TO_NEAR';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_sequence_strategy', optSequenceStrategy);
+    }, [optSequenceStrategy]);
+
     // Tempos de Atendimento por Canal de Remuneração (Persistidos no Banco SQL Server)
     const [channelServiceTimes, setChannelServiceTimes] = useState<Record<string, number>>({
         'PADRAO': 15,
@@ -1372,7 +1502,7 @@ export const AjusteRota: React.FC = () => {
     const [selectedSeller, setSelectedSeller] = useState<string>('');
 
     // Ordenação dinâmica da Grade de Ajuste Fino
-    const [sortField, setSortField] = useState<'Cod_Cliente' | 'Razao_Social' | 'Endereco' | 'Nome_Vendedor' | 'Dia_Semana' | 'Periodicidade'>('Cod_Cliente');
+    const [sortField, setSortField] = useState<'Sequencia' | 'Cod_Cliente' | 'Razao_Social' | 'Endereco' | 'Nome_Vendedor' | 'Dia_Semana' | 'Periodicidade'>('Cod_Cliente');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
     // Filtros Interativos da Grade de Ajuste Fino e Mapa
@@ -3541,10 +3671,10 @@ export const AjusteRota: React.FC = () => {
 
             for (const bucket of dayBuckets) {
                 let rawClients13 = [...bucket.semanais, ...bucket.quinzenais13];
-                let optimizedClients13 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients13);
+                let optimizedClients13 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients13, optSequenceStrategy);
 
                 let rawClients24 = [...bucket.semanais, ...bucket.quinzenais24];
-                let optimizedClients24 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients24);
+                let optimizedClients24 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients24, optSequenceStrategy);
 
                 // Salvaguarda Estrita de Horas: Em modo não flexibilizado com limite de horas,
                 // se a rota viária real + serviços exceder a jornada configurada,
@@ -3572,6 +3702,12 @@ export const AjusteRota: React.FC = () => {
                     }
                 }
 
+                const seq13Map = new Map<number, number>();
+                optimizedClients13.forEach((c, idx) => seq13Map.set(c.sampleVisit.Cod_Cliente, idx + 1));
+
+                const seq24Map = new Map<number, number>();
+                optimizedClients24.forEach((c, idx) => seq24Map.set(c.sampleVisit.Cod_Cliente, idx + 1));
+
                 const addedInDay = new Set<number>();
 
                 optimizedClients13.forEach(c => {
@@ -3589,7 +3725,9 @@ export const AjusteRota: React.FC = () => {
                         Nome_Vendedor: sellerName,
                         Dia_Semana: bucket.day,
                         Periodicidade: periodicidadeFinal,
-                        Data_da_Visita: c.sampleVisit.Data_da_Visita || ''
+                        Data_da_Visita: c.sampleVisit.Data_da_Visita || '',
+                        Sequencia_13: seq13Map.get(c.sampleVisit.Cod_Cliente),
+                        Sequencia_24: seq24Map.get(c.sampleVisit.Cod_Cliente)
                     });
                 });
 
@@ -3605,7 +3743,9 @@ export const AjusteRota: React.FC = () => {
                         Nome_Vendedor: sellerName,
                         Dia_Semana: bucket.day,
                         Periodicidade: periodicidadeFinal,
-                        Data_da_Visita: c.sampleVisit.Data_da_Visita || ''
+                        Data_da_Visita: c.sampleVisit.Data_da_Visita || '',
+                        Sequencia_13: seq13Map.get(c.sampleVisit.Cod_Cliente),
+                        Sequencia_24: seq24Map.get(c.sampleVisit.Cod_Cliente)
                     });
                 });
             }
@@ -4018,26 +4158,78 @@ export const AjusteRota: React.FC = () => {
         return () => { isMounted = false; };
     }, [filteredRoutes, scopedOriginalRoutes, selectedDaysFilter, selectedQuinzenaFilter, selectedPromoter, promoterColorMap, colaboradores, isSingleSellerView]);
 
-    // Mapa da ordem/sequência de atendimento diário de cada cliente (1ª parada, 2ª parada...)
+    // Mapa da ordem/sequência de atendimento diário de cada cliente por Quinzena 1/3 e 2/4
     const visitOrderMap = useMemo(() => {
-        const map = new Map<string, { order: number; total: number }>();
+        const map = new Map<string, {
+            order: number;
+            total: number;
+            order13?: number;
+            total13?: number;
+            order24?: number;
+            total24?: number;
+            isSemanal?: boolean;
+        }>();
         const dayGroups = new Map<string, VisitaPrevista[]>();
 
         scopedAdjustedRoutes.forEach(v => {
+            if (v.Dia_Semana === 'SEM ATENDIMENTO') return;
             const key = `${v.Cod_Vend}-${v.Dia_Semana}`;
             if (!dayGroups.has(key)) dayGroups.set(key, []);
             dayGroups.get(key)!.push(v);
         });
 
-        dayGroups.forEach(visits => {
-            visits.forEach((v, index) => {
+        dayGroups.forEach((visits, key) => {
+            const [sellerIdStr] = key.split('-');
+            const sellerId = Number(sellerIdStr);
+            const colab = getColabBySectorOrName(sellerId, visits[0]?.Nome_Vendedor);
+            const baseLat = colab?.LatitudeBase || visits.find(v => v.Lat)?.Lat || 0;
+            const baseLng = colab?.LongitudeBase || visits.find(v => v.Long)?.Long || 0;
+            const base = { lat: baseLat, lng: baseLng };
+
+            // Ciclo 1/3 (Semanais + Quinzenais 1/3)
+            const visits13 = visits.filter(r => {
+                const p = parsePeriodicidade(r.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
+            });
+            const stops13 = visits13.map(v => ({ lat: v.Lat || 0, lng: v.Long || 0, visit: v }));
+            const sequenced13 = sequenceDayStops(base, stops13, optSequenceStrategy);
+
+            // Ciclo 2/4 (Semanais + Quinzenais 2/4)
+            const visits24 = visits.filter(r => {
+                const p = parsePeriodicidade(r.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
+            });
+            const stops24 = visits24.map(v => ({ lat: v.Lat || 0, lng: v.Long || 0, visit: v }));
+            const sequenced24 = sequenceDayStops(base, stops24, optSequenceStrategy);
+
+            const map13 = new Map<number, number>();
+            sequenced13.forEach((s, idx) => map13.set(s.visit.Cod_Cliente, idx + 1));
+
+            const map24 = new Map<number, number>();
+            sequenced24.forEach((s, idx) => map24.set(s.visit.Cod_Cliente, idx + 1));
+
+            visits.forEach(v => {
                 const clientKey = `${v.Cod_Vend}-${v.Dia_Semana}-${v.Cod_Cliente}`;
-                map.set(clientKey, { order: index + 1, total: visits.length });
+                const pType = parsePeriodicidade(v.Periodicidade).tipo;
+                const order13 = map13.get(v.Cod_Cliente);
+                const order24 = map24.get(v.Cod_Cliente);
+                const primaryOrder = order13 || order24 || 1;
+                const primaryTotal = order13 ? visits13.length : visits24.length;
+
+                map.set(clientKey, {
+                    order: primaryOrder,
+                    total: primaryTotal,
+                    order13,
+                    total13: visits13.length,
+                    order24,
+                    total24: visits24.length,
+                    isSemanal: pType === 'SEMANAL'
+                });
             });
         });
 
         return map;
-    }, [scopedAdjustedRoutes]);
+    }, [scopedAdjustedRoutes, colaboradores, optSequenceStrategy]);
 
     // Calcular KPIs de Comparação com Métricas Reais de Circuito Fechado (KM e Tempo de Deslocamento)
     const kpis = useMemo(() => {
@@ -4792,12 +4984,84 @@ export const AjusteRota: React.FC = () => {
                             />
                         )}
                         {visitSeq && !isUnallocated && (
-                            <span 
-                                className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0" 
-                                title={`Ordem da Parada: ${visitSeq.order}ª parada de ${visitSeq.total} no roteiro de ${v.Dia_Semana}`}
-                            >
-                                #{visitSeq.order}
-                            </span>
+                            (() => {
+                                if (selectedQuinzenaFilter === '1_3' && visitSeq.order13) {
+                                    return (
+                                        <span 
+                                            className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0" 
+                                            title={`Ordem da Parada (Semana 1/3): ${visitSeq.order13}ª parada de ${visitSeq.total13} no roteiro de ${v.Dia_Semana}`}
+                                        >
+                                            #{visitSeq.order13}
+                                        </span>
+                                    );
+                                }
+                                if (selectedQuinzenaFilter === '2_4' && visitSeq.order24) {
+                                    return (
+                                        <span 
+                                            className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-fuchsia-50 dark:bg-fuchsia-950/70 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800 shrink-0" 
+                                            title={`Ordem da Parada (Semana 2/4): ${visitSeq.order24}ª parada de ${visitSeq.total24} no roteiro de ${v.Dia_Semana}`}
+                                        >
+                                            #{visitSeq.order24}
+                                        </span>
+                                    );
+                                }
+                                // Modo ALL (Todas as Semanas)
+                                const pType = parsePeriodicidade(v.Periodicidade).tipo;
+                                if (pType === 'SEMANAL') {
+                                    if (visitSeq.order13 && visitSeq.order24 && visitSeq.order13 === visitSeq.order24) {
+                                        return (
+                                            <span 
+                                                className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0" 
+                                                title={`Parada #${visitSeq.order13} tanto na Semana 1/3 quanto na 2/4 (${v.Dia_Semana})`}
+                                            >
+                                                #{visitSeq.order13}
+                                            </span>
+                                        );
+                                    }
+                                    return (
+                                        <div className="flex items-center gap-0.5 shrink-0" title={`Ordem no itinerário diário:\n• Semanas 1 e 3: ${visitSeq.order13}ª parada\n• Semanas 2 e 4: ${visitSeq.order24}ª parada`}>
+                                            {visitSeq.order13 && (
+                                                <span className="text-[8.5px] font-mono font-black px-1 py-0.2 rounded bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800">
+                                                    1/3:#{visitSeq.order13}
+                                                </span>
+                                            )}
+                                            {visitSeq.order24 && (
+                                                <span className="text-[8.5px] font-mono font-black px-1 py-0.2 rounded bg-fuchsia-50 dark:bg-fuchsia-950/70 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200/80 dark:border-fuchsia-800">
+                                                    2/4:#{visitSeq.order24}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                }
+                                if (pType === 'QUINZENAL_1_3' && visitSeq.order13) {
+                                    return (
+                                        <span 
+                                            className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0" 
+                                            title={`Semana 1/3: ${visitSeq.order13}ª parada de ${visitSeq.total13} no roteiro de ${v.Dia_Semana}`}
+                                        >
+                                            1/3:#{visitSeq.order13}
+                                        </span>
+                                    );
+                                }
+                                if (pType === 'QUINZENAL_2_4' && visitSeq.order24) {
+                                    return (
+                                        <span 
+                                            className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-fuchsia-50 dark:bg-fuchsia-950/70 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200 dark:border-fuchsia-800 shrink-0" 
+                                            title={`Semana 2/4: ${visitSeq.order24}ª parada de ${visitSeq.total24} no roteiro de ${v.Dia_Semana}`}
+                                        >
+                                            2/4:#{visitSeq.order24}
+                                        </span>
+                                    );
+                                }
+                                return (
+                                    <span 
+                                        className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0" 
+                                        title={`Ordem da Parada: ${visitSeq.order}ª parada`}
+                                    >
+                                        #{visitSeq.order}
+                                    </span>
+                                );
+                            })()
                         )}
                         {isUnallocated && (
                             <span 
@@ -5595,6 +5859,36 @@ export const AjusteRota: React.FC = () => {
                                             className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer shrink-0"
                                         />
                                     </label>
+
+                                    {/* Estratégia de Sequenciamento das Visitas Diárias */}
+                                    <div className="pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                                <span>🎯</span> Sequenciamento das Visitas
+                                            </span>
+                                            <span className="text-[8px] font-mono text-indigo-600 dark:text-indigo-400 font-bold">
+                                                {optSequenceStrategy === 'FAR_TO_NEAR' ? 'Mais Distante 1º' :
+                                                 optSequenceStrategy === 'SNAKE_SWEEP' ? 'Serpente' :
+                                                 optSequenceStrategy === 'CIRCUIT_TSP' ? 'Menor KM' : 'Mais Próximo 1º'}
+                                            </span>
+                                        </div>
+                                        <select
+                                            value={optSequenceStrategy}
+                                            onChange={(e) => setOptSequenceStrategy(e.target.value as SequenceStrategy)}
+                                            className="w-full text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg p-2 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-hidden cursor-pointer shadow-2xs"
+                                        >
+                                            <option value="FAR_TO_NEAR">🎯 Mais Distante 1º (Começar longe e vir voltando)</option>
+                                            <option value="SNAKE_SWEEP">🐍 Serpente / Varredura Contínua (Sem cruzamentos)</option>
+                                            <option value="CIRCUIT_TSP">⚡ Menor Quilometragem (Circuito TSP OSRM)</option>
+                                            <option value="NEAR_TO_FAR">📍 Mais Próximo 1º (Começar perto da base)</option>
+                                        </select>
+                                        <span className="text-[8px] text-slate-400 block mt-1 leading-tight">
+                                            {optSequenceStrategy === 'FAR_TO_NEAR' && 'Inicia no PDV mais distante e regressa atendendo em direção à base (fim do dia mais perto de casa).'}
+                                            {optSequenceStrategy === 'SNAKE_SWEEP' && 'Varre o setor em arco contínuo tipo serpente eliminando cruzamentos e retornos repetidos.'}
+                                            {optSequenceStrategy === 'CIRCUIT_TSP' && 'Otimiza o circuito fechado para a menor distância total viária em quilômetros.'}
+                                            {optSequenceStrategy === 'NEAR_TO_FAR' && 'Inicia pelos clientes vizinhos à base e afasta-se até o ponto final.'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -6612,7 +6906,17 @@ export const AjusteRota: React.FC = () => {
                                 /* VISÃO AGRUPADA POR DIA EM SANFONA */
                                 <div className="flex-1 overflow-auto custom-scrollbar space-y-3 pr-1">
                                     {visibleDays.map(day => {
-                                        const dayRoutes = sortedRoutes.filter(r => r.Dia_Semana === day);
+                                        const rawDayRoutes = sortedRoutes.filter(r => r.Dia_Semana === day);
+                                        const dayRoutes = (day !== 'SEM ATENDIMENTO' && (sortField === 'Cod_Cliente' || sortField === 'Sequencia'))
+                                            ? [...rawDayRoutes].sort((a, b) => {
+                                                const seqA = visitOrderMap.get(`${a.Cod_Vend}-${a.Dia_Semana}-${a.Cod_Cliente}`);
+                                                const seqB = visitOrderMap.get(`${b.Cod_Vend}-${b.Dia_Semana}-${b.Cod_Cliente}`);
+                                                const orderA = selectedQuinzenaFilter === '2_4' ? (seqA?.order24 ?? 999) : (seqA?.order13 ?? seqA?.order24 ?? 999);
+                                                const orderB = selectedQuinzenaFilter === '2_4' ? (seqB?.order24 ?? 999) : (seqB?.order13 ?? seqB?.order24 ?? 999);
+                                                if (orderA !== orderB) return sortDirection === 'asc' ? (orderA - orderB) : (orderB - orderA);
+                                                return Number(a.Cod_Cliente) - Number(b.Cod_Cliente);
+                                            })
+                                            : rawDayRoutes;
                                         const isOpen = Boolean(openDaysMap[day]);
                                         const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: day, bg: 'bg-indigo-600' };
                                         const dayMetrics = operationalSummary.dayMap[day];
@@ -6836,11 +7140,36 @@ export const AjusteRota: React.FC = () => {
                                                                 </div>
 
                                                                 {dayRoutes.length > 0 && (
-                                                                    <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                                                    <div 
+                                                                        className="flex items-center gap-1 text-slate-700 dark:text-slate-300 whitespace-nowrap"
+                                                                        title={`Ordem de visitação diária sequenciada pela estratégia: ${
+                                                                            optSequenceStrategy === 'FAR_TO_NEAR' ? 'Mais Distante Primeiro (volta para a base)' :
+                                                                            optSequenceStrategy === 'SNAKE_SWEEP' ? 'Serpente / Varredura Contínua' :
+                                                                            optSequenceStrategy === 'CIRCUIT_TSP' ? 'Menor Quilometragem TSP OSRM' : 'Mais Próximo Primeiro'
+                                                                        }\n• Semanas 1 e 3: #1 a #${dayMetrics?.pdvs13 ?? 0} paradas\n• Semanas 2 e 4: #1 a #${dayMetrics?.pdvs24 ?? 0} paradas`}
+                                                                    >
                                                                         <span className="text-slate-400 dark:text-slate-500 font-normal">Sequência:</span>
-                                                                        <span className="font-black text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200/60 dark:border-indigo-800 text-[10px]">
-                                                                            #1 a #{dayRoutes.length}
-                                                                        </span>
+                                                                        <div className="flex items-center gap-1 text-[10px] font-black">
+                                                                            {dayMetrics?.pdvs13 === dayMetrics?.pdvs24 ? (
+                                                                                <span className="bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-200/60 dark:border-indigo-800">
+                                                                                    #1 a #{dayMetrics?.pdvs13 ?? dayRoutes.length}
+                                                                                </span>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <span className="bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded border border-amber-200/60 dark:border-amber-800">
+                                                                                        1/3: #1 a #{dayMetrics?.pdvs13 ?? 0}
+                                                                                    </span>
+                                                                                    <span className="bg-fuchsia-50 dark:bg-fuchsia-950/60 text-fuchsia-800 dark:text-fuchsia-300 px-1.5 py-0.5 rounded border border-fuchsia-200/60 dark:border-fuchsia-800">
+                                                                                        2/4: #1 a #{dayMetrics?.pdvs24 ?? 0}
+                                                                                    </span>
+                                                                                </>
+                                                                            )}
+                                                                            <span className="text-[9px] font-normal text-slate-400 dark:text-slate-500 px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 hidden sm:inline-block">
+                                                                                {optSequenceStrategy === 'FAR_TO_NEAR' ? '🎯 Mais Distante 1º' :
+                                                                                 optSequenceStrategy === 'SNAKE_SWEEP' ? '🐍 Serpente' :
+                                                                                 optSequenceStrategy === 'CIRCUIT_TSP' ? '⚡ Menor KM' : '📍 Mais Próximo 1º'}
+                                                                            </span>
+                                                                        </div>
                                                                     </div>
                                                                 )}
                                                             </>

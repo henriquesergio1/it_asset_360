@@ -162,6 +162,8 @@ export interface ItemRelatorioAnalitico {
     MotivoEdicao?: string;
 }
 
+export type SequenceStrategy = 'FAR_TO_NEAR' | 'SNAKE_SWEEP' | 'CIRCUIT_TSP' | 'NEAR_TO_FAR';
+
 export interface VisitaPrevista {
     Cod_Vend: number;
     Nome_Vendedor: string;
@@ -179,6 +181,8 @@ export interface VisitaPrevista {
     Lat: number;
     Long: number;
     Canal_Remuneracao?: string;
+    Sequencia_13?: number;
+    Sequencia_24?: number;
 }
 
 export interface RotaCalculada {
