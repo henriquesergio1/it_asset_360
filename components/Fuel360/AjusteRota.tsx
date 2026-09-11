@@ -2042,25 +2042,37 @@ export const AjusteRota: React.FC = () => {
         return () => clearTimeout(timer);
     }, [rebalanceToast]);
 
-    // Lista de dias com jornada excedente / sobrecarregada (>= 60min acima da jornada configurada)
+    // Lista de dias com jornada excedente / sobrecarregada (>= 60min acima da jornada configurada) ou dias inativos com clientes
     const overloadedDays = useMemo(() => {
         if (!optLimitHours) return [];
+        const activeDaysSet = new Set(optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
         return WEEKDAYS.filter(day => {
             const dayMetrics = operationalSummary.dayMap[day];
             if (!dayMetrics) return false;
+            const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
+            const pdvsCount = scopedAdjustedRoutes.filter(r => r.Dia_Semana === day).length;
+            if (pdvsCount === 0 && maxDayTime === 0) return false;
+
+            const isInactiveDay = !activeDaysSet.has(day);
+            if (isInactiveDay) {
+                // Se é dia inativo no calendário mas tem PDVs / tempo de jornada alocado, é sobrecarga crítica (deve ser reequilibrado/evacuado)
+                return pdvsCount > 0 || maxDayTime > 0;
+            }
+
             const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) 
                 ? optMaxHours / 2 
                 : optMaxHours;
             const dayLimitMin = dayLimitHours * 60;
-            const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
             return maxDayTime > dayLimitMin && (maxDayTime - dayLimitMin) >= 60;
         });
-    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod]);
+    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod, optDays, scopedAdjustedRoutes]);
 
     // Lista de dias em atenção de jornada (< 60min acima da jornada configurada)
     const attentionDays = useMemo(() => {
         if (!optLimitHours) return [];
+        const activeDaysSet = new Set(optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
         return WEEKDAYS.filter(day => {
+            if (!activeDaysSet.has(day)) return false; // Dias inativos com PDVs caem em overloadedDays
             const dayMetrics = operationalSummary.dayMap[day];
             if (!dayMetrics) return false;
             const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) 
@@ -2071,22 +2083,29 @@ export const AjusteRota: React.FC = () => {
             const excess = maxDayTime - dayLimitMin;
             return excess > 0 && excess < 60;
         });
-    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod]);
+    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod, optDays]);
 
     // Dados consolidados para o modal de reequilíbrio de carga
     const rebalanceData = useMemo(() => {
         if (!rebalanceDay || !optLimitHours) return null;
 
+        const activeDays = optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA'];
+        const activeDaysSet = new Set(activeDays);
         const sourceDay = rebalanceDay;
+        const isSourceInactive = !activeDaysSet.has(sourceDay);
         const sourceMetrics = operationalSummary.dayMap[sourceDay];
-        const sourceLimitHours = (sourceDay === 'SÁBADO' && optSatHalfPeriod) 
-            ? optMaxHours / 2 
-            : optMaxHours;
+
+        // Se a fonte for um dia inativo no calendário de trabalho (ex: Sábado desmarcado), seu teto é 0h e todos os minutos/clientes são excedentes
+        const sourceLimitHours = isSourceInactive 
+            ? 0 
+            : ((sourceDay === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours);
         const sourceLimitMin = sourceLimitHours * 60;
         const sourceTime13 = sourceMetrics?.time13 || 0;
         const sourceTime24 = sourceMetrics?.time24 || 0;
         const sourceMaxTime = Math.max(sourceTime13, sourceTime24);
-        const sourceExcessMin = Math.max(0, sourceMaxTime - sourceLimitMin);
+        const sourceExcessMin = isSourceInactive 
+            ? sourceMaxTime 
+            : Math.max(0, sourceMaxTime - sourceLimitMin);
 
         // Clientes pertencentes a este dia no escopo atual
         const clientsOnDay = scopedAdjustedRoutes.filter(r => r.Dia_Semana === sourceDay);
@@ -2098,8 +2117,8 @@ export const AjusteRota: React.FC = () => {
         });
         const uniqueClients = Array.from(uniqueClientsMap.values());
 
-        // Análise dos outros dias da semana
-        const otherDays = WEEKDAYS.filter(d => d !== sourceDay).map(day => {
+        // Análise dos outros dias da semana: APENAS DIAS ATIVOS NO CALENDÁRIO DE JORNADA
+        const otherDays = activeDays.filter(d => d !== sourceDay).map(day => {
             const m = operationalSummary.dayMap[day];
             const limitHours = (day === 'SÁBADO' && optSatHalfPeriod) 
                 ? optMaxHours / 2 
@@ -2131,10 +2150,11 @@ export const AjusteRota: React.FC = () => {
 
         // Ordena dias receptores pelo maior tempo livre
         otherDays.sort((a, b) => b.freeMinutes - a.freeMinutes);
-        const bestTargetDay = otherDays.length > 0 && otherDays[0].freeMinutes > 0 ? otherDays[0] : null;
+        const bestTargetDay = otherDays.length > 0 && otherDays[0].freeMinutes > 0 ? otherDays[0] : (otherDays.length > 0 ? otherDays[0] : null);
 
         return {
             sourceDay,
+            isSourceInactive,
             sourceMetrics,
             sourceLimitHours,
             sourceLimitMin,
@@ -2144,19 +2164,41 @@ export const AjusteRota: React.FC = () => {
             otherDays,
             bestTargetDay
         };
-    }, [rebalanceDay, operationalSummary.dayMap, scopedAdjustedRoutes, optLimitHours, optMaxHours, optSatHalfPeriod]);
+    }, [rebalanceDay, operationalSummary.dayMap, scopedAdjustedRoutes, optLimitHours, optMaxHours, optSatHalfPeriod, optDays]);
 
     // Executar Reequilíbrio Automático em 1 Clique
     const handleAutoRebalance = () => {
         if (!rebalanceData || !rebalanceData.bestTargetDay) {
-            alert("Nenhum dia com capacidade ociosa encontrado para reequilíbrio automático.");
+            alert("Nenhum dia ativo com capacidade ociosa encontrado para reequilíbrio automático.");
             return;
         }
 
         const targetDay = rebalanceData.bestTargetDay.day;
         const targetFreeMin = rebalanceData.bestTargetDay.freeMinutes;
-        let excessToCover = rebalanceData.sourceExcessMin;
+        const isSourceInactive = rebalanceData.isSourceInactive;
 
+        // Se o dia de origem for inativo (ex: Sábado com PDVs), transferir TODOS os clientes para desocupar o dia
+        if (isSourceInactive) {
+            const allClientIds = new Set(rebalanceData.uniqueClients.map(c => c.Cod_Cliente));
+            setAdjustedRoutes(prev => prev.map(v => {
+                if (v.Dia_Semana === rebalanceData.sourceDay && allClientIds.has(v.Cod_Cliente)) {
+                    return {
+                        ...v,
+                        Dia_Semana: targetDay
+                    };
+                }
+                return v;
+            }));
+
+            const count = allClientIds.size;
+            setRebalanceToast(`✓ Evacuação de jornada concluída! ${count} ${count === 1 ? 'cliente transferido' : 'clientes transferidos'} de ${rebalanceData.sourceDay} (dia sem expediente) para ${targetDay}.`);
+            setRebalanceDay(null);
+            setSelectedRebalanceClients(new Set());
+            setTargetRebalanceDay('');
+            return;
+        }
+
+        let excessToCover = rebalanceData.sourceExcessMin;
         if (excessToCover <= 0) {
             excessToCover = 45;
         }
@@ -6490,9 +6532,29 @@ export const AjusteRota: React.FC = () => {
                                         const dayMetrics = operationalSummary.dayMap[day];
                                         const isUnallocated = day === 'SEM ATENDIMENTO';
                                         const dayOverload = (!isUnallocated && dayMetrics && optLimitHours) ? (() => {
+                                            const activeDaysSet = new Set(optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
+                                            const isInactiveDay = !activeDaysSet.has(day);
+                                            const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
+                                            const dayClientsCount = dayRoutes.length;
+
+                                            if (isInactiveDay) {
+                                                if (dayClientsCount === 0 && maxDayTime === 0) return null;
+                                                const excessMin = maxDayTime > 0 ? maxDayTime : (dayClientsCount * 25);
+                                                const excessH = Math.floor(excessMin / 60);
+                                                const remM = Math.round(excessMin % 60);
+                                                return {
+                                                    excessMin,
+                                                    excessH,
+                                                    remM,
+                                                    dayLimitHours: 0,
+                                                    maxDayTime,
+                                                    isSevere: true,
+                                                    isInactiveDay: true
+                                                };
+                                            }
+
                                             const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
                                             const dayLimitMin = dayLimitHours * 60;
-                                            const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
                                             const excessMin = maxDayTime - dayLimitMin;
                                             if (excessMin <= 0) return null;
                                             const excessH = Math.floor(excessMin / 60);
@@ -6503,7 +6565,8 @@ export const AjusteRota: React.FC = () => {
                                                 remM,
                                                 dayLimitHours,
                                                 maxDayTime,
-                                                isSevere: excessMin >= 60
+                                                isSevere: excessMin >= 60,
+                                                isInactiveDay: false
                                             };
                                         })() : null;
 
@@ -6566,15 +6629,20 @@ export const AjusteRota: React.FC = () => {
                                                                     setTargetRebalanceDay('');
                                                                 }}
                                                                 className={`text-[10px] font-black px-2 py-0.5 rounded-md border shadow-2xs shrink-0 whitespace-nowrap inline-flex items-center gap-1 cursor-pointer transition hover:scale-105 active:scale-95 select-none ${
-                                                                    dayOverload.isSevere 
-                                                                        ? 'bg-red-100 hover:bg-red-200 text-red-800 dark:bg-red-950/80 dark:hover:bg-red-900/90 dark:text-red-300 border-red-300 dark:border-red-800' 
-                                                                        : 'bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-950/80 dark:hover:bg-amber-900/90 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                                                    dayOverload.isInactiveDay
+                                                                        ? 'bg-rose-100 hover:bg-rose-200 text-rose-800 dark:bg-rose-950/80 dark:hover:bg-rose-900/90 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                                                                        : (dayOverload.isSevere 
+                                                                            ? 'bg-red-100 hover:bg-red-200 text-red-800 dark:bg-red-950/80 dark:hover:bg-red-900/90 dark:text-red-300 border-red-300 dark:border-red-800' 
+                                                                            : 'bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-950/80 dark:hover:bg-amber-900/90 dark:text-amber-300 border-amber-300 dark:border-amber-800')
                                                                 }`}
-                                                                title={`Clique para diagnosticar e reequilibrar a jornada de ${day} (excesso de +${dayOverload.excessH > 0 ? `${dayOverload.excessH}h ` : ''}${dayOverload.remM}m).`}
+                                                                title={dayOverload.isInactiveDay 
+                                                                    ? `Colaborador não trabalha em ${day} (${dayRoutes.length} PDVs alocados). Clique para evacuar e transferir clientes para a jornada ativa.`
+                                                                    : `Clique para diagnosticar e reequilibrar a jornada de ${day} (excesso de +${dayOverload.excessH > 0 ? `${dayOverload.excessH}h ` : ''}${dayOverload.remM}m).`
+                                                                }
                                                             >
-                                                                <span>{dayOverload.isSevere ? '🚨' : '⚠️'}</span>
-                                                                <span>{dayOverload.isSevere ? 'Sobrecarga' : 'Atenção'}</span>
-                                                                <span className="text-[9px] font-bold opacity-75 underline ml-0.5">Reequilibrar</span>
+                                                                <span>{dayOverload.isInactiveDay ? '🚨' : (dayOverload.isSevere ? '🚨' : '⚠️')}</span>
+                                                                <span>{dayOverload.isInactiveDay ? 'Fora da Jornada' : (dayOverload.isSevere ? 'Sobrecarga' : 'Atenção')}</span>
+                                                                <span className="text-[9px] font-bold opacity-75 underline ml-0.5">{dayOverload.isInactiveDay ? 'Evacuar' : 'Reequilibrar'}</span>
                                                             </span>
                                                         )}
                                                     </div>
@@ -6593,7 +6661,20 @@ export const AjusteRota: React.FC = () => {
                                                                         }
                                                                     </span>
                                                                     {dayOverload && (
-                                                                        dayOverload.isSevere ? (
+                                                                        dayOverload.isInactiveDay ? (
+                                                                            <span 
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setRebalanceDay(day);
+                                                                                    setSelectedRebalanceClients(new Set());
+                                                                                    setTargetRebalanceDay('');
+                                                                                }}
+                                                                                className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-rose-100 hover:bg-rose-200 text-rose-800 dark:bg-rose-950/80 dark:hover:bg-rose-900/90 dark:text-rose-300 border border-rose-300 dark:border-rose-800 inline-flex items-center gap-0.5 shrink-0 shadow-2xs cursor-pointer transition hover:scale-105 active:scale-95 select-none"
+                                                                                title={`🚨 Dia fora da jornada: ${dayRoutes.length} PDVs alocados em dia sem expediente (${formatDuration(dayOverload.maxDayTime)}). Clique para evacuar.`}
+                                                                            >
+                                                                                <span>🚨</span> Fora da Jornada
+                                                                            </span>
+                                                                        ) : dayOverload.isSevere ? (
                                                                             <span 
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
@@ -8519,12 +8600,20 @@ export const AjusteRota: React.FC = () => {
                                 <div>
                                     <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                                         Reequilíbrio de Carga: {rebalanceData.sourceDay}
-                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
-                                            {rebalanceData.sourceExcessMin >= 60 ? '🚨 Sobrecarga' : '⚠️ Atenção'}
+                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                                            rebalanceData.isSourceInactive
+                                                ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                                                : (rebalanceData.sourceExcessMin >= 60 
+                                                    ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800' 
+                                                    : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800')
+                                        }`}>
+                                            {rebalanceData.isSourceInactive ? '🚨 Dia Fora da Jornada' : (rebalanceData.sourceExcessMin >= 60 ? '🚨 Sobrecarga' : '⚠️ Atenção')}
                                         </span>
                                     </h3>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        Diagnóstico de jornada e remanejamento inteligente entre dias da semana.
+                                        {rebalanceData.isSourceInactive 
+                                            ? `O colaborador não trabalha em ${rebalanceData.sourceDay}. Realize a evacuação de clientes para os dias úteis ativos.`
+                                            : 'Diagnóstico de jornada e remanejamento inteligente entre dias da semana.'}
                                     </p>
                                 </div>
                             </div>
@@ -8550,11 +8639,13 @@ export const AjusteRota: React.FC = () => {
                                 <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
                                     <div className="text-[10px] font-black uppercase text-slate-400">Teto Configurado</div>
                                     <div className="text-base font-black text-slate-800 dark:text-slate-100 mt-0.5">
-                                        {rebalanceData.sourceLimitHours}h / dia
+                                        {rebalanceData.isSourceInactive ? '0h (Sem Expediente)' : `${rebalanceData.sourceLimitHours}h / dia`}
                                     </div>
                                 </div>
                                 <div className="p-3 bg-red-50/80 dark:bg-red-950/30 rounded-2xl border border-red-200 dark:border-red-800/50">
-                                    <div className="text-[10px] font-black uppercase text-red-500">Excesso de Carga</div>
+                                    <div className="text-[10px] font-black uppercase text-red-500">
+                                        {rebalanceData.isSourceInactive ? 'Carga a Evacuar' : 'Excesso de Carga'}
+                                    </div>
                                     <div className="text-base font-black text-red-600 dark:text-red-400 mt-0.5">
                                         +{Math.floor(rebalanceData.sourceExcessMin / 60)}h {Math.round(rebalanceData.sourceExcessMin % 60)}m
                                     </div>
@@ -8642,10 +8733,13 @@ export const AjusteRota: React.FC = () => {
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
                                             <h4 className="text-xs font-black text-indigo-950 dark:text-indigo-200 uppercase tracking-wider flex items-center gap-1.5">
-                                                <span>⚡</span> Sugestão de Reequilíbrio Automático
+                                                <span>⚡</span> {rebalanceData.isSourceInactive ? 'Evacuação Automática para Dia Útil' : 'Sugestão de Reequilíbrio Automático'}
                                             </h4>
                                             <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                                                Transfere automaticamente clientes excedentes de <strong>{rebalanceData.sourceDay}</strong> para o dia com maior folga (<strong>{rebalanceData.bestTargetDay.day}</strong>, com +{Math.floor(rebalanceData.bestTargetDay.freeMinutes / 60)}h {rebalanceData.bestTargetDay.freeMinutes % 60}m disponíveis), ajustando a jornada para a meta legal.
+                                                {rebalanceData.isSourceInactive 
+                                                    ? <>Transfere todos os clientes de <strong>{rebalanceData.sourceDay}</strong> (dia sem expediente) para o dia útil ativo com maior folga (<strong>{rebalanceData.bestTargetDay.day}</strong>, com +{Math.floor(rebalanceData.bestTargetDay.freeMinutes / 60)}h {rebalanceData.bestTargetDay.freeMinutes % 60}m disponíveis), liberando o dia de folga do colaborador.</>
+                                                    : <>Transfere automaticamente clientes excedentes de <strong>{rebalanceData.sourceDay}</strong> para o dia com maior folga (<strong>{rebalanceData.bestTargetDay.day}</strong>, com +{Math.floor(rebalanceData.bestTargetDay.freeMinutes / 60)}h {rebalanceData.bestTargetDay.freeMinutes % 60}m disponíveis), ajustando a jornada para a meta legal.</>
+                                                }
                                             </p>
                                         </div>
                                     </div>
@@ -8655,7 +8749,7 @@ export const AjusteRota: React.FC = () => {
                                         onClick={handleAutoRebalance}
                                         className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] shadow-md shadow-indigo-600/20 transition flex items-center justify-center space-x-2 cursor-pointer"
                                     >
-                                        <span>⚡ Reequilibrar Automaticamente com 1 Clique</span>
+                                        <span>{rebalanceData.isSourceInactive ? '⚡ Evacuar Dia Inativo com 1 Clique' : '⚡ Reequilibrar Automaticamente com 1 Clique'}</span>
                                         <span>➔</span>
                                     </button>
                                 </div>
