@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { APP_VERSION } from './constants';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, FileText, CheckSquare, Package, Calendar, Loader2, Calculator, MapPin, Navigation, TrendingUp, ClipboardList, BarChart3, Sliders, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, FileText, CheckSquare, Package, Calendar, Loader2, Calculator, MapPin, Navigation, TrendingUp, ClipboardList, BarChart3, Sliders, ShieldAlert, Crosshair } from 'lucide-react';
 
 // Contexts
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -113,6 +113,14 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           title: 'Fuel360 - Ajuste de Rota',
           subtitle: 'Otimização com particionamento balanceado e sequenciamento TSP',
           icon: Navigation,
+          colorClass: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+        };
+      }
+      if (path.includes('/geolocalizador')) {
+        return {
+          title: 'Fuel360 - Geolocalizador & Auditor ERP',
+          subtitle: 'Comparação de geolocalização cadastrada no ERP vs coordenadas geocodificadas reais',
+          icon: Crosshair,
           colorClass: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
         };
       }
@@ -518,6 +526,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
               <SidebarLink to="/fuel360/calculo" icon={Calculator} label="Cálculo Reembolso" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/roteirizador" icon={MapPin} label="Roteirizador" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/ajuste-rota" icon={Navigation} label="Ajuste de Rota" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/geolocalizador" icon={Crosshair} label="Geolocalizador ERP" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/comparativo" icon={TrendingUp} label="Previsto x Realizado" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/simulacoes" icon={ClipboardList} label="Simulações e Cálculos" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/equipe" icon={Users} label="Equipe & Setores" collapsed={isEffectiveCollapsed} module="FUEL" />

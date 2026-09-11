@@ -9,11 +9,12 @@ import { Roteirizador } from './Fuel360/Roteirizador';
 import { GestaoSimulacoes } from './Fuel360/GestaoSimulacoes';
 import { PrevistoVsRealizado } from './Fuel360/PrevistoVsRealizado';
 import { AjusteRota } from './Fuel360/AjusteRota';
+import { GeolocalizadorERP } from './Fuel360/GeolocalizadorERP';
 import { DataProvider } from './Fuel360/context/DataContext';
 import { AuthProvider } from './Fuel360/context/AuthContext';
 import { UI_CARD_CONTAINER } from '../constants';
 
-type FuelView = 'calculo' | 'roteirizador' | 'ajuste_rota' | 'comparativo' | 'simulacoes' | 'equipe' | 'ausencias' | 'relatorios' | 'config';
+type FuelView = 'calculo' | 'roteirizador' | 'ajuste_rota' | 'geolocalizador' | 'comparativo' | 'simulacoes' | 'equipe' | 'ausencias' | 'relatorios' | 'config';
 
 const FuelContent: React.FC = () => {
   const { subView } = useParams<{ subView?: string }>();
@@ -24,6 +25,7 @@ const FuelContent: React.FC = () => {
       case 'roteirizador': return 'roteirizador';
       case 'ajuste-rota':
       case 'ajuste_rota': return 'ajuste_rota';
+      case 'geolocalizador': return 'geolocalizador';
       case 'comparativo': return 'comparativo';
       case 'simulacoes': return 'simulacoes';
       case 'equipe': return 'equipe';
@@ -39,6 +41,7 @@ const FuelContent: React.FC = () => {
       case 'calculo': return <Importacao />;
       case 'roteirizador': return <Roteirizador />;
       case 'ajuste_rota': return <AjusteRota />;
+      case 'geolocalizador': return <GeolocalizadorERP />;
       case 'comparativo': return <PrevistoVsRealizado />;
       case 'simulacoes': return <GestaoSimulacoes />;
       case 'equipe': return <GestaoEquipe />;
