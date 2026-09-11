@@ -63,6 +63,7 @@ export interface ClienteAuditado {
     Cod_Supervisor: number;
     Nome_Supervisor: string;
     Endereco: string;
+    Numero?: string;
     Bairro: string;
     Cidade: string;
     CEP: string;
@@ -288,6 +289,7 @@ export const GeolocalizadorERP: React.FC = () => {
                         Cod_Supervisor: v.Cod_Supervisor || 0,
                         Nome_Supervisor: String(v.Nome_Supervisor || 'Supervisor Não Informado').trim(),
                         Endereco: String(v.Endereco || '').trim(),
+                        Numero: String(v.Numero || '').trim() || undefined,
                         Bairro: String(v.Bairro || '').trim(),
                         Cidade: String(v.Cidade || '').trim(),
                         CEP: String(v.CEP || '').trim(),
@@ -337,12 +339,16 @@ export const GeolocalizadorERP: React.FC = () => {
         }));
     }, [toleranciaCriticaMetros]);
 
-    // --- FORMATAR ENDEREÇO PARA GEOCODING ---
+    // --- FORMATAR ENDEREÇO PARA GEOCODING (LOGRADOURO, NÚMERO, BAIRRO, CIDADE, CEP) ---
     const buildSearchAddress = (c: ClienteAuditado): string => {
+        let addr = c.Endereco ? c.Endereco.trim() : '';
+        if (c.Numero && c.Numero.trim() !== '' && !addr.includes(c.Numero.trim())) {
+            addr = addr ? `${addr}, ${c.Numero.trim()}` : c.Numero.trim();
+        }
         const parts: string[] = [];
-        if (c.Endereco) parts.push(c.Endereco);
-        if (c.Bairro && !c.Endereco.toLowerCase().includes(c.Bairro.toLowerCase())) parts.push(c.Bairro);
-        if (c.Cidade && !c.Endereco.toLowerCase().includes(c.Cidade.toLowerCase())) parts.push(c.Cidade);
+        if (addr) parts.push(addr);
+        if (c.Bairro && !addr.toLowerCase().includes(c.Bairro.toLowerCase())) parts.push(c.Bairro);
+        if (c.Cidade && !addr.toLowerCase().includes(c.Cidade.toLowerCase())) parts.push(c.Cidade);
         if (c.CEP && String(c.CEP).trim() !== '') parts.push(`CEP ${String(c.CEP).trim()}`);
         return parts.join(', ');
     };
@@ -351,7 +357,14 @@ export const GeolocalizadorERP: React.FC = () => {
     const geocodeSingleClient = async (client: ClienteAuditado): Promise<ClienteAuditado> => {
         const fullAddr = buildSearchAddress(client);
         try {
-            const res = await geocodeAddress(fullAddr);
+            const res = await geocodeAddress({
+                address: fullAddr,
+                street: client.Endereco,
+                number: client.Numero,
+                neighborhood: client.Bairro,
+                city: client.Cidade,
+                cep: client.CEP
+            });
             if (res && res.lat && res.lon && !isNaN(res.lat) && !isNaN(res.lon)) {
                 saveToLocalCache(client.Cod_Cliente, res.lat, res.lon);
                 let divergencia: number | null = null;

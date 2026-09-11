@@ -3471,6 +3471,14 @@ function normalizeVisitaData(row) {
         return 'SEGUNDA-FEIRA';
     };
 
+    let rawEndereco = (findValue(['Endereco', 'Endereço', 'deslgrcet', 'RUA']) != null) ? String(findValue(['Endereco', 'Endereço', 'deslgrcet', 'RUA'])).trim() : '';
+    const rawNumero = findValue(['Numero', 'Número', 'NUMERO', 'numedrcet', 'numlgrcet', 'numcet', 'NUM', 'NRO', 'NUMERO_CLIENTE']);
+    const numeroStr = (rawNumero != null && String(rawNumero).trim() !== '' && String(rawNumero).trim() !== '0') ? String(rawNumero).trim() : '';
+
+    if (numeroStr && !rawEndereco.match(new RegExp(`(?:^|\\D)${numeroStr}(?:$|\\D)`))) {
+        rawEndereco = rawEndereco ? `${rawEndereco}, ${numeroStr}` : numeroStr;
+    }
+
     return {
         Cod_Vend: findValue(['CodVend', 'Cod. Vend', 'CODVEND', 'CODMTCEPGVDD']),
         Nome_Vendedor: findValue(['NomeVendedor', 'Nome Vendedor', 'NOMEPG']),
@@ -3481,7 +3489,8 @@ function normalizeVisitaData(row) {
         Dia_Semana: parseDiaSemana(rawDia, rawDataVisita),
         Periodicidade: findValue(['Periodicidade', 'DESCCOVSTCET', 'FREQ']),
         Data_da_Visita: rawDataVisita,
-        Endereco: (findValue(['Endereco', 'Endereço', 'deslgrcet', 'RUA']) != null) ? String(findValue(['Endereco', 'Endereço', 'deslgrcet', 'RUA'])).trim() : '',
+        Endereco: rawEndereco,
+        Numero: numeroStr,
         Bairro: (findValue(['Bairro', 'desbro', 'BAIRRO']) != null) ? String(findValue(['Bairro', 'desbro', 'BAIRRO'])).trim() : '',
         Cidade: (findValue(['Cidade', 'descdd', 'CIDADE']) != null) ? String(findValue(['Cidade', 'descdd', 'CIDADE'])).trim() : '',
         CEP: (findValue(['CEP', 'codcepcet', 'CEP_CLIENTE']) != null) ? String(findValue(['CEP', 'codcepcet', 'CEP_CLIENTE'])).trim() : '',

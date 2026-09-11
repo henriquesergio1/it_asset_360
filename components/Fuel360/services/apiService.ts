@@ -196,21 +196,67 @@ const RealService = {
     corrigirAusenciasHistorico: (ids: number[]): Promise<void> => apiRequest('/relatorios/fix-conflicts', 'POST', { ids }),
     getSugestoesVinculo: (ids: number[]): Promise<any[]> => apiRequest('/colaboradores/smart-suggestions', 'POST', { ids }),
     batchUpdateColaboradoresAddress: (items: any[], reason: string): Promise<void> => apiRequest('/colaboradores/batch-address', 'POST', { items, reason }),
-    geocodeAddress: async (address: string): Promise<{lat: number, lon: number}> => {
-        const addrStr = (address || '').trim();
+    geocodeAddress: async (input: string | { address?: string; street?: string; number?: string; neighborhood?: string; city?: string; state?: string; cep?: string }): Promise<{lat: number, lon: number}> => {
+        let street = '';
+        let num = '';
+        let neighborhood = '';
+        let city = '';
+        let state = '';
+        let zip = '';
+        let overrideAddress = '';
+        let rawStr = '';
+
+        if (typeof input === 'string') {
+            rawStr = (input || '').trim();
+            overrideAddress = rawStr;
+        } else if (input && typeof input === 'object') {
+            street = (input.street || '').trim();
+            num = (input.number || '').trim();
+            neighborhood = (input.neighborhood || '').trim();
+            city = (input.city || '').trim();
+            state = (input.state || '').trim();
+            zip = (input.cep || '').replace(/\D/g, '');
+            overrideAddress = (input.address || '').trim();
+            rawStr = overrideAddress || (street && city ? `${street}${num ? `, ${num}` : ''}${neighborhood ? ` - ${neighborhood}` : ''}, ${city}${state ? ` - ${state}` : ''}` : '');
+        }
+
+        // Extração auxiliar de número predial caso não tenha vindo em campo específico
+        if (!num && rawStr) {
+            const numMatch = rawStr.match(/(?:,|\b)\s*(?:nº|n°|num|número)?\s*(\d{1,6})\s*(?:,|\b|$)/i);
+            if (numMatch) {
+                num = numMatch[1];
+            }
+        }
+
+        // Extração auxiliar de CEP caso não tenha vindo em campo específico
+        if (!zip && rawStr) {
+            const cepMatch = rawStr.match(/(?:CEP\s*[:\-]?\s*|\b)(\d{5})[\s\-]?(\d{3})\b/i);
+            if (cepMatch) {
+                zip = `${cepMatch[1]}${cepMatch[2]}`;
+            }
+        }
+
+        // Montagem da query completa de alta precisão (Logradouro, Número, Bairro, Cidade, CEP)
+        let fullQuery = overrideAddress?.trim() || (street && city ? `${street}${num ? `, ${num}` : ''}${neighborhood ? ` - ${neighborhood}` : ''}, ${city}${state ? ` - ${state}` : ''}` : '');
+        if (!fullQuery) fullQuery = rawStr;
+
+        // Se o número existir e ainda não estiver na query, incorpora para precisão máxima
+        if (num && !fullQuery.match(new RegExp(`(?:^|\\D)${num}(?:$|\\D)`))) {
+            fullQuery = `${fullQuery}, ${num}`;
+        }
 
         // 1ª Prioridade Absoluta: Google Maps Engine via Backend Proxy (/api/fuel360/geocode ou /api/geocode)
-        if (addrStr) {
+        if (fullQuery) {
             try {
                 let gRes: { success: boolean; lat: number; lon: number } | null = null;
                 try {
-                    gRes = await apiRequest<{ success: boolean; lat: number; lon: number }>('/geocode', 'POST', { address: addrStr });
+                    gRes = await apiRequest<{ success: boolean; lat: number; lon: number }>('/geocode', 'POST', { address: fullQuery });
                 } catch (eRel) {
                     // Fallback para rota direta no proxy caso o endpoint com prefixo não responda
                     const fallbackRes = await fetch('/api/geocode', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ address: addrStr })
+                        body: JSON.stringify({ address: fullQuery })
                     });
                     if (fallbackRes.ok) {
                         gRes = await fallbackRes.json();
@@ -225,68 +271,93 @@ const RealService = {
                     }
                 }
             } catch (eGoogle) {
-                console.warn('[Fuel360] Geocodificação Google Maps falhou, tentando contingência:', eGoogle);
+                console.warn('[Fuel360] Geocodificação Google Maps falhou, iniciando contingência por camadas:', eGoogle);
             }
         }
 
-        // Extração precisa de CEP brasileiro (formato 00000-000 ou 00000000)
-        const cepRegex = /(?:CEP\s*[:\-]?\s*|\b)(\d{5})[\s\-]?(\d{3})\b/i;
-        const cepMatch = addrStr.match(cepRegex);
-        const cleanZip = cepMatch ? `${cepMatch[1]}${cepMatch[2]}` : '';
-        const zipPrefix = cleanZip.substring(0, 5);
+        // 2ª Prioridade (Contingência Inteligente): OpenStreetMap/Nominatim em tentativas hierárquicas (Padrão UserManager)
+        const attempts: Array<{ label: string; query: string }> = [];
 
-        const numMatch = addrStr.match(/(?:,|\b)\s*(\d{1,5})\s*(?:,|\b|$)/);
-        const numVal = numMatch ? parseInt(numMatch[1], 10) : 0;
+        if (street && city) {
+            const addrNum = num ? `${street}, ${num}` : street;
+            if (neighborhood) {
+                attempts.push({ label: 'Logradouro, Número e Bairro', query: `${addrNum}, ${neighborhood}, ${city}${state ? ` - ${state}` : ''}, Brasil` });
+            }
+            attempts.push({ label: 'Logradouro e Número', query: `${addrNum}, ${city}${state ? ` - ${state}` : ''}, Brasil` });
+            attempts.push({ label: 'Logradouro', query: `${street}, ${city}${state ? ` - ${state}` : ''}, Brasil` });
+        }
 
-        // 2ª Opção (Contingência): OpenStreetMap/Nominatim
-        try {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addrStr)}&limit=10&addressdetails=1`;
-            const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
-            if (res.ok) {
-                const data = await res.json();
-                if (data && data.length > 0) {
-                    let bestMatch = data[0];
-                    if (zipPrefix.length === 5) {
-                        const zipMatchItem = data.find((d: any) => {
-                            const pc = (d.address && d.address.postcode ? d.address.postcode : '').replace(/\D/g, '');
-                            return pc.startsWith(zipPrefix);
-                        });
-                        if (zipMatchItem) bestMatch = zipMatchItem;
-                    }
+        if (fullQuery && !attempts.some(a => a.query === fullQuery)) {
+            attempts.unshift({ label: 'Endereço Completo', query: fullQuery });
+        }
 
-                    let lat = parseFloat(bestMatch.lat);
-                    let lon = parseFloat(bestMatch.lon);
+        const numVal = parseInt(num, 10);
+        const cleanZip = zip.replace(/\D/g, '');
+        const zipPrefix = cleanZip.length >= 5 ? cleanZip.substring(0, 5) : '';
 
-                    if (numVal > 0 && bestMatch.boundingbox && bestMatch.boundingbox.length === 4) {
-                        const bMinLat = parseFloat(bestMatch.boundingbox[0]);
-                        const bMaxLat = parseFloat(bestMatch.boundingbox[1]);
-                        const bMinLon = parseFloat(bestMatch.boundingbox[2]);
-                        const bMaxLon = parseFloat(bestMatch.boundingbox[3]);
+        for (const attempt of attempts) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(attempt.query)}&limit=10&addressdetails=1`;
+                const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        // Filtra por cidade para evitar divergências com municípios homônimos
+                        let filtered = data;
+                        if (city) {
+                            const targetCity = city.toLowerCase();
+                            const cityMatches = data.filter((d: any) => {
+                                const displayName = (d.display_name || '').toLowerCase();
+                                return displayName.includes(targetCity);
+                            });
+                            if (cityMatches.length > 0) filtered = cityMatches;
+                        }
 
-                        if (!isNaN(bMinLat) && !isNaN(bMaxLat) && !isNaN(bMinLon) && !isNaN(bMaxLon)) {
-                            const latSpanMeters = Math.abs(bMaxLat - bMinLat) * 111000;
-                            const lonSpanMeters = Math.abs(bMaxLon - bMinLon) * 111000;
-                            const totalSpanMeters = Math.sqrt(latSpanMeters * latSpanMeters + lonSpanMeters * lonSpanMeters);
+                        // Seleção inteligente do segmento de logradouro mais preciso baseado no CEP
+                        let bestMatch = filtered[0];
+                        if (zipPrefix.length === 5) {
+                            const zipMatch = filtered.find((d: any) => {
+                                const pc = (d.address && d.address.postcode ? d.address.postcode : '').replace(/\D/g, '');
+                                return pc.startsWith(zipPrefix);
+                            });
+                            if (zipMatch) bestMatch = zipMatch;
+                        }
 
-                            if (totalSpanMeters > 50 && totalSpanMeters < 5000) {
-                                const estimatedMaxNum = Math.max(Math.round(totalSpanMeters * 0.85), 100);
-                                const fraction = Math.min(numVal / estimatedMaxNum, 1.0);
-                                lat = parseFloat((bMaxLat - (fraction * (bMaxLat - bMinLat))).toFixed(6));
-                                lon = parseFloat((bMaxLon - (fraction * (bMaxLon - bMinLon))).toFixed(6));
+                        let lat = parseFloat(bestMatch.lat);
+                        let lon = parseFloat(bestMatch.lon);
+
+                        // Interpolação predial métrica por BoundingBox se houver numeração da fachada
+                        if (!isNaN(numVal) && numVal > 0 && bestMatch.boundingbox && bestMatch.boundingbox.length === 4) {
+                            const bMinLat = parseFloat(bestMatch.boundingbox[0]);
+                            const bMaxLat = parseFloat(bestMatch.boundingbox[1]);
+                            const bMinLon = parseFloat(bestMatch.boundingbox[2]);
+                            const bMaxLon = parseFloat(bestMatch.boundingbox[3]);
+
+                            if (!isNaN(bMinLat) && !isNaN(bMaxLat) && !isNaN(bMinLon) && !isNaN(bMaxLon)) {
+                                const latSpanMeters = Math.abs(bMaxLat - bMinLat) * 111000;
+                                const lonSpanMeters = Math.abs(bMaxLon - bMinLon) * 111000;
+                                const totalSpanMeters = Math.sqrt(latSpanMeters * latSpanMeters + lonSpanMeters * lonSpanMeters);
+
+                                if (totalSpanMeters > 50 && totalSpanMeters < 5000) {
+                                    const estimatedMaxNum = Math.max(Math.round(totalSpanMeters * 0.85), 100);
+                                    const fraction = Math.min(numVal / estimatedMaxNum, 1.0);
+                                    lat = parseFloat((bMaxLat - (fraction * (bMaxLat - bMinLat))).toFixed(6));
+                                    lon = parseFloat((bMaxLon - (fraction * (bMaxLon - bMinLon))).toFixed(6));
+                                }
                             }
                         }
-                    }
 
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        return { lat, lon };
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            return { lat, lon };
+                        }
                     }
                 }
+            } catch (eNom) {
+                console.warn(`[Fuel360] Tentativa de geocodificação Nominatim (${attempt.label}) falhou:`, eNom);
             }
-        } catch (eNom) {
-            console.warn('[Fuel360] Busca Nominatim falhou, tentando fallback CEP:', eNom);
         }
 
-        // 3ª Opção (Fallback de Último Recurso): AwesomeAPI ou Nominatim Postalcode
+        // 3ª Prioridade (Fallback de Último Recurso): AwesomeAPI ou Nominatim por CEP (Apenas se logradouro e número falharem)
         if (cleanZip.length === 8) {
             try {
                 const resCep = await fetch(`https://cep.awesomeapi.com.br/json/${cleanZip}`);
@@ -322,7 +393,7 @@ const RealService = {
             }
         }
 
-        throw new Error('Endereço não localizado.');
+        throw new Error('Endereço ou CEP não localizado no mapa. Verifique se o logradouro, número e cidade estão corretos.');
     },
     calcDistance: (lat1: number, lon1: number, lat2: number, lon2: number): number => {
         const R = 6371;
@@ -508,10 +579,11 @@ const MockService = {
     corrigirAusenciasHistorico: async () => {},
     getSugestoesVinculo: async () => [],
     batchUpdateColaboradoresAddress: async () => {},
-    geocodeAddress: async (address: string) => {
+    geocodeAddress: async (address: string | any) => {
         await new Promise(r => setTimeout(r, 800));
+        const addrStr = typeof address === 'string' ? address : (address?.address || address?.street || '');
         // Simulação de retorno baseado no endereço
-        if (address.toLowerCase().includes('paulista')) return { lat: -23.5614, lon: -46.6559 };
+        if (addrStr.toLowerCase().includes('paulista')) return { lat: -23.5614, lon: -46.6559 };
         return { lat: -23.5505, lon: -46.6333 };
     },
     calcDistance: (lat1: number, lon1: number, lat2: number, lon2: number): number => {

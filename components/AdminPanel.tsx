@@ -292,6 +292,7 @@ SELECT DISTINCT
     a.DESCCOVSTCET AS Periodicidade,
     x.DataVisita AS Data_da_Visita,
     g.deslgrcet AS Endereco,
+    g.numedrcet AS Numero,
     i.desbro AS Bairro,
     TRIM(h.descdd) AS Cidade,
     g.codcepcet AS CEP,

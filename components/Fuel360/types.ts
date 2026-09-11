@@ -175,6 +175,7 @@ export interface VisitaPrevista {
     Periodicidade: string;
     Data_da_Visita: string; 
     Endereco: string;
+    Numero?: string;
     Bairro: string;
     Cidade: string;
     CEP: string;
