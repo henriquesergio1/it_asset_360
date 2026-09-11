@@ -30,7 +30,8 @@ import {
     ChevronRight,
     Compass,
     Database,
-    HelpCircle
+    HelpCircle,
+    Trash2
 } from 'lucide-react';
 import {
     UI_CARD_CONTAINER,
@@ -202,6 +203,8 @@ export const GeolocalizadorERP: React.FC = () => {
         failed: 0
     });
     const [batchScope, setBatchScope] = useState<'ALL' | 'SUPERVISOR' | 'VENDEDOR' | 'PENDING' | 'DIVERGENT'>('ALL');
+    const [clearBeforeBatch, setClearBeforeBatch] = useState<boolean>(false);
+    const [reloadingClientId, setReloadingClientId] = useState<number | null>(null);
     const isPausedRef = useRef<boolean>(false);
     const isCancelledRef = useRef<boolean>(false);
 
@@ -404,10 +407,43 @@ export const GeolocalizadorERP: React.FC = () => {
     };
 
     const handleGeocodeIndividual = async (client: ClienteAuditado) => {
-        const updated = await geocodeSingleClient(client);
-        setClientes(prev => prev.map(c => c.Cod_Cliente === updated.Cod_Cliente ? updated : c));
-        if (selectedClientModal && selectedClientModal.Cod_Cliente === updated.Cod_Cliente) {
-            setSelectedClientModal(updated);
+        setReloadingClientId(client.Cod_Cliente);
+        try {
+            const updated = await geocodeSingleClient(client);
+            setClientes(prev => prev.map(c => c.Cod_Cliente === updated.Cod_Cliente ? updated : c));
+            if (selectedClientModal && selectedClientModal.Cod_Cliente === updated.Cod_Cliente) {
+                setSelectedClientModal(updated);
+            }
+        } finally {
+            setReloadingClientId(null);
+        }
+    };
+
+    // --- LIMPAR TODO O CACHE LOCAL ---
+    const handleClearAllCache = () => {
+        if (clientes.length === 0) return;
+        if (confirm('Deseja realmente limpar todo o cache de geocodificação local? Todas as coordenadas calculadas serão resetadas para você refazer do zero.')) {
+            try {
+                localStorage.removeItem(GEOCODE_CACHE_STORAGE_KEY);
+            } catch {}
+            setClientes(prev => prev.map(c => ({
+                ...c,
+                Lat_Geocode: null,
+                Long_Geocode: null,
+                Divergencia_Metros: null,
+                Status: c.HasValidERPCoords ? 'PENDENTE' : 'SEM_COORDENADAS_ERP',
+                GeocodedAt: undefined
+            })));
+            if (selectedClientModal) {
+                setSelectedClientModal(prev => prev ? {
+                    ...prev,
+                    Lat_Geocode: null,
+                    Long_Geocode: null,
+                    Divergencia_Metros: null,
+                    Status: prev.HasValidERPCoords ? 'PENDENTE' : 'SEM_COORDENADAS_ERP',
+                    GeocodedAt: undefined
+                } : null);
+            }
         }
     };
 
@@ -511,6 +547,44 @@ export const GeolocalizadorERP: React.FC = () => {
         if (queue.length === 0) {
             alert('Nenhum cliente elegível para processamento com os critérios selecionados.');
             return;
+        }
+
+        // Se a opção de limpar e refazer do zero estiver marcada
+        if (clearBeforeBatch) {
+            try {
+                const currentCache = getLocalCache();
+                const queueIds = new Set(queue.map(c => c.Cod_Cliente));
+                for (const id of queueIds) {
+                    delete currentCache[id];
+                }
+                localStorage.setItem(GEOCODE_CACHE_STORAGE_KEY, JSON.stringify(currentCache));
+            } catch (e) {
+                console.warn('Erro ao limpar cache parcial:', e);
+            }
+
+            // Reseta na tabela os clientes da fila
+            const queueIds = new Set(queue.map(c => c.Cod_Cliente));
+            setClientes(prev => prev.map(c => {
+                if (queueIds.has(c.Cod_Cliente)) {
+                    return {
+                        ...c,
+                        Lat_Geocode: null,
+                        Long_Geocode: null,
+                        Divergencia_Metros: null,
+                        Status: c.HasValidERPCoords ? 'PENDENTE' : 'SEM_COORDENADAS_ERP',
+                        GeocodedAt: undefined
+                    };
+                }
+                return c;
+            }));
+            queue = queue.map(c => ({
+                ...c,
+                Lat_Geocode: null,
+                Long_Geocode: null,
+                Divergencia_Metros: null,
+                Status: c.HasValidERPCoords ? 'PENDENTE' : 'SEM_COORDENADAS_ERP',
+                GeocodedAt: undefined
+            }));
         }
 
         setIsProcessingBatch(true);
@@ -918,6 +992,29 @@ export const GeolocalizadorERP: React.FC = () => {
                             </select>
                         </div>
 
+                        {/* Checkbox: Limpar e refazer do zero */}
+                        <label className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={clearBeforeBatch}
+                                onChange={e => setClearBeforeBatch(e.target.checked)}
+                                disabled={isProcessingBatch}
+                                className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                            />
+                            Limpar anteriores e refazer do zero
+                        </label>
+
+                        {/* Botão Limpar Cache Geral */}
+                        <button
+                            onClick={handleClearAllCache}
+                            disabled={isProcessingBatch || clientes.length === 0}
+                            className="flex items-center gap-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 px-3 py-1.5 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                            title="Limpar todo o cache local e resetar a tabela"
+                        >
+                            <Trash2 size={13} />
+                            Limpar Cache
+                        </button>
+
                         {/* Botões de Ação do Batch */}
                         {!isProcessingBatch ? (
                             <button
@@ -1272,10 +1369,11 @@ export const GeolocalizadorERP: React.FC = () => {
                                                         {/* Botão Geocodificar Individual */}
                                                         <button
                                                             onClick={() => handleGeocodeIndividual(client)}
-                                                            className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors cursor-pointer"
-                                                            title="Geocodificar este cliente agora"
+                                                            disabled={reloadingClientId === client.Cod_Cliente || isProcessingBatch}
+                                                            className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors cursor-pointer disabled:opacity-50"
+                                                            title={reloadingClientId === client.Cod_Cliente ? "Geocodificando cliente..." : "Geocodificar este cliente agora"}
                                                         >
-                                                            <RefreshCw size={15} />
+                                                            <RefreshCw size={15} className={reloadingClientId === client.Cod_Cliente ? "animate-spin text-emerald-600" : ""} />
                                                         </button>
 
                                                         {/* Copiar Coordenadas Geocodificadas */}
@@ -1486,8 +1584,10 @@ export const GeolocalizadorERP: React.FC = () => {
                                     <p className="text-sm font-bold">Cliente sem coordenadas ERP e ainda não geocodificado</p>
                                     <button
                                         onClick={() => handleGeocodeIndividual(selectedClientModal)}
-                                        className={`${UI_BUTTON_PRIMARY} text-xs py-2 px-4`}
+                                        disabled={reloadingClientId === selectedClientModal.Cod_Cliente}
+                                        className={`${UI_BUTTON_PRIMARY} text-xs py-2 px-4 flex items-center gap-2`}
                                     >
+                                        <RefreshCw size={13} className={reloadingClientId === selectedClientModal.Cod_Cliente ? "animate-spin" : ""} />
                                         Geocodificar Agora
                                     </button>
                                 </div>
