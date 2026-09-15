@@ -1,12 +1,13 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
-import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress } from './services/apiService';
-import { VisitaPrevista, Colaborador, SequenceStrategy } from './types';
+import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao } from './services/apiService';
+import { VisitaPrevista, Colaborador, SequenceStrategy, ClienteRestricao } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import * as XLSX from 'xlsx';
 import { ShareSimulationModal } from './ShareSimulationModal';
+import { Calendar, Sun, Sunset, AlertCircle, Info, Edit3, Trash2, Plus, Check } from 'lucide-react';
 import {
     CogIcon,
     SpinnerIcon,
@@ -463,13 +464,51 @@ function optimizeDayCircuit2Opt<T extends { lat: number; lng: number }>(
     return fullTour.slice(1, -1).map(stop => stop.item!);
 }
 
+const getStopCodCliente = (item: any): number => {
+    if (!item) return 0;
+    if (typeof item.Cod_Cliente === 'number') return item.Cod_Cliente;
+    if (item.sampleVisit && typeof item.sampleVisit.Cod_Cliente === 'number') return item.sampleVisit.Cod_Cliente;
+    if (item.visit && typeof item.visit.Cod_Cliente === 'number') return item.visit.Cod_Cliente;
+    return 0;
+};
+
 // Sequenciamento Multiestratégia de Visitas Diárias (Far-to-Near, Snake/Sweep, Menor KM TSP, Near-to-Far)
 function sequenceDayStops<T extends { lat: number; lng: number }>(
     base: { lat: number; lng: number },
     clients: T[],
-    strategy: SequenceStrategy = 'FAR_TO_NEAR'
+    strategy: SequenceStrategy = 'FAR_TO_NEAR',
+    restricoesMap?: Map<number, ClienteRestricao>
 ): T[] {
     if (clients.length <= 1) return clients;
+
+    // Se temos restrições de turno (MANHA / TARDE), prioriza janelas operacionais
+    if (restricoesMap && restricoesMap.size > 0) {
+        const manha: T[] = [];
+        const livre: T[] = [];
+        const tarde: T[] = [];
+
+        clients.forEach(c => {
+            const cod = getStopCodCliente(c);
+            const r = cod ? restricoesMap.get(cod) : null;
+            if (r && r.TurnoPermitido === 'MANHA') {
+                manha.push(c);
+            } else if (r && r.TurnoPermitido === 'TARDE') {
+                tarde.push(c);
+            } else {
+                livre.push(c);
+            }
+        });
+
+        if (manha.length > 0 || tarde.length > 0) {
+            const seqManha = manha.length > 1 ? sequenceDayStops(base, manha, strategy) : manha;
+            const refBaseForLivre = seqManha.length > 0 ? seqManha[seqManha.length - 1] : base;
+            const seqLivre = livre.length > 1 ? sequenceDayStops(refBaseForLivre, livre, strategy) : livre;
+            const refBaseForTarde = seqLivre.length > 0 ? seqLivre[seqLivre.length - 1] : (seqManha.length > 0 ? seqManha[seqManha.length - 1] : base);
+            const seqTarde = tarde.length > 1 ? sequenceDayStops(refBaseForTarde, tarde, strategy) : tarde;
+
+            return [...seqManha, ...seqLivre, ...seqTarde];
+        }
+    }
 
     // Se temos exatamente 2 paradas
     if (clients.length === 2) {
@@ -588,9 +627,10 @@ function sequenceDayStops<T extends { lat: number; lng: number }>(
 async function optimizeDayCircuitWithOSRM<T extends { lat: number; lng: number }>(
     base: { lat: number; lng: number },
     clients: T[],
-    strategy: SequenceStrategy = 'FAR_TO_NEAR'
+    strategy: SequenceStrategy = 'FAR_TO_NEAR',
+    restricoesMap?: Map<number, ClienteRestricao>
 ): Promise<T[]> {
-    if (clients.length <= 2) return sequenceDayStops(base, clients, strategy);
+    if (clients.length <= 2) return sequenceDayStops(base, clients, strategy, restricoesMap);
 
     // Monta todos os pontos do dia incluindo a base no índice 0
     const allPoints = [{ lat: base.lat, lng: base.lng }, ...clients.map(c => ({ lat: c.lat, lng: c.lng }))];
@@ -760,7 +800,7 @@ async function optimizeDayCircuitWithOSRM<T extends { lat: number; lng: number }
         }
     }
 
-    return sequenceDayStops(base, fullTour.slice(1, -1).map(stop => stop.item!), strategy);
+    return sequenceDayStops(base, fullTour.slice(1, -1).map(stop => stop.item!), strategy, restricoesMap);
 }
 
 const WEEKDAYS = ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'];
@@ -1462,6 +1502,145 @@ export const AjusteRota: React.FC = () => {
             setChannelSaveFeedback('❌ Erro de conexão ao salvar no banco: ' + err.message);
         } finally {
             setSavingChannelTimes(false);
+        }
+    };
+
+    // Particularidades / Janelas de Atendimento de Clientes (Persistidas no Banco SQL Server)
+    const [clienteRestricoes, setClienteRestricoes] = useState<ClienteRestricao[]>([]);
+    const [showRestricoesModal, setShowRestricoesModal] = useState<boolean>(false);
+    const [savingRestricao, setSavingRestricao] = useState<boolean>(false);
+    const [restricaoSearch, setRestricaoSearch] = useState<string>('');
+    const [restricaoFilterTurno, setRestricaoFilterTurno] = useState<'TODOS' | 'MANHA' | 'TARDE' | 'QUALQUER'>('TODOS');
+    const [restricaoSaveFeedback, setRestricaoSaveFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [lastRestricaoAudit, setLastRestricaoAudit] = useState<{ usuario?: string; dataHora?: string } | null>(null);
+
+    // Formulário de Particularidade
+    const [formCodCliente, setFormCodCliente] = useState<string>('');
+    const [formRazaoSocial, setFormRazaoSocial] = useState<string>('');
+    const [formDiasPermitidos, setFormDiasPermitidos] = useState<string[]>([]);
+    const [formTurnoPermitido, setFormTurnoPermitido] = useState<'MANHA' | 'TARDE' | 'QUALQUER'>('QUALQUER');
+    const [formObservacao, setFormObservacao] = useState<string>('');
+    const [editingRestricaoId, setEditingRestricaoId] = useState<number | null>(null);
+
+    // Mapa rápido de consulta por Cod_Cliente
+    const clienteRestricoesMap = useMemo(() => {
+        const map = new Map<number, ClienteRestricao>();
+        clienteRestricoes.forEach(r => {
+            if (r.Ativo !== false && r.Cod_Cliente) {
+                map.set(Number(r.Cod_Cliente), r);
+            }
+        });
+        return map;
+    }, [clienteRestricoes]);
+
+    const loadClienteRestricoes = useCallback(async () => {
+        try {
+            const res = await getClienteRestricoes();
+            if (res && res.success && Array.isArray(res.restricoes)) {
+                setClienteRestricoes(res.restricoes);
+                if (res.lastAudit) {
+                    setLastRestricaoAudit(res.lastAudit);
+                }
+            }
+        } catch (err) {
+            console.warn('[Fuel360] Erro ao carregar particularidades de clientes:', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadClienteRestricoes();
+    }, [loadClienteRestricoes]);
+
+    const handleOpenNewRestricaoModal = (client?: VisitaPrevista | { Cod_Cliente: number; Razao_Social?: string }) => {
+        setRestricaoSaveFeedback(null);
+        if (client) {
+            const existing = clienteRestricoesMap.get(Number(client.Cod_Cliente));
+            if (existing) {
+                setEditingRestricaoId(existing.ID_Restricao || null);
+                setFormCodCliente(String(existing.Cod_Cliente));
+                setFormRazaoSocial(existing.Razao_Social || client.Razao_Social || '');
+                setFormDiasPermitidos(existing.DiasPermitidos ? existing.DiasPermitidos.split(',').map(s => s.trim()) : []);
+                setFormTurnoPermitido((existing.TurnoPermitido as any) || 'QUALQUER');
+                setFormObservacao(existing.Observacao || '');
+            } else {
+                setEditingRestricaoId(null);
+                setFormCodCliente(String(client.Cod_Cliente));
+                setFormRazaoSocial(client.Razao_Social || '');
+                setFormDiasPermitidos([]);
+                setFormTurnoPermitido('QUALQUER');
+                setFormObservacao('');
+            }
+        } else {
+            setEditingRestricaoId(null);
+            setFormCodCliente('');
+            setFormRazaoSocial('');
+            setFormDiasPermitidos([]);
+            setFormTurnoPermitido('QUALQUER');
+            setFormObservacao('');
+        }
+        setShowRestricoesModal(true);
+    };
+
+    const handleSaveRestricao = async () => {
+        const cod = parseInt(formCodCliente, 10);
+        if (isNaN(cod) || cod <= 0) {
+            setRestricaoSaveFeedback({ type: 'error', message: 'Informe um Código de Cliente válido.' });
+            return;
+        }
+
+        setSavingRestricao(true);
+        setRestricaoSaveFeedback(null);
+        try {
+            const itemToSave: ClienteRestricao = {
+                Cod_Cliente: cod,
+                Razao_Social: formRazaoSocial.trim() || undefined,
+                DiasPermitidos: formDiasPermitidos.length > 0 ? formDiasPermitidos.join(',') : undefined,
+                TurnoPermitido: formTurnoPermitido,
+                Observacao: formObservacao.trim() || undefined,
+                Ativo: true
+            };
+
+            const res = await saveClienteRestricoesBatch([itemToSave]);
+            if (res && res.success) {
+                setClienteRestricoes(res.restricoes || []);
+                if (res.lastAudit) setLastRestricaoAudit(res.lastAudit);
+                setRestricaoSaveFeedback({ type: 'success', message: 'Particularidade salva com sucesso no SQL Server corporativo!' });
+                setEditingRestricaoId(null);
+                setFormCodCliente('');
+                setFormRazaoSocial('');
+                setFormDiasPermitidos([]);
+                setFormTurnoPermitido('QUALQUER');
+                setFormObservacao('');
+            } else {
+                setRestricaoSaveFeedback({ type: 'error', message: res?.message || 'Erro ao salvar no banco.' });
+            }
+        } catch (err: any) {
+            setRestricaoSaveFeedback({ type: 'error', message: 'Erro ao salvar: ' + (err.message || 'Erro desconhecido') });
+        } finally {
+            setSavingRestricao(false);
+        }
+    };
+
+    const handleDeleteRestricao = async (idOrCod: number) => {
+        if (!confirm('Deseja realmente remover esta particularidade? O cliente voltará ao atendimento padrão sem restrições de janela.')) {
+            return;
+        }
+        try {
+            const res = await deleteClienteRestricao(idOrCod);
+            if (res && res.success) {
+                setClienteRestricoes(res.restricoes || []);
+                if (res.lastAudit) setLastRestricaoAudit(res.lastAudit);
+                if (formCodCliente === String(idOrCod)) {
+                    setEditingRestricaoId(null);
+                    setFormCodCliente('');
+                    setFormRazaoSocial('');
+                    setFormDiasPermitidos([]);
+                    setFormTurnoPermitido('QUALQUER');
+                    setFormObservacao('');
+                }
+            }
+        } catch (err: any) {
+            alert('Erro ao excluir: ' + (err.message || 'Erro de conexão'));
         }
     };
 
@@ -3532,6 +3711,37 @@ export const AjusteRota: React.FC = () => {
                 }
             }
 
+            // 2.5.2. Garantia de Cumprimento dos Dias Permitidos por Cliente (Hard Constraints)
+            if (clienteRestricoesMap.size > 0) {
+                for (let d = 0; d < K; d++) {
+                    const currentDay = activeDays[d];
+                    const clientsInDay = dayAssignedClients[d];
+
+                    for (let i = clientsInDay.length - 1; i >= 0; i--) {
+                        const client = clientsInDay[i];
+                        const cod = client.sampleVisit.Cod_Cliente;
+                        const restr = clienteRestricoesMap.get(cod);
+
+                        if (restr && restr.DiasPermitidos && restr.DiasPermitidos.trim()) {
+                            const allowedDays = restr.DiasPermitidos
+                                .split(',')
+                                .map(item => normalizeDiaSemana(item.trim()));
+
+                            if (!allowedDays.includes(currentDay)) {
+                                const targetDay = activeDays.find(ad => allowedDays.includes(ad));
+                                if (targetDay) {
+                                    const targetDIdx = activeDays.indexOf(targetDay);
+                                    if (targetDIdx !== -1 && targetDIdx !== d) {
+                                        const [moved] = clientsInDay.splice(i, 1);
+                                        dayAssignedClients[targetDIdx].push(moved);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // 2.6. Distribuição Interna e Equalização Quinzenal Homogênea
             for (let d = 0; d < K; d++) {
                 const bucket = dayBuckets[d];
@@ -3673,10 +3883,10 @@ export const AjusteRota: React.FC = () => {
 
             for (const bucket of dayBuckets) {
                 let rawClients13 = [...bucket.semanais, ...bucket.quinzenais13];
-                let optimizedClients13 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients13, optSequenceStrategy);
+                let optimizedClients13 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients13, optSequenceStrategy, clienteRestricoesMap);
 
                 let rawClients24 = [...bucket.semanais, ...bucket.quinzenais24];
-                let optimizedClients24 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients24, optSequenceStrategy);
+                let optimizedClients24 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients24, optSequenceStrategy, clienteRestricoesMap);
 
                 // Salvaguarda Estrita de Horas: Em modo não flexibilizado com limite de horas,
                 // se a rota viária real + serviços exceder a jornada configurada,
@@ -4194,7 +4404,7 @@ export const AjusteRota: React.FC = () => {
                 return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
             });
             const stops13 = visits13.map(v => ({ lat: v.Lat || 0, lng: v.Long || 0, visit: v }));
-            const sequenced13 = sequenceDayStops(base, stops13, optSequenceStrategy);
+            const sequenced13 = sequenceDayStops(base, stops13, optSequenceStrategy, clienteRestricoesMap);
 
             // Ciclo 2/4 (Semanais + Quinzenais 2/4)
             const visits24 = visits.filter(r => {
@@ -4202,7 +4412,7 @@ export const AjusteRota: React.FC = () => {
                 return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
             });
             const stops24 = visits24.map(v => ({ lat: v.Lat || 0, lng: v.Long || 0, visit: v }));
-            const sequenced24 = sequenceDayStops(base, stops24, optSequenceStrategy);
+            const sequenced24 = sequenceDayStops(base, stops24, optSequenceStrategy, clienteRestricoesMap);
 
             const map13 = new Map<number, number>();
             sequenced13.forEach((s, idx) => map13.set(s.visit.Cod_Cliente, idx + 1));
@@ -4231,7 +4441,7 @@ export const AjusteRota: React.FC = () => {
         });
 
         return map;
-    }, [scopedAdjustedRoutes, colaboradores, optSequenceStrategy]);
+    }, [scopedAdjustedRoutes, colaboradores, optSequenceStrategy, clienteRestricoesMap]);
 
     // Calcular KPIs de Comparação com Métricas Reais de Circuito Fechado (KM e Tempo de Deslocamento)
     const kpis = useMemo(() => {
@@ -5119,7 +5329,32 @@ export const AjusteRota: React.FC = () => {
                         )}
                     </div>
                 </td>
-                <td className="p-3 truncate max-w-[180px] text-slate-800 dark:text-slate-200" title={v.Razao_Social}>{v.Razao_Social}</td>
+                <td className="p-3 text-slate-800 dark:text-slate-200">
+                    <div className="truncate max-w-[180px] font-bold" title={v.Razao_Social}>{v.Razao_Social}</div>
+                    {clienteRestricoesMap.has(v.Cod_Cliente) && (() => {
+                        const r = clienteRestricoesMap.get(v.Cod_Cliente)!;
+                        return (
+                            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                {r.TurnoPermitido === 'MANHA' && (
+                                    <span className="inline-flex items-center gap-0.5 text-[8.5px] font-black px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                        <Sun className="w-2.5 h-2.5" /> Manhã
+                                    </span>
+                                )}
+                                {r.TurnoPermitido === 'TARDE' && (
+                                    <span className="inline-flex items-center gap-0.5 text-[8.5px] font-black px-1.5 py-0.2 rounded bg-orange-50 dark:bg-orange-950/80 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+                                        <Sunset className="w-2.5 h-2.5" /> Tarde
+                                    </span>
+                                )}
+                                {r.DiasPermitidos && (
+                                    <span className="inline-flex items-center gap-0.5 text-[8.5px] font-black px-1.5 py-0.2 rounded bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800" title={`Dias permitidos: ${r.DiasPermitidos}`}>
+                                        <Calendar className="w-2.5 h-2.5" />
+                                        {r.DiasPermitidos.split(',').map(d => d.trim().slice(0, 3).toUpperCase()).join('/')}
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })()}
+                </td>
                 <td 
                     className="p-3 text-slate-500 dark:text-slate-400 max-w-[240px]" 
                     title={`${v.Endereco || ''}${v.Bairro ? `, ${v.Bairro}` : ''}${v.Cidade ? ` - ${v.Cidade}` : ''}`}
@@ -5213,6 +5448,25 @@ export const AjusteRota: React.FC = () => {
                 </td>
                 <td className="p-3 text-center">
                     <div className="flex items-center justify-center space-x-1.5">
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenNewRestricaoModal(v);
+                            }}
+                            className={`p-1 rounded-lg transition cursor-pointer ${
+                                clienteRestricoesMap.has(v.Cod_Cliente)
+                                    ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100'
+                                    : 'text-slate-400 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+                            }`}
+                            title={
+                                clienteRestricoesMap.has(v.Cod_Cliente)
+                                    ? `Particularidade Ativa: ${clienteRestricoesMap.get(v.Cod_Cliente)?.DiasPermitidos ? `Dias: ${clienteRestricoesMap.get(v.Cod_Cliente)?.DiasPermitidos}` : ''} ${clienteRestricoesMap.get(v.Cod_Cliente)?.TurnoPermitido !== 'QUALQUER' ? `Turno: ${clienteRestricoesMap.get(v.Cod_Cliente)?.TurnoPermitido}` : ''}. Clique para editar.`
+                                    : 'Configurar particularidade/janela para este cliente'
+                            }
+                        >
+                            <Calendar className="w-4 h-4" />
+                        </button>
                         <button
                             type="button"
                             onClick={(e) => {
@@ -5803,6 +6057,26 @@ export const AjusteRota: React.FC = () => {
                                                 <span className="flex items-center gap-1 text-[8.5px] font-black text-amber-700 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-900/80 px-1.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-700 animate-pulse">
                                                     <ExclamationIcon className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
                                                     {channelsInUseWithAlerts.length} pendente{channelsInUseWithAlerts.length > 1 ? 's' : ''}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    {/* Configuração de Particularidades / Janelas de Atendimento de Clientes */}
+                                    <div className="pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenNewRestricaoModal()}
+                                            className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg border text-[10px] font-black transition cursor-pointer shadow-2xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300"
+                                            title="Configurar restrições operacionais e janelas de atendimento por cliente (ex.: dias fixos, manhã, tarde)"
+                                        >
+                                            <div className="flex items-center space-x-1.5">
+                                                <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                                <span>Janelas de Clientes ({clienteRestricoes.length})</span>
+                                            </div>
+                                            {clienteRestricoes.length > 0 && (
+                                                <span className="text-[8.5px] font-black text-blue-700 dark:text-blue-300 bg-blue-200/80 dark:bg-blue-900/80 px-1.5 py-0.5 rounded-full">
+                                                    {clienteRestricoes.length} ativa{clienteRestricoes.length > 1 ? 's' : ''}
                                                 </span>
                                             )}
                                         </button>
@@ -7888,6 +8162,14 @@ export const AjusteRota: React.FC = () => {
                                                         <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                                                             {stop.Periodicidade}
                                                         </span>
+                                                        {clienteRestricoesMap.has(stop.Cod_Cliente) && (() => {
+                                                            const r = clienteRestricoesMap.get(stop.Cod_Cliente)!;
+                                                            return (
+                                                                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 flex items-center gap-1" title={r.Observacao || 'Cliente com janela de atendimento definida'}>
+                                                                    {r.TurnoPermitido === 'MANHA' ? '🌅 Manhã' : r.TurnoPermitido === 'TARDE' ? '🌇 Tarde' : '📅 Janela'}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </div>
                                                     <div className="flex items-center space-x-1.5 shrink-0">
                                                         <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
@@ -8713,6 +8995,435 @@ export const AjusteRota: React.FC = () => {
                                         <span>💾 Gravar no Banco de Dados</span>
                                     </>
                                 )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE PARTICULARIDADES E JANELAS DE ATENDIMENTO DE CLIENTES */}
+            {showRestricoesModal && (
+                <div className="fixed inset-0 z-[2000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 lg:p-6 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+                        {/* Header */}
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-xs shrink-0">
+                                    <Calendar className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        Janelas e Particularidades de Clientes
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                            {clienteRestricoes.length} {clienteRestricoes.length === 1 ? 'regra ativa' : 'regras ativas'}
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                        Defina restrições de dias da semana e turnos (manhã/tarde) que guiam o roteirizador no particionamento e ordem de atendimento.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowRestricoesModal(false);
+                                    setRestricaoSaveFeedback(null);
+                                    setEditingRestricaoId(null);
+                                }}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Conteúdo com Scroll: Formulário de Cadastro/Edição + Tabela com Filtros */}
+                        <div className="p-5 overflow-y-auto custom-scrollbar space-y-5 flex-1">
+                            {/* Card de Formulário (Cadastrar / Editar Particularidade) */}
+                            <div className="bg-slate-50/90 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                        <span>{editingRestricaoId ? '✏️' : '➕'}</span>
+                                        <span>{editingRestricaoId ? 'Editar Particularidade de Cliente' : 'Cadastrar Nova Particularidade'}</span>
+                                    </h4>
+                                    {editingRestricaoId && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setEditingRestricaoId(null);
+                                                setFormCodCliente('');
+                                                setFormRazaoSocial('');
+                                                setFormDiasPermitidos([]);
+                                                setFormTurnoPermitido('QUALQUER');
+                                                setFormObservacao('');
+                                                setRestricaoSaveFeedback(null);
+                                            }}
+                                            className="text-[11px] font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 underline cursor-pointer"
+                                        >
+                                            Cancelar Edição
+                                        </button>
+                                    )}
+                                </div>
+
+                                {restricaoSaveFeedback && (
+                                    <div className={`p-2.5 rounded-xl text-xs font-medium border flex items-center gap-2 ${
+                                        restricaoSaveFeedback.type === 'success'
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
+                                            : 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
+                                    }`}>
+                                        <span>{restricaoSaveFeedback.type === 'success' ? '✅' : '❌'}</span>
+                                        <span>{restricaoSaveFeedback.message}</span>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    {/* Código do Cliente (SOLD) */}
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                                            Código do Cliente / SOLD <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={formCodCliente}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setFormCodCliente(val);
+                                                const num = parseInt(val, 10);
+                                                if (!isNaN(num)) {
+                                                    const match = scopedAdjustedRoutes.find(r => r.Cod_Cliente === num) || scopedOriginalRoutes.find(r => r.Cod_Cliente === num);
+                                                    if (match && match.Razao_Social && !formRazaoSocial) {
+                                                        setFormRazaoSocial(match.Razao_Social);
+                                                    }
+                                                }
+                                            }}
+                                            placeholder="Ex: 104523"
+                                            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+
+                                    {/* Razão Social / Nome Fantasia */}
+                                    <div className="md:col-span-2">
+                                        <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                                            Razão Social / Nome do Estabelecimento
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formRazaoSocial}
+                                            onChange={(e) => setFormRazaoSocial(e.target.value)}
+                                            placeholder="Ex: SUPERMERCADO BOM PREÇO LTDA"
+                                            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                                    {/* Dias Permitidos (Multiselect) */}
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                                            Dias Permitidos de Atendimento:
+                                        </label>
+                                        <div className="grid grid-cols-3 gap-1">
+                                            {WEEKDAYS.map(day => {
+                                                const isSel = formDiasPermitidos.includes(day);
+                                                const short = day.split('-')[0].slice(0, 3).toUpperCase();
+                                                return (
+                                                    <button
+                                                        key={day}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (isSel) {
+                                                                setFormDiasPermitidos(prev => prev.filter(d => d !== day));
+                                                            } else {
+                                                                setFormDiasPermitidos(prev => [...prev, day]);
+                                                            }
+                                                        }}
+                                                        className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition cursor-pointer border ${
+                                                            isSel
+                                                                ? 'bg-blue-600 text-white border-blue-700 shadow-2xs font-black'
+                                                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                                                        }`}
+                                                    >
+                                                        {short}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        <span className="text-[9.5px] text-slate-400 dark:text-slate-500 mt-1 block">
+                                            {formDiasPermitidos.length === 0 
+                                                ? 'Nenhum dia restrito: Cliente pode ser atendido em qualquer dia útil.' 
+                                                : `Atendimento restrito exclusivamente para: ${formDiasPermitidos.map(d => d.split('-')[0]).join(', ')}.`}
+                                        </span>
+                                    </div>
+
+                                    {/* Turno Permitido */}
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                                            Turno de Atendimento Preferencial:
+                                        </label>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormTurnoPermitido('MANHA')}
+                                                className={`py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 border cursor-pointer ${
+                                                    formTurnoPermitido === 'MANHA'
+                                                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs font-black ring-2 ring-amber-400/40'
+                                                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                <Sun className="w-4 h-4" />
+                                                <span>🌅 Manhã</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormTurnoPermitido('TARDE')}
+                                                className={`py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 border cursor-pointer ${
+                                                    formTurnoPermitido === 'TARDE'
+                                                        ? 'bg-orange-500 text-white border-orange-600 shadow-xs font-black ring-2 ring-orange-400/40'
+                                                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                <Sunset className="w-4 h-4" />
+                                                <span>🌇 Tarde</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormTurnoPermitido('QUALQUER')}
+                                                className={`py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 border cursor-pointer ${
+                                                    formTurnoPermitido === 'QUALQUER'
+                                                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs font-black ring-2 ring-indigo-400/40'
+                                                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                <ClockIcon className="w-4 h-4" />
+                                                <span>⏰ Qualquer</span>
+                                            </button>
+                                        </div>
+                                        <span className="text-[9.5px] text-slate-400 dark:text-slate-500 mt-1 block">
+                                            {formTurnoPermitido === 'MANHA' && 'Otimizador aloca o cliente nas primeiras paradas da rota do dia.'}
+                                            {formTurnoPermitido === 'TARDE' && 'Otimizador aloca o cliente nas paradas finais da rota do dia.'}
+                                            {formTurnoPermitido === 'QUALQUER' && 'Sem restrição horária: segue o circuito de menor quilometragem.'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Observação Operacional */}
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                                        Observação / Restrição Operacional
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formObservacao}
+                                        onChange={(e) => setFormObservacao(e.target.value)}
+                                        placeholder="Ex: Recebimento das 08h às 11h. Falar com o encarregado do depósito."
+                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                {/* Botão de Salvar no SQL Server */}
+                                <div className="flex justify-end pt-1">
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveRestricao}
+                                        disabled={savingRestricao || !formCodCliente}
+                                        className="px-4 py-2 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 shadow-md transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                                    >
+                                        {savingRestricao ? (
+                                            <>
+                                                <SpinnerIcon className="w-4 h-4 animate-spin" />
+                                                <span>Gravando no SQL Server...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>💾 {editingRestricaoId ? 'Atualizar Particularidade' : 'Gravar Particularidade'}</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Tabela de Particularidades Cadastradas */}
+                            <div className="space-y-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div className="flex items-center space-x-2">
+                                        <h4 className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider">
+                                            Particularidades Cadastradas
+                                        </h4>
+                                        <span className="text-[11px] font-bold text-slate-400">
+                                            ({clienteRestricoes.length} total)
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Filtrar por código ou cliente..."
+                                            value={restricaoSearch}
+                                            onChange={(e) => setRestricaoSearch(e.target.value)}
+                                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1 text-xs font-medium outline-none w-52 text-slate-800 dark:text-white"
+                                        />
+                                        <select
+                                            value={restricaoFilterTurno}
+                                            onChange={(e) => setRestricaoFilterTurno(e.target.value as any)}
+                                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none"
+                                        >
+                                            <option value="TODOS">Todos os Turnos</option>
+                                            <option value="MANHA">🌅 Manhã</option>
+                                            <option value="TARDE">🌇 Tarde</option>
+                                            <option value="QUALQUER">⏰ Qualquer</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+                                    <table className="w-full text-left text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                        <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 uppercase text-[9px] border-b border-slate-200 dark:border-slate-700">
+                                            <tr>
+                                                <th className="p-3">Código/SOLD</th>
+                                                <th className="p-3">Cliente / Razão Social</th>
+                                                <th className="p-3 text-center">Dias Permitidos</th>
+                                                <th className="p-3 text-center">Turno</th>
+                                                <th className="p-3">Observação</th>
+                                                <th className="p-3 text-center">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            {clienteRestricoes
+                                                .filter(r => {
+                                                    if (restricaoFilterTurno !== 'TODOS' && r.TurnoPermitido !== restricaoFilterTurno) return false;
+                                                    if (restricaoSearch) {
+                                                        const term = restricaoSearch.toLowerCase();
+                                                        const mCod = String(r.Cod_Cliente).includes(term);
+                                                        const mRazao = (r.Razao_Social || '').toLowerCase().includes(term);
+                                                        const mObs = (r.Observacao || '').toLowerCase().includes(term);
+                                                        if (!mCod && !mRazao && !mObs) return false;
+                                                    }
+                                                    return true;
+                                                })
+                                                .map(r => (
+                                                    <tr key={r.ID_Restricao || r.Cod_Cliente} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                                                        <td className="p-3 font-mono font-bold text-slate-900 dark:text-white">
+                                                            #{r.Cod_Cliente}
+                                                        </td>
+                                                        <td className="p-3 truncate max-w-[200px]" title={r.Razao_Social}>
+                                                            {r.Razao_Social || '-'}
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            {r.DiasPermitidos ? (
+                                                                <div className="flex flex-wrap items-center justify-center gap-1">
+                                                                    {r.DiasPermitidos.split(',').map(d => (
+                                                                        <span key={d} className="px-1.5 py-0.2 text-[9px] font-black rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200">
+                                                                            {d.trim().slice(0, 3).toUpperCase()}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-[10px] text-slate-400 font-normal italic">Livre (todos os dias)</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            {r.TurnoPermitido === 'MANHA' && (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
+                                                                    <Sun className="w-3 h-3" /> Manhã
+                                                                </span>
+                                                            )}
+                                                            {r.TurnoPermitido === 'TARDE' && (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-black bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border border-orange-300">
+                                                                    <Sunset className="w-3 h-3" /> Tarde
+                                                                </span>
+                                                            )}
+                                                            {(!r.TurnoPermitido || r.TurnoPermitido === 'QUALQUER') && (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                                                                    Qualquer
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[200px]" title={r.Observacao}>
+                                                            {r.Observacao || '-'}
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <div className="flex items-center justify-center space-x-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setEditingRestricaoId(r.ID_Restricao || r.Cod_Cliente);
+                                                                        setFormCodCliente(String(r.Cod_Cliente));
+                                                                        setFormRazaoSocial(r.Razao_Social || '');
+                                                                        setFormDiasPermitidos(r.DiasPermitidos ? r.DiasPermitidos.split(',').map(s => s.trim()) : []);
+                                                                        setFormTurnoPermitido((r.TurnoPermitido as any) || 'QUALQUER');
+                                                                        setFormObservacao(r.Observacao || '');
+                                                                        setRestricaoSaveFeedback(null);
+                                                                    }}
+                                                                    className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-lg transition cursor-pointer"
+                                                                    title="Editar Particularidade"
+                                                                >
+                                                                    <Edit3 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteRestricao(r.ID_Restricao || r.Cod_Cliente)}
+                                                                    className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition cursor-pointer"
+                                                                    title="Excluir Particularidade"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            {clienteRestricoes.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={6} className="p-8 text-center text-slate-400 dark:text-slate-500">
+                                                        <p className="font-bold text-xs">Nenhuma particularidade cadastrada ainda.</p>
+                                                        <p className="text-[11px] mt-1">Utilize o formulário acima para cadastrar restrições de dias ou turnos por cliente.</p>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Faixa de Auditoria SQL Server */}
+                        <div className="px-5 py-2.5 bg-slate-100/80 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            <div className="flex items-center space-x-1.5">
+                                <ClockIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                                <span>
+                                    <strong className="font-bold text-slate-700 dark:text-slate-300">Auditoria no Banco:</strong>{' '}
+                                    {lastRestricaoAudit?.usuario ? (
+                                        <span>
+                                            atualizado por <strong className="text-blue-600 dark:text-blue-400 font-bold">{lastRestricaoAudit.usuario}</strong> em{' '}
+                                            <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                                {lastRestricaoAudit.dataHora ? new Date(lastRestricaoAudit.dataHora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }) : '-'}
+                                            </span>
+                                        </span>
+                                    ) : (
+                                        <span className="italic text-slate-400">Tabela FuelClienteRestricoes sincronizada</span>
+                                    )}
+                                </span>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                SQL Server Integrado
+                            </span>
+                        </div>
+
+                        {/* Rodapé do Modal */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                As janelas cadastradas são aplicadas automaticamente no cálculo e sequenciamento da rota.
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowRestricoesModal(false);
+                                    setRestricaoSaveFeedback(null);
+                                    setEditingRestricaoId(null);
+                                }}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                            >
+                                Fechar
                             </button>
                         </div>
                     </div>

@@ -328,3 +328,18 @@ export interface CalculoItem {
     KM_Dia: number;
     Valor_Dia: number;
 }
+
+export interface ClienteRestricao {
+    ID_Restricao?: number;
+    Cod_Cliente: number;
+    Razao_Social?: string;
+    DiasPermitidos?: string; // ex.: 'SEGUNDA-FEIRA,QUARTA-FEIRA' ou null
+    TurnoPermitido?: 'MANHA' | 'TARDE' | 'QUALQUER';
+    HoraInicio?: string;
+    HoraFim?: string;
+    Observacao?: string;
+    Ativo?: boolean;
+    DataAtualizacao?: string;
+    UsuarioAtualizacao?: string;
+}
+

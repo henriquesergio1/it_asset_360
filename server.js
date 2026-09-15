@@ -2365,6 +2365,26 @@ async function ensureFuelTablesExist(pool) {
                 await pool.request().query("ALTER TABLE FuelCanaisAtendimento ADD Ativo BIT NOT NULL DEFAULT 1");
             }
         }
+
+        const checkRestricoes = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelClienteRestricoes'");
+        if (checkRestricoes.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelClienteRestricoes (
+                    ID_Restricao INT IDENTITY(1,1) PRIMARY KEY,
+                    Cod_Cliente INT NOT NULL,
+                    Razao_Social NVARCHAR(255) NULL,
+                    DiasPermitidos NVARCHAR(255) NULL,
+                    TurnoPermitido NVARCHAR(50) DEFAULT 'QUALQUER',
+                    HoraInicio NVARCHAR(10) NULL,
+                    HoraFim NVARCHAR(10) NULL,
+                    Observacao NVARCHAR(500) NULL,
+                    Ativo BIT DEFAULT 1,
+                    DataAtualizacao DATETIME DEFAULT GETDATE(),
+                    UsuarioAtualizacao NVARCHAR(255) NULL
+                );
+                CREATE INDEX IX_FuelClienteRestricoes_CodCliente ON FuelClienteRestricoes(Cod_Cliente);
+            `);
+        }
     } catch (err) {
         console.error('AVISO ao verificar/criar tabelas Fuel360:', err.message);
     }
@@ -2936,6 +2956,116 @@ app.delete('/api/fuel360/canais-atendimento/:id', async (req, res) => {
         res.json({ success: true, message: `Canal '${canalName}' removido com sucesso.`, canais: updated.recordset || [], lastAudit });
     } catch (err) {
         console.error('[Fuel360 ERROR] Falha ao excluir canal:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Endpoints para Particularidades / Janelas de Atendimento de Clientes (Persistência Corporativa no Banco)
+app.get('/api/fuel360/cliente-restricoes', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request().query("SELECT ID_Restricao, Cod_Cliente, Razao_Social, DiasPermitidos, TurnoPermitido, HoraInicio, HoraFim, Observacao, ISNULL(Ativo, 1) as Ativo, DataAtualizacao, UsuarioAtualizacao FROM FuelClienteRestricoes ORDER BY Cod_Cliente ASC");
+        const auditRes = await pool.request().query("SELECT TOP 1 UsuarioAtualizacao as usuario, DataAtualizacao as dataHora FROM FuelClienteRestricoes WHERE DataAtualizacao IS NOT NULL ORDER BY DataAtualizacao DESC");
+        const lastAudit = auditRes.recordset && auditRes.recordset.length > 0 ? auditRes.recordset[0] : null;
+        res.json({ success: true, restricoes: result.recordset || [], lastAudit });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha ao buscar restricoes de clientes:', err.message);
+        res.status(500).json({ success: false, error: err.message, restricoes: [], lastAudit: null });
+    }
+});
+
+app.post('/api/fuel360/cliente-restricoes/batch', async (req, res) => {
+    try {
+        const { restricoes, usuario } = req.body;
+        if (!Array.isArray(restricoes) || restricoes.length === 0) {
+            return res.status(400).json({ success: false, message: 'Lista de particularidades inválida ou vazia.' });
+        }
+
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+
+        const userName = usuario || req.user?.Nome || req.user?.Usuario || 'Operador Fuel';
+
+        for (const item of restricoes) {
+            const codCliente = parseInt(item.Cod_Cliente, 10);
+            if (isNaN(codCliente) || codCliente <= 0) continue;
+
+            const razaoSocial = item.Razao_Social ? String(item.Razao_Social).trim() : null;
+            const diasPermitidos = item.DiasPermitidos ? String(item.DiasPermitidos).trim() : null;
+            const turnoPermitido = item.TurnoPermitido ? String(item.TurnoPermitido).trim().toUpperCase() : 'QUALQUER';
+            const horaInicio = item.HoraInicio ? String(item.HoraInicio).trim() : null;
+            const horaFim = item.HoraFim ? String(item.HoraFim).trim() : null;
+            const observacao = item.Observacao ? String(item.Observacao).trim() : null;
+            const ativo = item.Ativo === false || item.Ativo === 0 ? 0 : 1;
+
+            await pool.request()
+                .input('Cod_Cliente', sql.Int, codCliente)
+                .input('Razao_Social', sql.NVarChar(255), razaoSocial)
+                .input('DiasPermitidos', sql.NVarChar(255), diasPermitidos)
+                .input('TurnoPermitido', sql.NVarChar(50), turnoPermitido)
+                .input('HoraInicio', sql.NVarChar(10), horaInicio)
+                .input('HoraFim', sql.NVarChar(10), horaFim)
+                .input('Observacao', sql.NVarChar(500), observacao)
+                .input('Ativo', sql.Bit, ativo)
+                .input('Usuario', sql.NVarChar(255), userName)
+                .query(`
+                    IF EXISTS (SELECT 1 FROM FuelClienteRestricoes WHERE Cod_Cliente = @Cod_Cliente)
+                        UPDATE FuelClienteRestricoes 
+                        SET Razao_Social = ISNULL(@Razao_Social, Razao_Social),
+                            DiasPermitidos = @DiasPermitidos,
+                            TurnoPermitido = @TurnoPermitido,
+                            HoraInicio = @HoraInicio,
+                            HoraFim = @HoraFim,
+                            Observacao = @Observacao,
+                            Ativo = @Ativo,
+                            DataAtualizacao = GETDATE(),
+                            UsuarioAtualizacao = @Usuario
+                        WHERE Cod_Cliente = @Cod_Cliente
+                    ELSE
+                        INSERT INTO FuelClienteRestricoes (Cod_Cliente, Razao_Social, DiasPermitidos, TurnoPermitido, HoraInicio, HoraFim, Observacao, Ativo, DataAtualizacao, UsuarioAtualizacao)
+                        VALUES (@Cod_Cliente, @Razao_Social, @DiasPermitidos, @TurnoPermitido, @HoraInicio, @HoraFim, @Observacao, @Ativo, GETDATE(), @Usuario)
+                `);
+        }
+
+        // Registrar log de auditoria no sistema
+        await pool.request()
+            .input('Usuario', sql.NVarChar(255), userName)
+            .input('Acao', sql.NVarChar(255), 'ATUALIZAR_RESTRICOES_CLIENTES')
+            .input('Detalhes', sql.NVarChar(sql.MAX), `Atualizadas particularidades de ${restricoes.length} cliente(s) no banco por ${userName}.`)
+            .query("INSERT INTO FuelLogsSistema (DataHora, Usuario, Acao, Detalhes) VALUES (GETDATE(), @Usuario, @Acao, @Detalhes)");
+
+        const updated = await pool.request().query("SELECT ID_Restricao, Cod_Cliente, Razao_Social, DiasPermitidos, TurnoPermitido, HoraInicio, HoraFim, Observacao, ISNULL(Ativo, 1) as Ativo, DataAtualizacao, UsuarioAtualizacao FROM FuelClienteRestricoes ORDER BY Cod_Cliente ASC");
+        const lastAudit = { usuario: userName, dataHora: new Date().toISOString() };
+        res.json({ success: true, message: 'Particularidades de clientes atualizadas com sucesso.', restricoes: updated.recordset || [], lastAudit });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha ao salvar restricoes de clientes:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.delete('/api/fuel360/cliente-restricoes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const check = await pool.request().input('ID', sql.Int, id).query("SELECT Cod_Cliente, Razao_Social FROM FuelClienteRestricoes WHERE ID_Restricao = @ID OR Cod_Cliente = @ID");
+        const clientDesc = check.recordset && check.recordset.length > 0 ? `${check.recordset[0].Cod_Cliente} (${check.recordset[0].Razao_Social || ''})` : `ID ${id}`;
+        
+        await pool.request().input('ID', sql.Int, id).query("DELETE FROM FuelClienteRestricoes WHERE ID_Restricao = @ID OR Cod_Cliente = @ID");
+        
+        const userName = req.body?.usuario || req.user?.Nome || req.user?.Usuario || 'Operador Fuel';
+        await pool.request()
+            .input('Usuario', sql.NVarChar(255), userName)
+            .input('Acao', sql.NVarChar(255), 'REMOVER_RESTRICAO_CLIENTE')
+            .input('Detalhes', sql.NVarChar(sql.MAX), `Particularidade do cliente ${clientDesc} removida por ${userName}.`)
+            .query("INSERT INTO FuelLogsSistema (DataHora, Usuario, Acao, Detalhes) VALUES (GETDATE(), @Usuario, @Acao, @Detalhes)");
+
+        const updated = await pool.request().query("SELECT ID_Restricao, Cod_Cliente, Razao_Social, DiasPermitidos, TurnoPermitido, HoraInicio, HoraFim, Observacao, ISNULL(Ativo, 1) as Ativo, DataAtualizacao, UsuarioAtualizacao FROM FuelClienteRestricoes ORDER BY Cod_Cliente ASC");
+        const lastAudit = { usuario: userName, dataHora: new Date().toISOString() };
+        res.json({ success: true, message: `Particularidade do cliente ${clientDesc} removida com sucesso.`, restricoes: updated.recordset || [], lastAudit });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha ao excluir restricao de cliente:', err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });

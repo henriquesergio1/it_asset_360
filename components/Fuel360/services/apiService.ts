@@ -28,7 +28,8 @@ import {
     RotaPrevistaSaved,
     RotaPrevistaItem,
     CalculoSaved,
-    CalculoItem
+    CalculoItem,
+    ClienteRestricao
 } from '../types';
 import * as mockApiData from '../api/mockData';
 
@@ -196,6 +197,9 @@ const RealService = {
     corrigirAusenciasHistorico: (ids: number[]): Promise<void> => apiRequest('/relatorios/fix-conflicts', 'POST', { ids }),
     getSugestoesVinculo: (ids: number[]): Promise<any[]> => apiRequest('/colaboradores/smart-suggestions', 'POST', { ids }),
     batchUpdateColaboradoresAddress: (items: any[], reason: string): Promise<void> => apiRequest('/colaboradores/batch-address', 'POST', { items, reason }),
+    getClienteRestricoes: (): Promise<{ success: boolean; restricoes: ClienteRestricao[]; lastAudit?: any }> => apiRequest('/cliente-restricoes'),
+    saveClienteRestricoesBatch: (restricoes: ClienteRestricao[]): Promise<{ success: boolean; message: string; restricoes: ClienteRestricao[]; lastAudit?: any }> => apiRequest('/cliente-restricoes/batch', 'POST', { restricoes }),
+    deleteClienteRestricao: (id: number): Promise<{ success: boolean; message: string; restricoes: ClienteRestricao[]; lastAudit?: any }> => apiRequest(`/cliente-restricoes/${id}`, 'DELETE'),
     geocodeAddress: async (input: string | { address?: string; street?: string; number?: string; neighborhood?: string; city?: string; state?: string; cep?: string; forceCepOnly?: boolean }): Promise<{lat: number, lon: number}> => {
         let street = '';
         let num = '';
@@ -630,6 +634,9 @@ const MockService = {
     corrigirAusenciasHistorico: async () => {},
     getSugestoesVinculo: async () => [],
     batchUpdateColaboradoresAddress: async () => {},
+    getClienteRestricoes: async (): Promise<{ success: boolean; restricoes: ClienteRestricao[]; lastAudit?: any }> => ({ success: true, restricoes: [] }),
+    saveClienteRestricoesBatch: async (restricoes: ClienteRestricao[]): Promise<{ success: boolean; message: string; restricoes: ClienteRestricao[]; lastAudit?: any }> => ({ success: true, message: 'Salvo com sucesso', restricoes }),
+    deleteClienteRestricao: async (id: number): Promise<{ success: boolean; message: string; restricoes: ClienteRestricao[]; lastAudit?: any }> => ({ success: true, message: 'Excluído com sucesso', restricoes: [] }),
     geocodeAddress: async (address: string | any) => {
         await new Promise(r => setTimeout(r, 800));
         const addrStr = typeof address === 'string' ? address : (address?.address || address?.street || '');
@@ -664,5 +671,6 @@ export const {
     deleteRotaPrevista, updateRotaPrevistaDiario, getCalculoHistory, getCalculoDetails, updateCalculoDiario,
     getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, updateSugestaoStatus,
     moveColaboradoresToGroup, bulkUpdateColaboradores, corrigirAusenciasHistorico, getSugestoesVinculo, batchUpdateColaboradoresAddress,
+    getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao,
     geocodeAddress, getOSRMData, getOSRMTable, calcDistance
 } = Service;
