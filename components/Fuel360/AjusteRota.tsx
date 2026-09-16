@@ -1836,17 +1836,50 @@ export const AjusteRota: React.FC = () => {
         return name;
     };
 
-    // Supervisores únicos presentes nas rotas
+    const formatSupervisorDisplayName = (supId?: string | number, supName?: string): string => {
+        let name = (supName || '').trim();
+        if (!name && supId && supId !== 'SEM_SUPERVISOR') {
+            name = `Supervisão ${supId}`;
+        }
+        if (!name) return 'Equipe sem Supervisor';
+
+        // Se já possui o prefixo numérico "10 - ...", retorna direto
+        if (/^\d+\s*-\s*/.test(name)) {
+            return name;
+        }
+
+        const idNum = Number(supId);
+        if (supId && !isNaN(idNum) && idNum > 0) {
+            return `${idNum} - ${name}`;
+        }
+
+        if (supId && supId !== 'SEM_SUPERVISOR' && !name.includes(String(supId))) {
+            return `${supId} - ${name}`;
+        }
+
+        return name;
+    };
+
+    // Supervisores únicos presentes nas rotas com código prefixado
     const supervisors = useMemo(() => {
-        const map = new Map<string, string>();
+        const map = new Map<string, { id: string; name: string; cod: number }>();
         adjustedRoutes.forEach(r => {
             const supId = r.Cod_Supervisor ? String(r.Cod_Supervisor) : 'SEM_SUPERVISOR';
-            const supNome = r.Nome_Supervisor || 'Equipe sem Supervisor';
-            map.set(supId, supNome);
+            const rawNome = r.Nome_Supervisor || 'Equipe sem Supervisor';
+            const cod = Number(r.Cod_Supervisor) || 0;
+            if (!map.has(supId)) {
+                map.set(supId, {
+                    id: supId,
+                    name: formatSupervisorDisplayName(supId, rawNome),
+                    cod
+                });
+            }
         });
-        return Array.from(map.entries())
-            .map(([id, name]) => ({ id, name }))
-            .sort((a, b) => a.name.localeCompare(b.name));
+        return Array.from(map.values())
+            .sort((a, b) => {
+                if (a.cod > 0 && b.cod > 0) return a.cod - b.cod;
+                return a.name.localeCompare(b.name);
+            });
     }, [adjustedRoutes]);
 
     // Vendedores disponíveis conforme escopo
