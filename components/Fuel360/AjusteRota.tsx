@@ -2256,16 +2256,12 @@ export const AjusteRota: React.FC = () => {
 
     // Resumo Operacional Consolidado de KM, Tempo e Balanceamento Quinzena a Quinzena
     const operationalSummary = useMemo(() => {
-        // Base de colaboradores do escopo
-        const activeSellers = Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend)));
-        const primarySellerId = activeSellers.length === 1 ? activeSellers[0] : (selectedPromoter !== 'ALL' ? Number(selectedPromoter) : activeSellers[0]);
-        const primarySellerColab = colaboradores.find(c => c.CodigoSetor === primarySellerId || c.ID_Colaborador === primarySellerId);
-        const baseCoord = {
-            lat: primarySellerColab?.LatitudeBase || 0,
-            lng: primarySellerColab?.LongitudeBase || 0
-        };
+        // Escopo efetivo de rotas (respeitando filtro de colaborador selecionado)
+        const routesToAnalyze = selectedPromoter !== 'ALL'
+            ? scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter)
+            : scopedAdjustedRoutes;
 
-        const uniqueClients = deduplicateVisitasPrevistas(scopedAdjustedRoutes);
+        const uniqueClients = deduplicateVisitasPrevistas(routesToAnalyze);
         let semanalCount = 0;
         let quinzenal13Count = 0;
         let quinzenal24Count = 0;
@@ -2291,6 +2287,9 @@ export const AjusteRota: React.FC = () => {
             travelTime24: number;
             serviceTime24: number;
             avgPdvs: number;
+            maxSellerTime13?: number;
+            maxSellerTime24?: number;
+            anySellerOverloaded?: boolean;
         }> = [];
 
         const dayMap: Record<string, {
@@ -2309,6 +2308,9 @@ export const AjusteRota: React.FC = () => {
             totalTime: number;
             totalTravelTime: number;
             totalServiceTime: number;
+            maxSellerTime13?: number;
+            maxSellerTime24?: number;
+            anySellerOverloaded?: boolean;
         }> = {};
 
         let totalPdvs13 = 0;
@@ -2323,77 +2325,146 @@ export const AjusteRota: React.FC = () => {
         let totalServiceTime24 = 0;
 
         WEEKDAYS.forEach(day => {
-            const dayVisits = scopedAdjustedRoutes.filter(r => r.Dia_Semana === day);
-            
-            // Quinzena 1/3: Semanais + Quinzenal 1/3
-            const visits13 = dayVisits.filter(r => {
-                const p = parsePeriodicidade(r.Periodicidade).tipo;
-                return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
-            });
-            const pdvs13 = visits13.length;
-            const coords13 = visits13.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long }));
-            const metrics13 = coords13.length > 0 ? calcCircuitMetrics(baseCoord, coords13) : { totalKm: 0, travelMinutes: 0 };
-            const serviceMins13 = visits13.reduce((sum, v) => sum + getClientServiceTime(v), 0);
-            const totalDayTime13 = metrics13.travelMinutes + serviceMins13;
+            const dayVisits = routesToAnalyze.filter(r => r.Dia_Semana === day);
 
-            // Quinzena 2/4: Semanais + Quinzenal 2/4
-            const visits24 = dayVisits.filter(r => {
-                const p = parsePeriodicidade(r.Periodicidade).tipo;
-                return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
+            // Agrupar visitas por vendedor para calcular circuitos individuais a partir da base de cada um
+            const sellerVisitsMap = new Map<number, VisitaPrevista[]>();
+            dayVisits.forEach(v => {
+                const sId = Number(v.Cod_Vend);
+                if (!sellerVisitsMap.has(sId)) sellerVisitsMap.set(sId, []);
+                sellerVisitsMap.get(sId)!.push(v);
             });
-            const pdvs24 = visits24.length;
-            const coords24 = visits24.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long }));
-            const metrics24 = coords24.length > 0 ? calcCircuitMetrics(baseCoord, coords24) : { totalKm: 0, travelMinutes: 0 };
-            const serviceMins24 = visits24.reduce((sum, v) => sum + getClientServiceTime(v), 0);
-            const totalDayTime24 = metrics24.travelMinutes + serviceMins24;
 
-            totalPdvs13 += pdvs13;
-            totalPdvs24 += pdvs24;
-            totalKm13 += metrics13.totalKm;
-            totalKm24 += metrics24.totalKm;
+            let dayKm13 = 0;
+            let dayTravelTime13 = 0;
+            let dayServiceTime13 = 0;
+            let dayPdvs13 = 0;
+
+            let dayKm24 = 0;
+            let dayTravelTime24 = 0;
+            let dayServiceTime24 = 0;
+            let dayPdvs24 = 0;
+
+            let maxSellerTime13 = 0;
+            let maxSellerTime24 = 0;
+            let anySellerOverloaded = false;
+
+            const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
+            const dayLimitMin = dayLimitHours * 60;
+
+            sellerVisitsMap.forEach((sellerVisits, sellerId) => {
+                const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
+                const baseLat = colab?.LatitudeBase || sellerVisits.find(v => v.Lat)?.Lat || 0;
+                const baseLng = colab?.LongitudeBase || sellerVisits.find(v => v.Long)?.Long || 0;
+                const baseCoord = { lat: baseLat, lng: baseLng };
+
+                // Quinzena 1/3 (Semanais + Quinzenal 1/3)
+                const v13 = sellerVisits.filter(r => {
+                    const p = parsePeriodicidade(r.Periodicidade).tipo;
+                    return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
+                });
+                dayPdvs13 += v13.length;
+                const srv13 = v13.reduce((sum, v) => sum + getClientServiceTime(v), 0);
+                dayServiceTime13 += srv13;
+
+                // Ordenar paradas sequencialmente para cálculo do circuito
+                const stops13 = v13.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long, seq: v.Sequencia_13 }));
+                const orderedStops13 = stops13.some(s => s.seq !== undefined && s.seq > 0)
+                    ? [...stops13].sort((a, b) => (a.seq || 0) - (b.seq || 0))
+                    : optimizeDayCircuit2Opt(baseCoord, stops13);
+
+                const metrics13 = orderedStops13.length > 0 ? calcCircuitMetrics(baseCoord, orderedStops13) : { totalKm: 0, travelMinutes: 0 };
+                dayKm13 += metrics13.totalKm;
+                dayTravelTime13 += metrics13.travelMinutes;
+
+                const sellerTotalTime13 = metrics13.travelMinutes + srv13;
+                if (sellerTotalTime13 > maxSellerTime13) maxSellerTime13 = sellerTotalTime13;
+
+                // Quinzena 2/4 (Semanais + Quinzenal 2/4)
+                const v24 = sellerVisits.filter(r => {
+                    const p = parsePeriodicidade(r.Periodicidade).tipo;
+                    return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
+                });
+                dayPdvs24 += v24.length;
+                const srv24 = v24.reduce((sum, v) => sum + getClientServiceTime(v), 0);
+                dayServiceTime24 += srv24;
+
+                const stops24 = v24.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long, seq: v.Sequencia_24 }));
+                const orderedStops24 = stops24.some(s => s.seq !== undefined && s.seq > 0)
+                    ? [...stops24].sort((a, b) => (a.seq || 0) - (b.seq || 0))
+                    : optimizeDayCircuit2Opt(baseCoord, stops24);
+
+                const metrics24 = orderedStops24.length > 0 ? calcCircuitMetrics(baseCoord, orderedStops24) : { totalKm: 0, travelMinutes: 0 };
+                dayKm24 += metrics24.totalKm;
+                dayTravelTime24 += metrics24.travelMinutes;
+
+                const sellerTotalTime24 = metrics24.travelMinutes + srv24;
+                if (sellerTotalTime24 > maxSellerTime24) maxSellerTime24 = sellerTotalTime24;
+
+                const sellerMaxTime = Math.max(sellerTotalTime13, sellerTotalTime24);
+                if (optLimitHours && sellerMaxTime > dayLimitMin && (sellerMaxTime - dayLimitMin) >= 60) {
+                    anySellerOverloaded = true;
+                }
+            });
+
+            dayKm13 = Math.round(dayKm13 * 10) / 10;
+            dayKm24 = Math.round(dayKm24 * 10) / 10;
+            const totalDayTime13 = dayTravelTime13 + dayServiceTime13;
+            const totalDayTime24 = dayTravelTime24 + dayServiceTime24;
+
+            totalPdvs13 += dayPdvs13;
+            totalPdvs24 += dayPdvs24;
+            totalKm13 += dayKm13;
+            totalKm24 += dayKm24;
             totalTime13 += totalDayTime13;
             totalTime24 += totalDayTime24;
-            totalTravelTime13 += metrics13.travelMinutes;
-            totalServiceTime13 += serviceMins13;
-            totalTravelTime24 += metrics24.travelMinutes;
-            totalServiceTime24 += serviceMins24;
+            totalTravelTime13 += dayTravelTime13;
+            totalServiceTime13 += dayServiceTime13;
+            totalTravelTime24 += dayTravelTime24;
+            totalServiceTime24 += dayServiceTime24;
 
             const dayObj = {
                 day,
-                pdvs13,
-                km13: metrics13.totalKm,
+                pdvs13: dayPdvs13,
+                km13: dayKm13,
                 time13: totalDayTime13,
-                travelTime13: metrics13.travelMinutes,
-                serviceTime13: serviceMins13,
-                pdvs24,
-                km24: metrics24.totalKm,
+                travelTime13: dayTravelTime13,
+                serviceTime13: dayServiceTime13,
+                pdvs24: dayPdvs24,
+                km24: dayKm24,
                 time24: totalDayTime24,
-                travelTime24: metrics24.travelMinutes,
-                serviceTime24: serviceMins24,
-                avgPdvs: Math.round(((pdvs13 + pdvs24) / 2) * 10) / 10
+                travelTime24: dayTravelTime24,
+                serviceTime24: dayServiceTime24,
+                avgPdvs: Math.round(((dayPdvs13 + dayPdvs24) / 2) * 10) / 10,
+                maxSellerTime13,
+                maxSellerTime24,
+                anySellerOverloaded
             };
 
             daysMetrics.push(dayObj);
             dayMap[day] = {
                 day,
-                pdvs13,
-                km13: metrics13.totalKm,
+                pdvs13: dayPdvs13,
+                km13: dayKm13,
                 time13: totalDayTime13,
-                travelTime13: metrics13.travelMinutes,
-                serviceTime13: serviceMins13,
-                pdvs24,
-                km24: metrics24.totalKm,
+                travelTime13: dayTravelTime13,
+                serviceTime13: dayServiceTime13,
+                pdvs24: dayPdvs24,
+                km24: dayKm24,
                 time24: totalDayTime24,
-                travelTime24: metrics24.travelMinutes,
-                serviceTime24: serviceMins24,
-                totalKm: metrics13.totalKm + metrics24.totalKm,
+                travelTime24: dayTravelTime24,
+                serviceTime24: dayServiceTime24,
+                totalKm: Math.round((dayKm13 + dayKm24) * 10) / 10,
                 totalTime: totalDayTime13 + totalDayTime24,
-                totalTravelTime: metrics13.travelMinutes + metrics24.travelMinutes,
-                totalServiceTime: serviceMins13 + serviceMins24
+                totalTravelTime: dayTravelTime13 + dayTravelTime24,
+                totalServiceTime: dayServiceTime13 + dayServiceTime24,
+                maxSellerTime13,
+                maxSellerTime24,
+                anySellerOverloaded
             };
         });
 
-        const unallocatedVisits = scopedAdjustedRoutes.filter(r => r.Dia_Semana === 'SEM ATENDIMENTO');
+        const unallocatedVisits = routesToAnalyze.filter(r => r.Dia_Semana === 'SEM ATENDIMENTO');
         const unallocatedCount = unallocatedVisits.length;
 
         const diffPdvs = Math.abs(totalPdvs13 - totalPdvs24);
@@ -2425,7 +2496,7 @@ export const AjusteRota: React.FC = () => {
             isBalanced: imbalancePct <= 15,
             unallocatedCount
         };
-    }, [scopedAdjustedRoutes, selectedPromoter, colaboradores, getClientServiceTime]);
+    }, [scopedAdjustedRoutes, selectedPromoter, colaboradores, getClientServiceTime, optLimitHours, optMaxHours, optSatHalfPeriod]);
 
     // Auto-dismiss do toast de reequilíbrio
     useEffect(() => {
@@ -2438,26 +2509,35 @@ export const AjusteRota: React.FC = () => {
     const overloadedDays = useMemo(() => {
         if (!optLimitHours) return [];
         const activeDaysSet = new Set(optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
+        const routesToAnalyze = selectedPromoter !== 'ALL'
+            ? scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter)
+            : scopedAdjustedRoutes;
+
         return WEEKDAYS.filter(day => {
             const dayMetrics = operationalSummary.dayMap[day];
             if (!dayMetrics) return false;
-            const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
-            const pdvsCount = scopedAdjustedRoutes.filter(r => r.Dia_Semana === day).length;
-            if (pdvsCount === 0 && maxDayTime === 0) return false;
+            const pdvsCount = routesToAnalyze.filter(r => r.Dia_Semana === day).length;
+            if (pdvsCount === 0) return false;
 
             const isInactiveDay = !activeDaysSet.has(day);
             if (isInactiveDay) {
-                // Se é dia inativo no calendário mas tem PDVs / tempo de jornada alocado, é sobrecarga crítica (deve ser reequilibrado/evacuado)
-                return pdvsCount > 0 || maxDayTime > 0;
+                // Se é dia inativo no calendário mas tem PDVs alocados, é sobrecarga crítica (deve ser reequilibrado/evacuado)
+                return true;
             }
 
             const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) 
                 ? optMaxHours / 2 
                 : optMaxHours;
             const dayLimitMin = dayLimitHours * 60;
-            return maxDayTime > dayLimitMin && (maxDayTime - dayLimitMin) >= 60;
+
+            if (selectedPromoter !== 'ALL') {
+                const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
+                return maxDayTime > dayLimitMin && (maxDayTime - dayLimitMin) >= 60;
+            } else {
+                return Boolean(dayMetrics.anySellerOverloaded);
+            }
         });
-    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod, optDays, scopedAdjustedRoutes]);
+    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod, optDays, scopedAdjustedRoutes, selectedPromoter]);
 
     // Lista de dias em atenção de jornada (< 60min acima da jornada configurada)
     const attentionDays = useMemo(() => {
@@ -2471,11 +2551,13 @@ export const AjusteRota: React.FC = () => {
                 ? optMaxHours / 2 
                 : optMaxHours;
             const dayLimitMin = dayLimitHours * 60;
-            const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
+            const maxDayTime = selectedPromoter !== 'ALL'
+                ? Math.max(dayMetrics.time13, dayMetrics.time24)
+                : Math.max(dayMetrics.maxSellerTime13 || 0, dayMetrics.maxSellerTime24 || 0);
             const excess = maxDayTime - dayLimitMin;
             return excess > 0 && excess < 60;
         });
-    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod, optDays]);
+    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod, optDays, selectedPromoter]);
 
     // Dados consolidados para o modal de reequilíbrio de carga
     const rebalanceData = useMemo(() => {
@@ -2500,7 +2582,10 @@ export const AjusteRota: React.FC = () => {
             : Math.max(0, sourceMaxTime - sourceLimitMin);
 
         // Clientes pertencentes a este dia no escopo atual
-        const clientsOnDay = scopedAdjustedRoutes.filter(r => r.Dia_Semana === sourceDay);
+        const routesToAnalyze = selectedPromoter !== 'ALL'
+            ? scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter)
+            : scopedAdjustedRoutes;
+        const clientsOnDay = routesToAnalyze.filter(r => r.Dia_Semana === sourceDay);
         const uniqueClientsMap = new Map<number, VisitaPrevista>();
         clientsOnDay.forEach(c => {
             if (!uniqueClientsMap.has(c.Cod_Cliente)) {
@@ -2518,9 +2603,11 @@ export const AjusteRota: React.FC = () => {
             const limitMin = limitHours * 60;
             const time13 = m?.time13 || 0;
             const time24 = m?.time24 || 0;
-            const maxTime = Math.max(time13, time24);
+            const maxTime = selectedPromoter !== 'ALL'
+                ? Math.max(time13, time24)
+                : Math.max(m?.maxSellerTime13 || 0, m?.maxSellerTime24 || 0);
             const freeMinutes = Math.max(0, limitMin - maxTime);
-            const pdvsCount = scopedAdjustedRoutes.filter(r => r.Dia_Semana === day).length;
+            const pdvsCount = routesToAnalyze.filter(r => r.Dia_Semana === day).length;
             const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: day, bg: 'bg-indigo-600' };
 
             let status: 'high' | 'medium' | 'full';
@@ -2556,7 +2643,7 @@ export const AjusteRota: React.FC = () => {
             otherDays,
             bestTargetDay
         };
-    }, [rebalanceDay, operationalSummary.dayMap, scopedAdjustedRoutes, optLimitHours, optMaxHours, optSatHalfPeriod, optDays]);
+    }, [rebalanceDay, operationalSummary.dayMap, scopedAdjustedRoutes, selectedPromoter, optLimitHours, optMaxHours, optSatHalfPeriod, optDays]);
 
     // Executar Reequilíbrio Automático em 1 Clique
     const handleAutoRebalance = () => {
@@ -4328,7 +4415,12 @@ export const AjusteRota: React.FC = () => {
 
                 for (const [day, visits] of groupedByDay.entries()) {
                     if (day === 'SEM ATENDIMENTO') continue;
-                    const sortedVisits = visits; // Mantém a ordem sequencial
+                    const sortedVisits = [...visits].sort((a, b) => {
+                        const seqA = (selectedQuinzenaFilter === '2_4' ? a.Sequencia_24 : a.Sequencia_13) ?? 0;
+                        const seqB = (selectedQuinzenaFilter === '2_4' ? b.Sequencia_24 : b.Sequencia_13) ?? 0;
+                        if (seqA && seqB) return seqA - seqB;
+                        return 0;
+                    });
                     const lineColor = isSingleSellerView ? (DAY_COLORS[day]?.hex || sellerBaseColor) : sellerBaseColor;
                     
                     const pointsObj: any[] = [];
@@ -4520,23 +4612,57 @@ export const AjusteRota: React.FC = () => {
                 let sellerHasExceededHours = false;
 
                 dayMap.forEach((dayVisits, day) => {
+                    if (day === 'SEM ATENDIMENTO') return;
+
+                    // Quinzena 1/3 (Semanais + Quinzenais 1/3)
+                    const visits13 = dayVisits.filter(r => {
+                        const p = parsePeriodicidade(r.Periodicidade).tipo;
+                        return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
+                    });
+                    // Quinzena 2/4 (Semanais + Quinzenais 2/4)
+                    const visits24 = dayVisits.filter(r => {
+                        const p = parsePeriodicidade(r.Periodicidade).tipo;
+                        return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
+                    });
+
+                    const stops13 = visits13.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long, seq: v.Sequencia_13 }));
+                    const stops24 = visits24.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long, seq: v.Sequencia_24 }));
+
+                    const orderedStops13 = stops13.some(s => s.seq !== undefined && s.seq > 0)
+                        ? [...stops13].sort((a, b) => (a.seq || 0) - (b.seq || 0))
+                        : optimizeDayCircuit2Opt(base, stops13);
+
+                    const orderedStops24 = stops24.some(s => s.seq !== undefined && s.seq > 0)
+                        ? [...stops24].sort((a, b) => (a.seq || 0) - (b.seq || 0))
+                        : optimizeDayCircuit2Opt(base, stops24);
+
+                    const circuit13 = calcCircuitMetrics(base, orderedStops13);
+                    const circuit24 = calcCircuitMetrics(base, orderedStops24);
+
+                    // Média semanal típica de percurso do dia (duas semanas no ciclo 1/3 e duas no ciclo 2/4)
+                    const dayAvgKm = (circuit13.totalKm + circuit24.totalKm) / 2;
+                    const dayAvgTravelMinutes = (circuit13.travelMinutes + circuit24.travelMinutes) / 2;
+
+                    totalKm += dayAvgKm;
+                    totalTravelMinutes += dayAvgTravelMinutes;
+
+                    const dayVisitsServiceMins13 = visits13.reduce((acc, v) => acc + getClientServiceTime(v), 0);
+                    const dayVisitsServiceMins24 = visits24.reduce((acc, v) => acc + getClientServiceTime(v), 0);
+                    const maxDayTotalHours = Math.max(
+                        circuit13.travelMinutes + dayVisitsServiceMins13,
+                        circuit24.travelMinutes + dayVisitsServiceMins24
+                    ) / 60;
+                    const maxDayKm = Math.max(circuit13.totalKm, circuit24.totalKm);
+
+                    const peakVisitsInDay = Math.max(visits13.length, visits24.length);
                     const dayKey = `${sellerId}-${day}`;
-                    countsPerSellerAndDay.set(dayKey, dayVisits.length);
+                    countsPerSellerAndDay.set(dayKey, peakVisitsInDay);
 
-                    const stops = dayVisits.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long }));
-                    const circuit = calcCircuitMetrics(base, stops);
-
-                    totalKm += circuit.totalKm;
-                    totalTravelMinutes += circuit.travelMinutes;
-
-                    const dayVisitsServiceMins = dayVisits.reduce((acc, v) => acc + getClientServiceTime(v), 0);
-                    const dayEstimatedTotalHours = (circuit.travelMinutes + dayVisitsServiceMins) / 60;
-
-                    if (optLimitKm && circuit.totalKm > optMaxKm) {
+                    if (optLimitKm && maxDayKm > optMaxKm) {
                         sellerHasExceededDay = true;
                     }
                     const maxDayAllowedHours = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
-                    if (optLimitHours && dayEstimatedTotalHours > maxDayAllowedHours) {
+                    if (optLimitHours && maxDayTotalHours > maxDayAllowedHours) {
                         sellerHasExceededHours = true;
                     }
                 });
@@ -4564,8 +4690,15 @@ export const AjusteRota: React.FC = () => {
             };
         };
 
-        const orig = getKpisForSet(scopedOriginalRoutes);
-        const adj = getKpisForSet(scopedAdjustedRoutes);
+        const targetOriginalRoutes = selectedPromoter !== 'ALL'
+            ? scopedOriginalRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter)
+            : scopedOriginalRoutes;
+        const targetAdjustedRoutes = selectedPromoter !== 'ALL'
+            ? scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter)
+            : scopedAdjustedRoutes;
+
+        const orig = getKpisForSet(targetOriginalRoutes);
+        const adj = getKpisForSet(targetAdjustedRoutes);
 
         const kmSaved = orig.totalKm - adj.totalKm;
         const percentSaved = orig.totalKm ? Math.round((kmSaved / orig.totalKm) * 100) : 0;
@@ -4581,7 +4714,7 @@ export const AjusteRota: React.FC = () => {
             timeSavedMinutes,
             percentTimeSaved
         };
-    }, [scopedOriginalRoutes, scopedAdjustedRoutes, colaboradores, optMaxKm, optLimitKm, optMaxHours, optLimitHours, getClientServiceTime, channelServiceTimes]);
+    }, [scopedOriginalRoutes, scopedAdjustedRoutes, selectedPromoter, colaboradores, optMaxKm, optLimitKm, optMaxHours, optLimitHours, getClientServiceTime, channelServiceTimes]);
 
     // Reatribuir vendedor, dia de visita ou quinzena manualmente
     const handleManualReassign = (clientCode: number, targetSellerId: number, targetDay: string, targetPeriodicidade?: string) => {
@@ -7299,7 +7432,7 @@ export const AjusteRota: React.FC = () => {
                                                 ? dayMetrics?.km13 
                                                 : (selectedQuinzenaFilter === '2_4' 
                                                     ? dayMetrics?.km24 
-                                                    : (dayMetrics?.km13 || dayMetrics?.km24 || 0));
+                                                    : (dayMetrics ? Math.round(((dayMetrics.km13 + dayMetrics.km24) / 2) * 10) / 10 : 0));
 
                                             return (
                                                 <button
@@ -7488,7 +7621,9 @@ export const AjusteRota: React.FC = () => {
                                         const dayOverload = (!isUnallocated && dayMetrics && optLimitHours) ? (() => {
                                             const activeDaysSet = new Set(optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
                                             const isInactiveDay = !activeDaysSet.has(day);
-                                            const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
+                                            const maxDayTime = selectedPromoter !== 'ALL'
+                                                ? Math.max(dayMetrics.time13, dayMetrics.time24)
+                                                : Math.max(dayMetrics.maxSellerTime13 || 0, dayMetrics.maxSellerTime24 || 0);
                                             const dayClientsCount = dayRoutes.length;
 
                                             if (isInactiveDay) {
