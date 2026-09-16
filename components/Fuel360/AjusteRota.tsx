@@ -1431,6 +1431,81 @@ export const AjusteRota: React.FC = () => {
         localStorage.setItem('fuel_opt_sequence_strategy', optSequenceStrategy);
     }, [optSequenceStrategy]);
 
+    // Persistência corporativa dos Parâmetros do Otimizador no SQL Server
+    const [savingParamsToDb, setSavingParamsToDb] = useState(false);
+    const [paramsSaveFeedback, setParamsSaveFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+    const loadOptimizerParametersFromDatabase = useCallback(async () => {
+        try {
+            const res = await fetch('/api/fuel360/parametros-otimizacao');
+            const data = await res.json();
+            if (data.success && data.parametros) {
+                const p = data.parametros;
+                if (p.OptLimitClients !== undefined && p.OptLimitClients !== null) setOptLimitClients(Boolean(p.OptLimitClients));
+                if (p.OptMaxClients !== undefined && p.OptMaxClients !== null) setOptMaxClients(Number(p.OptMaxClients));
+                if (p.OptLimitKm !== undefined && p.OptLimitKm !== null) setOptLimitKm(Boolean(p.OptLimitKm));
+                if (p.OptMaxKm !== undefined && p.OptMaxKm !== null) setOptMaxKm(Number(p.OptMaxKm));
+                if (p.OptLimitHours !== undefined && p.OptLimitHours !== null) setOptLimitHours(Boolean(p.OptLimitHours));
+                if (p.OptMaxHours !== undefined && p.OptMaxHours !== null) setOptMaxHours(Number(p.OptMaxHours));
+                if (p.OptDays) {
+                    const daysArr = typeof p.OptDays === 'string' ? p.OptDays.split(',').map((d: string) => d.trim()).filter(Boolean) : p.OptDays;
+                    if (Array.isArray(daysArr) && daysArr.length > 0) setOptDays(daysArr);
+                }
+                if (p.OptSatHalfPeriod !== undefined && p.OptSatHalfPeriod !== null) setOptSatHalfPeriod(Boolean(p.OptSatHalfPeriod));
+                if (p.OptBalanceWorkload !== undefined && p.OptBalanceWorkload !== null) setOptBalanceWorkload(Boolean(p.OptBalanceWorkload));
+                if (p.OptAvoidFridayDistant !== undefined && p.OptAvoidFridayDistant !== null) setOptAvoidFridayDistant(Boolean(p.OptAvoidFridayDistant));
+                if (p.OptSequenceStrategy) setOptSequenceStrategy(p.OptSequenceStrategy as SequenceStrategy);
+            }
+        } catch (e) {
+            console.warn('[Fuel360] Falha ao carregar parâmetros do otimizador do banco:', e);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadOptimizerParametersFromDatabase();
+    }, [loadOptimizerParametersFromDatabase]);
+
+    const handleSaveOptimizerParametersToDatabase = async () => {
+        try {
+            setSavingParamsToDb(true);
+            setParamsSaveFeedback(null);
+            const currentUser = authUser?.Nome || authUser?.Usuario || 'Operador Fuel';
+            const payload = {
+                optLimitClients,
+                optMaxClients,
+                optLimitKm,
+                optMaxKm,
+                optLimitHours,
+                optMaxHours,
+                optDays,
+                optSatHalfPeriod,
+                optBalanceWorkload,
+                optAvoidFridayDistant,
+                optSequenceStrategy,
+                usuario: currentUser
+            };
+
+            const res = await fetch('/api/fuel360/parametros-otimizacao', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                setParamsSaveFeedback({ type: 'success', message: 'Parâmetros gravados com sucesso no banco de dados corporativo!' });
+                setTimeout(() => {
+                    setParamsSaveFeedback(null);
+                }, 3500);
+            } else {
+                setParamsSaveFeedback({ type: 'error', message: data.error || 'Erro ao salvar parâmetros no banco.' });
+            }
+        } catch (err: any) {
+            setParamsSaveFeedback({ type: 'error', message: err.message || 'Falha de comunicação com o servidor.' });
+        } finally {
+            setSavingParamsToDb(false);
+        }
+    };
+
     // Tempos de Atendimento por Canal de Remuneração (Persistidos no Banco SQL Server)
     const [channelServiceTimes, setChannelServiceTimes] = useState<Record<string, number>>({
         'PADRAO': 15,
@@ -8128,25 +8203,44 @@ export const AjusteRota: React.FC = () => {
                         </div>
 
                         {/* Rodapé com Ações */}
-                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70">
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-900/70">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowParamsModal(false)}
+                                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
+                                >
+                                    Fechar
+                                </button>
+                                {paramsSaveFeedback && (
+                                    <span className={`text-xs font-bold px-3 py-1.5 rounded-xl animate-in fade-in ${
+                                        paramsSaveFeedback.type === 'success'
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                                            : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                                    }`}>
+                                        {paramsSaveFeedback.type === 'success' ? '✅ ' : '❌ '}
+                                        {paramsSaveFeedback.message}
+                                    </span>
+                                )}
+                            </div>
                             <button
                                 type="button"
-                                onClick={() => setShowParamsModal(false)}
-                                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
-                            >
-                                Fechar
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowParamsModal(false);
-                                    handleOptimizeSimulate();
-                                }}
-                                disabled={loading || adjustedRoutes.length === 0}
+                                onClick={handleSaveOptimizerParametersToDatabase}
+                                disabled={savingParamsToDb}
                                 className="px-5 py-2.5 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 flex items-center space-x-1.5"
+                                title="Gravar parâmetros permanentemente no SQL Server corporativo"
                             >
-                                <RefreshIcon className="w-4 h-4 mr-1.5"/>
-                                <span>Salvar & Otimizar Rotas Agora</span>
+                                {savingParamsToDb ? (
+                                    <>
+                                        <SpinnerIcon className="w-4 h-4 animate-spin mr-1.5" />
+                                        <span>Gravando no Banco...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>💾</span>
+                                        <span>Salvar Parâmetros no Banco</span>
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>

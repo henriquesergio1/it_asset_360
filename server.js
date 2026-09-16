@@ -2385,6 +2385,31 @@ async function ensureFuelTablesExist(pool) {
                 CREATE INDEX IX_FuelClienteRestricoes_CodCliente ON FuelClienteRestricoes(Cod_Cliente);
             `);
         }
+
+        const checkParamOtim = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelParametrosOtimizacao'");
+        if (checkParamOtim.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelParametrosOtimizacao (
+                    ID INT IDENTITY(1,1) PRIMARY KEY,
+                    Chave NVARCHAR(100) NOT NULL UNIQUE DEFAULT 'GLOBAL',
+                    OptLimitClients BIT NOT NULL DEFAULT 0,
+                    OptMaxClients INT NOT NULL DEFAULT 15,
+                    OptLimitKm BIT NOT NULL DEFAULT 0,
+                    OptMaxKm INT NOT NULL DEFAULT 60,
+                    OptLimitHours BIT NOT NULL DEFAULT 1,
+                    OptMaxHours FLOAT NOT NULL DEFAULT 8,
+                    OptDays NVARCHAR(255) NOT NULL DEFAULT 'SEGUNDA-FEIRA,TERÇA-FEIRA,QUARTA-FEIRA,QUINTA-FEIRA,SEXTA-FEIRA',
+                    OptSatHalfPeriod BIT NOT NULL DEFAULT 1,
+                    OptBalanceWorkload BIT NOT NULL DEFAULT 1,
+                    OptAvoidFridayDistant BIT NOT NULL DEFAULT 1,
+                    OptSequenceStrategy NVARCHAR(50) NOT NULL DEFAULT 'FAR_TO_NEAR',
+                    DataAtualizacao DATETIME DEFAULT GETDATE(),
+                    UsuarioAtualizacao NVARCHAR(255) NULL
+                );
+                INSERT INTO FuelParametrosOtimizacao (Chave, OptLimitClients, OptMaxClients, OptLimitKm, OptMaxKm, OptLimitHours, OptMaxHours, OptDays, OptSatHalfPeriod, OptBalanceWorkload, OptAvoidFridayDistant, OptSequenceStrategy, UsuarioAtualizacao)
+                VALUES ('GLOBAL', 0, 15, 0, 60, 1, 8, 'SEGUNDA-FEIRA,TERÇA-FEIRA,QUARTA-FEIRA,QUINTA-FEIRA,SEXTA-FEIRA', 1, 1, 1, 'FAR_TO_NEAR', 'Sistema');
+            `);
+        }
     } catch (err) {
         console.error('AVISO ao verificar/criar tabelas Fuel360:', err.message);
     }
@@ -3066,6 +3091,110 @@ app.delete('/api/fuel360/cliente-restricoes/:id', async (req, res) => {
         res.json({ success: true, message: `Particularidade do cliente ${clientDesc} removida com sucesso.`, restricoes: updated.recordset || [], lastAudit });
     } catch (err) {
         console.error('[Fuel360 ERROR] Falha ao excluir restricao de cliente:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/fuel360/parametros-otimizacao', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request()
+            .input('Chave', sql.NVarChar(100), 'GLOBAL')
+            .query("SELECT TOP 1 * FROM FuelParametrosOtimizacao WHERE Chave = @Chave ORDER BY ID DESC");
+        if (result.recordset.length > 0) {
+            res.json({ success: true, parametros: result.recordset[0] });
+        } else {
+            res.json({ success: true, parametros: null });
+        }
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha ao carregar parametros de otimizacao:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const b = req.body || {};
+        const chave = 'GLOBAL';
+        const optLimitClients = b.optLimitClients ? 1 : 0;
+        const optMaxClients = parseInt(b.optMaxClients, 10) || 15;
+        const optLimitKm = b.optLimitKm ? 1 : 0;
+        const optMaxKm = parseInt(b.optMaxKm, 10) || 60;
+        const optLimitHours = b.optLimitHours ? 1 : 0;
+        const optMaxHours = parseFloat(b.optMaxHours) || 8;
+        const optDays = Array.isArray(b.optDays) ? b.optDays.join(',') : (b.optDays || 'SEGUNDA-FEIRA,TERÇA-FEIRA,QUARTA-FEIRA,QUINTA-FEIRA,SEXTA-FEIRA');
+        const optSatHalfPeriod = b.optSatHalfPeriod ? 1 : 0;
+        const optBalanceWorkload = b.optBalanceWorkload ? 1 : 0;
+        const optAvoidFridayDistant = b.optAvoidFridayDistant ? 1 : 0;
+        const optSequenceStrategy = b.optSequenceStrategy || 'FAR_TO_NEAR';
+        const userName = b.usuario || req.user?.Nome || req.user?.Usuario || 'Operador Fuel';
+
+        await pool.request()
+            .input('Chave', sql.NVarChar(100), chave)
+            .input('OptLimitClients', sql.Bit, optLimitClients)
+            .input('OptMaxClients', sql.Int, optMaxClients)
+            .input('OptLimitKm', sql.Bit, optLimitKm)
+            .input('OptMaxKm', sql.Int, optMaxKm)
+            .input('OptLimitHours', sql.Bit, optLimitHours)
+            .input('OptMaxHours', sql.Float, optMaxHours)
+            .input('OptDays', sql.NVarChar(255), optDays)
+            .input('OptSatHalfPeriod', sql.Bit, optSatHalfPeriod)
+            .input('OptBalanceWorkload', sql.Bit, optBalanceWorkload)
+            .input('OptAvoidFridayDistant', sql.Bit, optAvoidFridayDistant)
+            .input('OptSequenceStrategy', sql.NVarChar(50), optSequenceStrategy)
+            .input('UsuarioAtualizacao', sql.NVarChar(255), userName)
+            .query(`
+                IF EXISTS (SELECT 1 FROM FuelParametrosOtimizacao WHERE Chave = @Chave)
+                BEGIN
+                    UPDATE FuelParametrosOtimizacao
+                    SET OptLimitClients = @OptLimitClients,
+                        OptMaxClients = @OptMaxClients,
+                        OptLimitKm = @OptLimitKm,
+                        OptMaxKm = @OptMaxKm,
+                        OptLimitHours = @OptLimitHours,
+                        OptMaxHours = @OptMaxHours,
+                        OptDays = @OptDays,
+                        OptSatHalfPeriod = @OptSatHalfPeriod,
+                        OptBalanceWorkload = @OptBalanceWorkload,
+                        OptAvoidFridayDistant = @OptAvoidFridayDistant,
+                        OptSequenceStrategy = @OptSequenceStrategy,
+                        DataAtualizacao = GETDATE(),
+                        UsuarioAtualizacao = @UsuarioAtualizacao
+                    WHERE Chave = @Chave;
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO FuelParametrosOtimizacao (
+                        Chave, OptLimitClients, OptMaxClients, OptLimitKm, OptMaxKm,
+                        OptLimitHours, OptMaxHours, OptDays, OptSatHalfPeriod,
+                        OptBalanceWorkload, OptAvoidFridayDistant, OptSequenceStrategy,
+                        DataAtualizacao, UsuarioAtualizacao
+                    )
+                    VALUES (
+                        @Chave, @OptLimitClients, @OptMaxClients, @OptLimitKm, @OptMaxKm,
+                        @OptLimitHours, @OptMaxHours, @OptDays, @OptSatHalfPeriod,
+                        @OptBalanceWorkload, @OptAvoidFridayDistant, @OptSequenceStrategy,
+                        GETDATE(), @UsuarioAtualizacao
+                    );
+                END
+            `);
+
+        await pool.request()
+            .input('Usuario', sql.NVarChar(255), userName)
+            .input('Acao', sql.NVarChar(255), 'ATUALIZAR_PARAMETROS_OTIMIZACAO')
+            .input('Detalhes', sql.NVarChar(sql.MAX), `Parâmetros de otimização de rotas atualizados por ${userName}. Dias: ${optDays}, Horas: ${optMaxHours}h, Km: ${optMaxKm}km, Clientes: ${optMaxClients}.`)
+            .query("INSERT INTO FuelLogsSistema (DataHora, Usuario, Acao, Detalhes) VALUES (GETDATE(), @Usuario, @Acao, @Detalhes)");
+
+        const updated = await pool.request()
+            .input('Chave', sql.NVarChar(100), chave)
+            .query("SELECT TOP 1 * FROM FuelParametrosOtimizacao WHERE Chave = @Chave ORDER BY ID DESC");
+
+        res.json({ success: true, message: 'Parâmetros de otimização salvos com sucesso no banco de dados corporativo.', parametros: updated.recordset[0] || null });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha ao salvar parametros de otimizacao:', err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });
