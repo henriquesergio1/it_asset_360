@@ -4491,13 +4491,13 @@ export const AjusteRota: React.FC = () => {
             return;
         }
 
-        const sellers = Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend)));
+        const sellers = Array.from(new Set(effectiveScopedRoutes.map(r => r.Cod_Vend)));
         if (sellers.length === 0) {
             alert("Nenhum vendedor encontrado no escopo selecionado.");
             return;
         }
 
-        // Pré-checagem de viabilidade de capacidade / jornada
+        // Pré-checagem de viabilidade de capacidade / jornada para os vendedores em foco
         const feasibility = checkCapacityFeasibility(sellers, adjustedRoutes);
         if (feasibility.hasOverflow && feasibility.overflowData) {
             setCapacityOverflowData(feasibility.overflowData);
@@ -4505,12 +4505,17 @@ export const AjusteRota: React.FC = () => {
             return;
         }
 
-        const escopoDesc = scopeMode === 'vendedor' 
-            ? 'do vendedor selecionado' 
-            : (scopeMode === 'equipe' ? 'da equipe de supervisão selecionada' : 'geral');
+        const isSingleSeller = sellers.length === 1;
+        const singleColab = isSingleSeller ? getColabBySectorOrName(sellers[0], effectiveScopedRoutes[0]?.Nome_Vendedor) : null;
+        const sellerNameDesc = singleColab?.Nome || effectiveScopedRoutes[0]?.Nome_Vendedor || `Vendedor ${sellers[0]}`;
+        const escopoDesc = isSingleSeller
+            ? `do vendedor ${sellerNameDesc}`
+            : (scopeMode === 'vendedor' 
+                ? 'do vendedor selecionado' 
+                : (scopeMode === 'equipe' ? 'da equipe de supervisão selecionada' : 'geral'));
 
         const result = await runOptimizationForSellers(sellers, adjustedRoutes, true, {
-            title: 'Otimização e Roteirização Concluída',
+            title: isSingleSeller ? `Otimização de ${sellerNameDesc} Concluída` : 'Otimização e Roteirização Concluída',
             escopoDesc: `Escopo: ${escopoDesc}`,
             mode: 'simulate'
         });
@@ -5366,13 +5371,22 @@ export const AjusteRota: React.FC = () => {
 
     // Abrir Modal para Salvar Rota com Nome Personalizado
     const handleOpenSaveModal = () => {
-        if (adjustedRoutes.length === 0) {
-            alert("Sem rotas para salvar. Carregue ou calcule uma rota primeiro.");
+        if (effectiveScopedRoutes.length === 0) {
+            alert("Sem rotas para salvar no escopo selecionado.");
             return;
         }
 
         const tag = teamType === 'vendedores' ? '[VENDEDOR]' : '[PROMOTOR]';
-        const defaultName = loadedSimInfo?.name || `${tag} ROTA AJUSTADA OTIMIZADA - ${new Date().toLocaleDateString('pt-BR')}`;
+        const isSingleSeller = (selectedTeamSellers.size === 1) || (selectedPromoter !== 'ALL');
+        const singleColabName = isSingleSeller
+            ? (getColabBySectorOrName(Number(effectiveScopedRoutes[0]?.Cod_Vend), effectiveScopedRoutes[0]?.Nome_Vendedor)?.Nome || effectiveScopedRoutes[0]?.Nome_Vendedor)
+            : null;
+
+        const defaultName = loadedSimInfo?.name || (
+            singleColabName 
+                ? `${tag} ${singleColabName} - ${new Date().toLocaleDateString('pt-BR')}`
+                : `${tag} ROTA AJUSTADA OTIMIZADA - ${new Date().toLocaleDateString('pt-BR')}`
+        );
         setSimSaveName(defaultName);
         setSimSaveDesc(loadedSimInfo?.desc || '');
         setSimSaveOverwrite(Boolean(loadedSimInfo?.id));
@@ -5388,18 +5402,24 @@ export const AjusteRota: React.FC = () => {
 
         setSaving(true);
         try {
-            // Agrupar visitas por colaborador para o payload
+            // Salvar estritamente as rotas do escopo filtrado ativo
+            const routesToSave = effectiveScopedRoutes;
             const groups = new Map<number, VisitaPrevista[]>();
-            adjustedRoutes.forEach(v => {
+            routesToSave.forEach(v => {
                 if(!groups.has(v.Cod_Vend)) groups.set(v.Cod_Vend, []);
                 groups.get(v.Cod_Vend)?.push(v);
             });
+
+            // KM Total do escopo salvo (usando a média quinzenal de KM calculada pelo operationalSummary)
+            const scopeKm = (operationalSummary.totalKm13 + operationalSummary.totalKm24) > 0
+                ? Math.round(((operationalSummary.totalKm13 + operationalSummary.totalKm24) / 2) * 10) / 10
+                : kpis.adjusted.totalKm;
 
             const snapshotData = {
                 teamType,
                 periodo: simSaveName.trim(),
                 descricao: simSaveDesc.trim(),
-                totalKm: kpis.adjusted.totalKm,
+                totalKm: scopeKm,
                 sellers: Array.from(groups.entries()).map(([vendedorId, visits]) => ({
                     id: vendedorId,
                     name: visits[0]?.Nome_Vendedor || `Vendedor ${vendedorId}`,
@@ -5427,7 +5447,7 @@ export const AjusteRota: React.FC = () => {
             const payload = {
                 Periodo: simSaveName.trim(),
                 Descricao: simSaveDesc.trim() || undefined,
-                TotalKM: kpis.adjusted.totalKm,
+                TotalKM: scopeKm,
                 UsuarioSimulacao: authUser?.Nome || 'Operador',
                 SnapshotData: snapshotData,
                 overwriteId: (simSaveOverwrite && loadedSimInfo?.id) ? loadedSimInfo.id : undefined,
@@ -6428,38 +6448,6 @@ export const AjusteRota: React.FC = () => {
                                     {optLimitKm ? ` • ${optMaxKm}km` : ''}
                                     {optLimitHours ? ` • ${optMaxHours}h` : ''}
                                 </span>
-                            </button>
-
-                            {/* BOTÃO MODAL / PAINEL DE VENDEDORES */}
-                            <button
-                                type="button"
-                                onClick={() => setShowSellersModal(true)}
-                                className={`bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer h-[34px] ${
-                                    imbalancedSellersCount > 0 
-                                        ? 'border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300' 
-                                        : 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200'
-                                }`}
-                                title="Visualizar lista de vendedores, desbalanceamentos quinzenais e anomalias de coordenadas da base"
-                            >
-                                <UserGroupIcon className="w-4 h-4 mr-1.5 text-slate-500" />
-                                <span>Vendedores ({Array.from(new Set((scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).map(r => r.Cod_Vend))).length})</span>
-                                {imbalancedSellersCount > 0 && (
-                                    <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[9px] font-black border border-amber-300 animate-pulse">
-                                        {imbalancedSellersCount}
-                                    </span>
-                                )}
-                            </button>
-
-                            {/* BOTÃO RÁPIDO DE OTIMIZAR ROTAS */}
-                            <button
-                                type="button"
-                                onClick={handleOptimizeSimulate}
-                                disabled={loading || adjustedRoutes.length === 0}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-3.5 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 h-[34px]"
-                                title="Executar algoritmo de otimização de rotas para o escopo selecionado"
-                            >
-                                <RefreshIcon className="w-3.5 h-3.5 mr-1.5" />
-                                <span>Otimizar Rotas</span>
                             </button>
 
                             <button
@@ -7486,28 +7474,51 @@ export const AjusteRota: React.FC = () => {
                                             )}
                                         </button>
                                         <button
+                                            type="button"
                                             onClick={handleExportExcel}
                                             className="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition h-[32px]"
                                             title="Exportar planilha Excel estruturada com abas consolidadas e por equipe/colaborador conforme o escopo selecionado"
                                         >
                                             <UploadIcon className="w-3.5 h-3.5 mr-1.5 rotate-180"/> Exportar Excel (em Abas)
                                         </button>
-                                        <button
-                                            type="button"
-                                            onClick={handleOpenSavedSimulationsModal}
-                                            className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition h-[32px] cursor-pointer"
-                                            title="Visualizar, abrir no mapa, editar, excluir ou compartilhar simulações salvas"
-                                        >
-                                            <FolderOpen className="w-3.5 h-3.5 mr-1.5"/> Simulações Salvas
-                                        </button>
-                                        <button
-                                            onClick={handleOpenSaveModal}
-                                            disabled={saving}
-                                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition h-[32px] disabled:opacity-50 cursor-pointer"
-                                        >
-                                            {saving ? <SpinnerIcon className="w-3.5 h-3.5 animate-spin mr-1.5"/> : <CheckCircleIcon className="w-3.5 h-3.5 mr-1.5"/>}
-                                            Salvar Simulação
-                                        </button>
+
+                                        {/* GRUPO DE AÇÕES: OTIMIZAÇÃO E SIMULAÇÕES SALVAS */}
+                                        <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-700">
+                                            <button
+                                                type="button"
+                                                onClick={handleOptimizeSimulate}
+                                                disabled={loading || effectiveScopedRoutes.length === 0}
+                                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-3.5 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 h-[32px]"
+                                                title={selectedTeamSellers.size === 1 || selectedPromoter !== 'ALL'
+                                                    ? `Executar algoritmo de otimização de rotas apenas para o vendedor selecionado (${effectiveScopedRoutes.length} PDVs)`
+                                                    : `Executar algoritmo de otimização de rotas para o escopo selecionado (${effectiveScopedRoutes.length} PDVs)`
+                                                }
+                                            >
+                                                <RefreshIcon className="w-3.5 h-3.5 mr-1.5" />
+                                                <span>{selectedTeamSellers.size === 1 || selectedPromoter !== 'ALL' ? 'Otimizar Vendedor' : 'Otimizar Rotas'}</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleOpenSavedSimulationsModal}
+                                                className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition h-[32px] cursor-pointer"
+                                                title="Visualizar, abrir no mapa, editar, excluir ou compartilhar simulações salvas"
+                                            >
+                                                <FolderOpen className="w-3.5 h-3.5 mr-1.5"/> Simulações Salvas
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleOpenSaveModal}
+                                                disabled={saving || effectiveScopedRoutes.length === 0}
+                                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition h-[32px] disabled:opacity-50 cursor-pointer"
+                                                title={selectedTeamSellers.size === 1 || selectedPromoter !== 'ALL'
+                                                    ? `Salvar simulação contendo apenas o vendedor selecionado (${effectiveScopedRoutes.length} PDVs)`
+                                                    : `Salvar simulação contendo os ${effectiveScopedRoutes.length} PDVs do escopo atual`
+                                                }
+                                            >
+                                                {saving ? <SpinnerIcon className="w-3.5 h-3.5 animate-spin mr-1.5"/> : <CheckCircleIcon className="w-3.5 h-3.5 mr-1.5"/>}
+                                                <span>{selectedTeamSellers.size === 1 || selectedPromoter !== 'ALL' ? 'Salvar Simulação (Vendedor)' : 'Salvar Simulação'}</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -11155,13 +11166,13 @@ export const AjusteRota: React.FC = () => {
                                 <div>
                                     <span className="text-[10px] uppercase font-bold text-slate-400">KM Total</span>
                                     <p className="text-sm font-black text-indigo-600 dark:text-indigo-400">
-                                        {Math.round(kpis.adjusted.totalKm).toLocaleString('pt-BR')} km
+                                        {Math.round((operationalSummary.totalKm13 + operationalSummary.totalKm24) > 0 ? ((operationalSummary.totalKm13 + operationalSummary.totalKm24) / 2) : kpis.adjusted.totalKm).toLocaleString('pt-BR')} km
                                     </p>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] uppercase font-bold text-slate-400">Visitas</span>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400">Visitas no Escopo</span>
                                     <p className="text-sm font-black text-slate-700 dark:text-slate-200">
-                                        {adjustedRoutes.length}
+                                        {effectiveScopedRoutes.length}
                                     </p>
                                 </div>
                                 <div>
