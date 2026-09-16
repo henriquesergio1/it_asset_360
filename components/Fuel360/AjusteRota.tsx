@@ -2279,27 +2279,39 @@ export const AjusteRota: React.FC = () => {
             } else {
                 next.add(sellerId);
             }
+            if (next.size === 1) {
+                setSelectedPromoter(Array.from(next)[0]);
+            } else {
+                setSelectedPromoter('ALL');
+            }
             return next;
         });
     };
 
     const handleSelectOnlySeller = (sellerId: string) => {
         setSelectedTeamSellers(new Set([sellerId]));
+        setSelectedPromoter(sellerId);
     };
 
     const handleSelectAllTeamSellers = () => {
         setSelectedTeamSellers(new Set());
+        setSelectedPromoter('ALL');
     };
+
+    // Escopo efetivo de rotas refinado pelo filtro de vendedores selecionados
+    const effectiveScopedRoutes = useMemo(() => {
+        if (selectedTeamSellers.size > 0) {
+            return scopedAdjustedRoutes.filter(r => selectedTeamSellers.has(String(r.Cod_Vend)));
+        }
+        if (selectedPromoter !== 'ALL') {
+            return scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter);
+        }
+        return scopedAdjustedRoutes;
+    }, [scopedAdjustedRoutes, selectedTeamSellers, selectedPromoter]);
 
     // Rotas ajustadas com os filtros interativos aplicados (vendedores da equipe, dias da semana e quinzenas)
     const filteredRoutes = useMemo(() => {
-        return scopedAdjustedRoutes.filter(v => {
-            if (selectedTeamSellers.size > 0 && !selectedTeamSellers.has(String(v.Cod_Vend))) {
-                return false;
-            }
-            if (selectedPromoter !== 'ALL' && String(v.Cod_Vend) !== selectedPromoter) {
-                return false;
-            }
+        return effectiveScopedRoutes.filter(v => {
             if (selectedDaysFilter.length > 0 && !selectedDaysFilter.includes(v.Dia_Semana)) {
                 return false;
             }
@@ -2312,7 +2324,7 @@ export const AjusteRota: React.FC = () => {
             }
             return true;
         });
-    }, [scopedAdjustedRoutes, selectedTeamSellers, selectedPromoter, selectedDaysFilter, selectedQuinzenaFilter]);
+    }, [effectiveScopedRoutes, selectedDaysFilter, selectedQuinzenaFilter]);
 
     // Pontos geográficos para renderização do Mapa de Calor (Heatmap)
     const heatmapPoints = useMemo(() => {
@@ -2566,10 +2578,8 @@ export const AjusteRota: React.FC = () => {
 
     // Resumo Operacional Consolidado de KM, Tempo e Balanceamento Quinzena a Quinzena
     const operationalSummary = useMemo(() => {
-        // Escopo efetivo de rotas (respeitando filtro de colaborador selecionado)
-        const routesToAnalyze = selectedPromoter !== 'ALL'
-            ? scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter)
-            : scopedAdjustedRoutes;
+        // Escopo efetivo de rotas (respeitando filtro de vendedores/colaboradores selecionados)
+        const routesToAnalyze = effectiveScopedRoutes;
 
         const uniqueClients = deduplicateVisitasPrevistas(routesToAnalyze);
         let semanalCount = 0;
@@ -2806,7 +2816,7 @@ export const AjusteRota: React.FC = () => {
             isBalanced: imbalancePct <= 15,
             unallocatedCount
         };
-    }, [scopedAdjustedRoutes, selectedPromoter, colaboradores, getClientServiceTime, optLimitHours, optMaxHours, optSatHalfPeriod]);
+    }, [effectiveScopedRoutes, colaboradores, getClientServiceTime, optLimitHours, optMaxHours, optSatHalfPeriod]);
 
     // Auto-dismiss do toast de reequilíbrio
     useEffect(() => {
@@ -2819,9 +2829,8 @@ export const AjusteRota: React.FC = () => {
     const overloadedDays = useMemo(() => {
         if (!optLimitHours) return [];
         const activeDaysSet = new Set(optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
-        const routesToAnalyze = selectedPromoter !== 'ALL'
-            ? scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter)
-            : scopedAdjustedRoutes;
+        const routesToAnalyze = effectiveScopedRoutes;
+        const isSingleSellerView = (selectedTeamSellers.size === 1) || (selectedPromoter !== 'ALL');
 
         return WEEKDAYS.filter(day => {
             const dayMetrics = operationalSummary.dayMap[day];
@@ -2840,19 +2849,20 @@ export const AjusteRota: React.FC = () => {
                 : optMaxHours;
             const dayLimitMin = dayLimitHours * 60;
 
-            if (selectedPromoter !== 'ALL') {
+            if (isSingleSellerView) {
                 const maxDayTime = Math.max(dayMetrics.time13, dayMetrics.time24);
                 return maxDayTime > dayLimitMin && (maxDayTime - dayLimitMin) >= 60;
             } else {
                 return Boolean(dayMetrics.anySellerOverloaded);
             }
         });
-    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod, optDays, scopedAdjustedRoutes, selectedPromoter]);
+    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod, optDays, effectiveScopedRoutes, selectedTeamSellers.size, selectedPromoter]);
 
     // Lista de dias em atenção de jornada (< 60min acima da jornada configurada)
     const attentionDays = useMemo(() => {
         if (!optLimitHours) return [];
         const activeDaysSet = new Set(optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
+        const isSingleSellerView = (selectedTeamSellers.size === 1) || (selectedPromoter !== 'ALL');
         return WEEKDAYS.filter(day => {
             if (!activeDaysSet.has(day)) return false; // Dias inativos com PDVs caem em overloadedDays
             const dayMetrics = operationalSummary.dayMap[day];
@@ -2861,13 +2871,13 @@ export const AjusteRota: React.FC = () => {
                 ? optMaxHours / 2 
                 : optMaxHours;
             const dayLimitMin = dayLimitHours * 60;
-            const maxDayTime = selectedPromoter !== 'ALL'
+            const maxDayTime = isSingleSellerView
                 ? Math.max(dayMetrics.time13, dayMetrics.time24)
                 : Math.max(dayMetrics.maxSellerTime13 || 0, dayMetrics.maxSellerTime24 || 0);
             const excess = maxDayTime - dayLimitMin;
             return excess > 0 && excess < 60;
         });
-    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod, optDays, selectedPromoter]);
+    }, [operationalSummary.dayMap, optLimitHours, optMaxHours, optSatHalfPeriod, optDays, selectedTeamSellers.size, selectedPromoter]);
 
     // Dados consolidados para o modal de reequilíbrio de carga
     const rebalanceData = useMemo(() => {
@@ -2892,9 +2902,7 @@ export const AjusteRota: React.FC = () => {
             : Math.max(0, sourceMaxTime - sourceLimitMin);
 
         // Clientes pertencentes a este dia no escopo atual
-        const routesToAnalyze = selectedPromoter !== 'ALL'
-            ? scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter)
-            : scopedAdjustedRoutes;
+        const routesToAnalyze = effectiveScopedRoutes;
         const clientsOnDay = routesToAnalyze.filter(r => r.Dia_Semana === sourceDay);
         const uniqueClientsMap = new Map<number, VisitaPrevista>();
         clientsOnDay.forEach(c => {
@@ -2913,7 +2921,8 @@ export const AjusteRota: React.FC = () => {
             const limitMin = limitHours * 60;
             const time13 = m?.time13 || 0;
             const time24 = m?.time24 || 0;
-            const maxTime = selectedPromoter !== 'ALL'
+            const isSingleSellerView = (selectedTeamSellers.size === 1) || (selectedPromoter !== 'ALL');
+            const maxTime = isSingleSellerView
                 ? Math.max(time13, time24)
                 : Math.max(m?.maxSellerTime13 || 0, m?.maxSellerTime24 || 0);
             const freeMinutes = Math.max(0, limitMin - maxTime);
@@ -2953,7 +2962,7 @@ export const AjusteRota: React.FC = () => {
             otherDays,
             bestTargetDay
         };
-    }, [rebalanceDay, operationalSummary.dayMap, scopedAdjustedRoutes, selectedPromoter, optLimitHours, optMaxHours, optSatHalfPeriod, optDays]);
+    }, [rebalanceDay, operationalSummary.dayMap, effectiveScopedRoutes, selectedTeamSellers.size, selectedPromoter, optLimitHours, optMaxHours, optSatHalfPeriod, optDays]);
 
     // Executar Reequilíbrio Automático em 1 Clique
     const handleAutoRebalance = () => {
@@ -7247,9 +7256,9 @@ export const AjusteRota: React.FC = () => {
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                                 <span 
                                                     className="text-[10px] font-black bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-200/60 dark:border-indigo-800 cursor-help"
-                                                    title={`Carteira de clientes físicos ativos: ${scopedAdjustedRoutes.length} PDVs únicos cadastrados.`}
+                                                    title={`Carteira de clientes físicos ativos no escopo selecionado: ${effectiveScopedRoutes.length} PDVs únicos cadastrados.`}
                                                 >
-                                                    {scopedAdjustedRoutes.length} {scopedAdjustedRoutes.length === 1 ? 'PDV' : 'PDVs'} (Carteira)
+                                                    {effectiveScopedRoutes.length} {effectiveScopedRoutes.length === 1 ? 'PDV' : 'PDVs'} (Carteira)
                                                 </span>
                                                 <span 
                                                     className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 cursor-help"
@@ -7709,7 +7718,8 @@ export const AjusteRota: React.FC = () => {
                                         const dayOverload = (!isUnallocated && dayMetrics && optLimitHours) ? (() => {
                                             const activeDaysSet = new Set(optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
                                             const isInactiveDay = !activeDaysSet.has(day);
-                                            const maxDayTime = selectedPromoter !== 'ALL'
+                                            const isSingleSellerView = (selectedTeamSellers.size === 1) || (selectedPromoter !== 'ALL');
+                                            const maxDayTime = isSingleSellerView
                                                 ? Math.max(dayMetrics.time13, dayMetrics.time24)
                                                 : Math.max(dayMetrics.maxSellerTime13 || 0, dayMetrics.maxSellerTime24 || 0);
                                             const dayClientsCount = dayRoutes.length;
@@ -7992,7 +8002,7 @@ export const AjusteRota: React.FC = () => {
                                                 {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
                                             </span>
                                             <span className="font-bold text-slate-500 dark:text-slate-400">
-                                                Total no Escopo: {scopedAdjustedRoutes.length} PDVs (~{operationalSummary.totalVisitsMonth} visitas/mês)
+                                                Total no Escopo: {effectiveScopedRoutes.length} PDVs (~{operationalSummary.totalVisitsMonth} visitas/mês)
                                             </span>
                                         </div>
                                     )}
@@ -8035,7 +8045,7 @@ export const AjusteRota: React.FC = () => {
                                                 {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
                                             </span>
                                             <span className="font-bold text-slate-500 dark:text-slate-400">
-                                                Total no Escopo: {scopedAdjustedRoutes.length} PDVs (~{operationalSummary.totalVisitsMonth} visitas/mês)
+                                                Total no Escopo: {effectiveScopedRoutes.length} PDVs (~{operationalSummary.totalVisitsMonth} visitas/mês)
                                             </span>
                                         </div>
                                     )}
