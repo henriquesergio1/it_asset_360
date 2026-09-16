@@ -1351,6 +1351,10 @@ export const AjusteRota: React.FC = () => {
         } | null;
     } | null>(null);
 
+    // Modais de Controle Superior (Layout Full-Width)
+    const [showParamsModal, setShowParamsModal] = useState(false);
+    const [showSellersModal, setShowSellersModal] = useState(false);
+
     // Comparativo Antes x Depois
     const [showCompareModal, setShowCompareModal] = useState(false);
     const [compareOnlyChanged, setCompareOnlyChanged] = useState(true);
@@ -6270,14 +6274,62 @@ export const AjusteRota: React.FC = () => {
                     )}
                 </div>
 
-                {/* LADO DIREITO: STATUS DO FOCO, REDISTRIBUIR E CARGA DE ROTAS */}
+                {/* LADO DIREITO: STATUS DO FOCO, PARÂMETROS, VENDEDORES, OTIMIZAR E CARGA */}
                 <div className="flex flex-wrap items-center gap-2">
                     {adjustedRoutes.length > 0 && (
                         <>
-                            <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-xl text-xs font-bold border border-indigo-100 dark:border-indigo-900/60 flex items-center shadow-2xs">
+                            <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-xl text-xs font-bold border border-indigo-100 dark:border-indigo-900/60 flex items-center shadow-2xs h-[34px]">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
                                 {Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).length} Colab • {scopedAdjustedRoutes.length} PDVs em foco
                             </div>
+
+                            {/* BOTÃO MODAL DE PARÂMETROS DO OTIMIZADOR */}
+                            <button
+                                type="button"
+                                onClick={() => setShowParamsModal(true)}
+                                className="bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer h-[34px]"
+                                title="Abrir configurações e parâmetros do otimizador de rotas"
+                            >
+                                <CogIcon className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400" />
+                                <span>Parâmetros</span>
+                                <span className="ml-1.5 px-1.5 py-0.2 rounded-md bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-black border border-indigo-200/60 dark:border-indigo-800">
+                                    {optLimitClients ? `Máx ${optMaxClients}` : 'Livre'}
+                                    {optLimitKm ? ` • ${optMaxKm}km` : ''}
+                                    {optLimitHours ? ` • ${optMaxHours}h` : ''}
+                                </span>
+                            </button>
+
+                            {/* BOTÃO MODAL / PAINEL DE VENDEDORES */}
+                            <button
+                                type="button"
+                                onClick={() => setShowSellersModal(true)}
+                                className={`bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer h-[34px] ${
+                                    imbalancedSellersCount > 0 
+                                        ? 'border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300' 
+                                        : 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                                }`}
+                                title="Visualizar lista de vendedores, desbalanceamentos quinzenais e anomalias de coordenadas da base"
+                            >
+                                <UserGroupIcon className="w-4 h-4 mr-1.5 text-slate-500" />
+                                <span>Vendedores ({Array.from(new Set((scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).map(r => r.Cod_Vend))).length})</span>
+                                {imbalancedSellersCount > 0 && (
+                                    <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[9px] font-black border border-amber-300 animate-pulse">
+                                        {imbalancedSellersCount}
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* BOTÃO RÁPIDO DE OTIMIZAR ROTAS */}
+                            <button
+                                type="button"
+                                onClick={handleOptimizeSimulate}
+                                disabled={loading || adjustedRoutes.length === 0}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-3.5 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 h-[34px]"
+                                title="Executar algoritmo de otimização de rotas para o escopo selecionado"
+                            >
+                                <RefreshIcon className="w-3.5 h-3.5 mr-1.5" />
+                                <span>Otimizar Rotas</span>
+                            </button>
 
                             <button
                                 type="button"
@@ -6287,17 +6339,17 @@ export const AjusteRota: React.FC = () => {
                                     setShowExtinguishModal(true);
                                 }}
                                 disabled={loading || adjustedRoutes.length === 0}
-                                className="bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer disabled:opacity-50"
+                                className="bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer disabled:opacity-50 h-[34px]"
                                 title="Simular a extinção de um setor e redistribuir sua carteira para os demais setores selecionados com balanceamento equilibrado"
                             >
                                 <UserGroupIcon className="w-3.5 h-3.5 mr-1 text-amber-600 dark:text-amber-400"/>
-                                Redistribuir Setor Extinto
+                                Redistribuir Setor
                             </button>
                             {backupRoutesBeforeExtinguish && (
                                 <button
                                     type="button"
                                     onClick={handleUndoExtinguish}
-                                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-bold px-2.5 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer"
+                                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-bold px-2.5 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer h-[34px]"
                                     title="Restaurar a carteira do setor extinto de volta ao estado original"
                                 >
                                     ↩️ Desfazer
@@ -6483,482 +6535,16 @@ export const AjusteRota: React.FC = () => {
                 </div>
             )}
 
-            {/* ABAIXO: MAPA E SIDEBAR DE AJUSTES */}
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-0">
-                {/* COLUNA ESQUERDA: PARÂMETROS E LISTA DE AJUSTES */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 flex flex-col space-y-3 overflow-y-auto custom-scrollbar shadow-sm transition-colors">
-                    {/* ABAS DA SIDEBAR (PARÂMETROS vs VENDEDORES vs AMBOS) */}
-                    {scopedAdjustedRoutes.length > 0 && (
-                        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shrink-0">
-                            <button
-                                type="button"
-                                onClick={() => setSidebarActiveTab('params')}
-                                className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                    sidebarActiveTab === 'params' 
-                                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs font-black' 
-                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                                }`}
-                            >
-                                <CogIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"/>
-                                <span>Parâmetros</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setSidebarActiveTab('colabs')}
-                                className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                    sidebarActiveTab === 'colabs' 
-                                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs font-black' 
-                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                                }`}
-                            >
-                                <UserGroupIcon className="w-3.5 h-3.5 text-slate-500"/>
-                                <span>Vendedores ({Array.from(new Set((scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).map(r => r.Cod_Vend))).length})</span>
-                                {imbalancedSellersCount > 0 && (
-                                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title={`${imbalancedSellersCount} com desbalanço quinzenal`} />
-                                )}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setSidebarActiveTab('all')}
-                                className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                                    sidebarActiveTab === 'all' 
-                                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs font-black' 
-                                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-                                }`}
-                                title="Exibir Parâmetros e Vendedores juntos"
-                            >
-                                Ambos
-                            </button>
-                        </div>
-                    )}
-
-                    {/* SEÇÃO DE PARÂMETROS (Visível em 'params' ou 'all') */}
-                    {(sidebarActiveTab === 'params' || sidebarActiveTab === 'all' || scopedAdjustedRoutes.length === 0) && (
-                        <div className="space-y-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-                            <div className="flex items-center justify-between">
-                                <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center">
-                                    <CogIcon className="w-4 h-4 mr-1 text-indigo-600"/> Parâmetros do Otimizador
-                                </h4>
-                            </div>
-                            
-                            {/* BLINDAGEM DE CARTEIRA (COMPACTO) */}
-                            <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-xl p-2 text-[10px] text-indigo-700 dark:text-indigo-300 flex items-start space-x-1.5">
-                                <CheckCircleIcon className="w-3.5 h-3.5 mt-0.5 text-indigo-600 dark:text-indigo-400 shrink-0"/>
-                                <div>
-                                    <span className="font-black block">Carteira Blindada por Vendedor</span>
-                                    <span className="text-[9px] text-slate-500 dark:text-slate-400 leading-tight block">
-                                        Clientes pertencem exclusivamente ao vendedor. Periodicidades preservadas.
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* GRUPO 1: LIMITES DIÁRIOS (CLIENTES, KM E HORAS) */}
-                            <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-xl p-2.5 space-y-2.5">
-                                <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                                    ⏱️ Limites Diários por Rota
-                                </span>
-
-                                {/* Clientes Máximo / Dia com Liga/Desliga */}
-                                <div className="flex items-center justify-between">
-                                    <label className="flex items-center space-x-1.5 cursor-pointer">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={optLimitClients} 
-                                            onChange={(e) => setOptLimitClients(e.target.checked)}
-                                            className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                                        />
-                                        <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
-                                            Limitar Clientes / Dia:
-                                        </span>
-                                    </label>
-                                    <input 
-                                        type="number" 
-                                        value={optMaxClients} 
-                                        disabled={!optLimitClients}
-                                        onChange={(e) => setOptMaxClients(Math.max(1, Number(e.target.value)))}
-                                        className={`w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg py-1 px-2 text-xs font-black text-right outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitClients ? 'opacity-30 cursor-not-allowed' : ''}`}
-                                    />
-                                </div>
-
-                                {/* KM Máximo Rota / Dia com Liga/Desliga */}
-                                <div className="space-y-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                                    <div className="flex items-center justify-between">
-                                        <label className="flex items-center space-x-1.5 cursor-pointer">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={optLimitKm} 
-                                                onChange={(e) => setOptLimitKm(e.target.checked)}
-                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                                            />
-                                            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
-                                                Limitar KM / Dia:
-                                            </span>
-                                        </label>
-                                        <div className="flex items-center space-x-1">
-                                            <input 
-                                                type="number" 
-                                                value={optMaxKm} 
-                                                disabled={!optLimitKm}
-                                                onChange={(e) => setOptMaxKm(Number(e.target.value))}
-                                                className={`w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg py-1 px-2 text-xs font-black text-right outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitKm ? 'opacity-30 cursor-not-allowed' : ''}`}
-                                            />
-                                            <span className="text-[10px] font-bold text-slate-400">km</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Horas Máximas da Rota / Dia com Liga/Desliga */}
-                                <div className="space-y-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                                    <div className="flex items-center justify-between">
-                                        <label className="flex items-center space-x-1.5 cursor-pointer">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={optLimitHours} 
-                                                onChange={(e) => setOptLimitHours(e.target.checked)}
-                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                                            />
-                                            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
-                                                Limitar Horas / Dia:
-                                            </span>
-                                        </label>
-                                        <div className="flex items-center space-x-1">
-                                            <input 
-                                                type="number" 
-                                                value={optMaxHours} 
-                                                disabled={!optLimitHours}
-                                                step={0.5}
-                                                min={1}
-                                                max={24}
-                                                onChange={(e) => setOptMaxHours(Number(e.target.value))}
-                                                className={`w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg py-1 px-2 text-xs font-black text-right outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitHours ? 'opacity-30 cursor-not-allowed' : ''}`}
-                                            />
-                                            <span className="text-[10px] font-bold text-slate-400">h</span>
-                                        </div>
-                                    </div>
-                                    <span className="text-[8.5px] text-slate-400 dark:text-slate-500 block">
-                                        Inclui deslocamento viário + atendimento médio nos clientes
-                                    </span>
-
-                                    {/* Configuração de Tempos por Canal no Banco de Dados */}
-                                    <div className="pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowChannelTimesModal(true)}
-                                            className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg border text-[10px] font-black transition cursor-pointer shadow-2xs ${
-                                                channelsInUseWithAlerts.length > 0
-                                                    ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200'
-                                                    : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300'
-                                            }`}
-                                            title={channelsInUseWithAlerts.length > 0 ? `Atenção: ${channelsInUseWithAlerts.length} canal(is) em uso na rota possuem pendências!` : 'Configurar permanência em minutos por Canal de Remuneração (salvo no SQL Server corporativo)'}
-                                        >
-                                            <div className="flex items-center space-x-1.5">
-                                                <ClockIcon className={`w-3.5 h-3.5 ${channelsInUseWithAlerts.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'}`} />
-                                                <span>Tempos por Canal ({allDisplayChannels.length})</span>
-                                            </div>
-                                            {channelsInUseWithAlerts.length > 0 && (
-                                                <span className="flex items-center gap-1 text-[8.5px] font-black text-amber-700 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-900/80 px-1.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-700 animate-pulse">
-                                                    <ExclamationIcon className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
-                                                    {channelsInUseWithAlerts.length} pendente{channelsInUseWithAlerts.length > 1 ? 's' : ''}
-                                                </span>
-                                            )}
-                                        </button>
-                                    </div>
-
-                                    {/* Configuração de Particularidades / Janelas de Atendimento de Clientes */}
-                                    <div className="pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleOpenNewRestricaoModal()}
-                                            className="w-full flex items-center justify-between py-1.5 px-2 rounded-lg border text-[10px] font-black transition cursor-pointer shadow-2xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300"
-                                            title="Configurar restrições operacionais e janelas de atendimento por cliente (ex.: dias fixos, manhã, tarde)"
-                                        >
-                                            <div className="flex items-center space-x-1.5">
-                                                <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                                                <span>Janelas de Clientes ({clienteRestricoes.length})</span>
-                                            </div>
-                                            {clienteRestricoes.length > 0 && (
-                                                <span className="text-[8.5px] font-black text-blue-700 dark:text-blue-300 bg-blue-200/80 dark:bg-blue-900/80 px-1.5 py-0.5 rounded-full">
-                                                    {clienteRestricoes.length} ativa{clienteRestricoes.length > 1 ? 's' : ''}
-                                                </span>
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* GRUPO 2: CALENDÁRIO OPERACIONAL E DIAS ATIVOS */}
-                            <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-xl p-2.5 space-y-2">
-                                <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                                    📅 Calendário & Jornada
-                                </span>
-
-                                {/* Dias Ativos em Chips Elegantes */}
-                                <div>
-                                    <label className="block text-[9.5px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
-                                        Dias de Atendimento Ativos:
-                                    </label>
-                                    <div className="grid grid-cols-3 gap-1">
-                                        {WEEKDAYS.map(day => {
-                                            const shortName = day.split('-')[0].slice(0, 3);
-                                            const isActive = optDays.includes(day);
-                                            return (
-                                                <button
-                                                    key={day}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (isActive) {
-                                                            if (optDays.length > 1) setOptDays(optDays.filter(d => d !== day));
-                                                        } else {
-                                                            setOptDays([...optDays, day]);
-                                                        }
-                                                    }}
-                                                    className={`py-1 px-1.5 rounded-lg text-[10px] font-bold transition-all text-center cursor-pointer border ${
-                                                        isActive
-                                                            ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs font-black'
-                                                            : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                                                    }`}
-                                                >
-                                                    {shortName}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Toggles Rápidos */}
-                                <div className="space-y-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
-                                    <label className="flex items-center justify-between cursor-pointer">
-                                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                                            Sábado Meio-Período
-                                        </span>
-                                        <input 
-                                            type="checkbox" 
-                                            checked={optSatHalfPeriod} 
-                                            onChange={(e) => setOptSatHalfPeriod(e.target.checked)}
-                                            className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                                        />
-                                    </label>
-
-                                    <label className="flex items-center justify-between cursor-pointer">
-                                        <div>
-                                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 block">
-                                                Equilibrar Quinzenas
-                                            </span>
-                                            <span className="text-[8px] text-slate-400 block">
-                                                Equaliza Sem 1/3 e Sem 2/4
-                                            </span>
-                                        </div>
-                                        <input 
-                                            type="checkbox" 
-                                            checked={optBalanceWorkload} 
-                                            onChange={(e) => setOptBalanceWorkload(e.target.checked)}
-                                            className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                                        />
-                                    </label>
-
-                                    <label className="flex items-center justify-between cursor-pointer pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
-                                        <div className="pr-2">
-                                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 block">
-                                                Evitar Rotas Distantes na Sexta
-                                            </span>
-                                            <span className="text-[8px] text-slate-400 block">
-                                                Prioriza rotas longas de Seg a Qui (evita tráfego rodoviário de sexta)
-                                            </span>
-                                        </div>
-                                        <input 
-                                            type="checkbox" 
-                                            checked={optAvoidFridayDistant} 
-                                            onChange={(e) => setOptAvoidFridayDistant(e.target.checked)}
-                                            className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer shrink-0"
-                                        />
-                                    </label>
-
-                                    {/* Estratégia de Sequenciamento das Visitas Diárias */}
-                                    <div className="pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                                <span>🎯</span> Sequenciamento das Visitas
-                                            </span>
-                                            <span className="text-[8px] font-mono text-indigo-600 dark:text-indigo-400 font-bold">
-                                                {optSequenceStrategy === 'FAR_TO_NEAR' ? 'Mais Distante 1º' :
-                                                 optSequenceStrategy === 'SNAKE_SWEEP' ? 'Serpente' :
-                                                 optSequenceStrategy === 'CIRCUIT_TSP' ? 'Menor KM' : 'Mais Próximo 1º'}
-                                            </span>
-                                        </div>
-                                        <select
-                                            value={optSequenceStrategy}
-                                            onChange={(e) => setOptSequenceStrategy(e.target.value as SequenceStrategy)}
-                                            className="w-full text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg p-2 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-hidden cursor-pointer shadow-2xs"
-                                        >
-                                            <option value="FAR_TO_NEAR">🎯 Mais Distante 1º (Começar longe e vir voltando)</option>
-                                            <option value="SNAKE_SWEEP">🐍 Serpente / Varredura Contínua (Sem cruzamentos)</option>
-                                            <option value="CIRCUIT_TSP">⚡ Menor Quilometragem (Circuito TSP OSRM)</option>
-                                            <option value="NEAR_TO_FAR">📍 Mais Próximo 1º (Começar perto da base)</option>
-                                        </select>
-                                        <span className="text-[8px] text-slate-400 block mt-1 leading-tight">
-                                            {optSequenceStrategy === 'FAR_TO_NEAR' && 'Inicia no PDV mais distante e regressa atendendo em direção à base (fim do dia mais perto de casa).'}
-                                            {optSequenceStrategy === 'SNAKE_SWEEP' && 'Varre o setor em arco contínuo tipo serpente eliminando cruzamentos e retornos repetidos.'}
-                                            {optSequenceStrategy === 'CIRCUIT_TSP' && 'Otimiza o circuito fechado para a menor distância total viária em quilômetros.'}
-                                            {optSequenceStrategy === 'NEAR_TO_FAR' && 'Inicia pelos clientes vizinhos à base e afasta-se até o ponto final.'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* BOTÃO PRIMÁRIO: OTIMIZAR ROTAS */}
-                            <div className="pt-1">
-                                <button
-                                    onClick={handleOptimizeSimulate}
-                                    disabled={loading || adjustedRoutes.length === 0}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black p-2.5 rounded-xl text-xs flex items-center justify-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50"
-                                >
-                                    <RefreshIcon className="w-4 h-4 mr-1.5"/> Otimizar Rotas
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* SEÇÃO DE COLABORADORES (Visível em 'colabs' ou 'all') */}
-                    {scopedAdjustedRoutes.length > 0 && (sidebarActiveTab === 'colabs' || sidebarActiveTab === 'all') && (
-                        <div className="flex-1 flex flex-col min-h-0">
-                            <div className="mb-2 flex items-center justify-between">
-                                <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center">
-                                    <UserGroupIcon className="w-4 h-4 mr-1 text-slate-500"/> Rotas por Colaborador
-                                </h4>
-                                {imbalancedSellersCount > 0 && (
-                                    <span 
-                                        className="text-[9px] font-black bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-800 flex items-center shadow-xs"
-                                        title={`${imbalancedSellersCount} colaborador(es) com desbalanceamento quinzenal superior a 30%`}
-                                    >
-                                        ⚠️ {imbalancedSellersCount} com desbalanço
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* CAMPO DE BUSCA RÁPIDA DE COLABORADOR */}
-                            <div className="relative mb-2 shrink-0">
-                                <SearchIcon className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
-                                <input
-                                    type="text"
-                                    value={collaboratorSearchQuery}
-                                    onChange={(e) => setCollaboratorSearchQuery(e.target.value)}
-                                    placeholder="Filtrar por código ou nome..."
-                                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-7 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                                {collaboratorSearchQuery && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setCollaboratorSearchQuery('')}
-                                        className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer"
-                                        title="Limpar busca"
-                                    >
-                                        ✕
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className={`overflow-y-auto space-y-1.5 pr-1 custom-scrollbar ${sidebarActiveTab === 'all' ? 'max-h-[300px]' : 'max-h-[520px] flex-1'}`}>
-                                <div 
-                                    className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition ${selectedPromoter === 'ALL' && (!selectedSeller || selectedSeller === 'ALL') ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200'}`}
-                                    onClick={() => {
-                                        setSelectedPromoter('ALL');
-                                        if (scopeMode === 'vendedor') {
-                                            setSelectedSeller('');
-                                        }
-                                    }}
-                                >
-                                    Todos no Escopo ({Array.from(new Set((scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).map(r => r.Cod_Vend))).length})
-                                </div>
-                                {Array.from(new Set((scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).map(r => r.Cod_Vend)))
-                                    .filter(sellerId => {
-                                        if (!collaboratorSearchQuery.trim()) return true;
-                                        const q = collaboratorSearchQuery.toLowerCase().trim();
-                                        const sellerVisits = (scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).filter(v => v.Cod_Vend === sellerId);
-                                        const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
-                                        const displayName = (colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : '')).toLowerCase();
-                                        return String(sellerId).includes(q) || displayName.includes(q);
-                                    })
-                                    .map(sellerId => {
-                                        const sellerVisits = (scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).filter(v => v.Cod_Vend === sellerId);
-                                        const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
-                                        const count = sellerVisits.length;
-                                        const color = promoterColorMap.get(String(sellerId)) || '#64748b';
-                                        const qStats = getSellerQuinzenaStats(sellerId, (scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes));
-                                        const baseAnomaly = checkCollaboratorBaseAnomaly(colab?.LatitudeBase, colab?.LongitudeBase, sellerVisits);
-                                        const displayName = formatSellerDisplayName(sellerId, colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`));
-                                        const isItemActive = selectedPromoter === String(sellerId) || (scopeMode === 'vendedor' && selectedSeller === String(sellerId));
-
-                                        return (
-                                            <div 
-                                                key={sellerId}
-                                                className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between gap-1.5 ${isItemActive ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : (baseAnomaly.isAnomalous ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/40 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200 hover:border-rose-400' : (qStats.isImbalanced ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200 hover:border-amber-400' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200'))}`}
-                                                onClick={() => {
-                                                    setSelectedPromoter(String(sellerId));
-                                                    if (scopeMode === 'vendedor') {
-                                                        setSelectedSeller(String(sellerId));
-                                                    }
-                                                }}
-                                            >
-                                                <div className="flex items-center space-x-2 truncate min-w-0">
-                                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }}></span>
-                                                    <span className="truncate" title={displayName}>{displayName}</span>
-                                                </div>
-
-                                                <div className="flex items-center space-x-1 shrink-0">
-                                                    {baseAnomaly.isAnomalous && (
-                                                        <span 
-                                                            className="bg-rose-100 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-700 px-1.5 py-0.5 rounded text-[9px] font-black flex items-center shadow-xs"
-                                                            title={`🚨 ${baseAnomaly.message}`}
-                                                        >
-                                                            {baseAnomaly.badgeText}
-                                                        </span>
-                                                    )}
-                                                    {qStats.isImbalanced && !baseAnomaly.isAnomalous && (
-                                                        <span 
-                                                            className="bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-1.5 py-0.5 rounded text-[9px] font-black flex items-center shadow-xs"
-                                                            title={`⚠️ Desbalanceamento Quinzenal: ${qStats.variationPct}% de variação\n• Semanas 1 e 3: ${qStats.v13} atendimentos\n• Semanas 2 e 4: ${qStats.v24} atendimentos\nDica: Alterne clientes quinzenais na Grade de Ajuste Fino para equilibrar.`}
-                                                        >
-                                                            ⚠️ {qStats.variationPct}%
-                                                        </span>
-                                                    )}
-                                                    <span 
-                                                        className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-[10px]"
-                                                        title={`Total: ${count} PDVs\n• Semanas 1 e 3: ${qStats.v13}\n• Semanas 2 e 4: ${qStats.v24}`}
-                                                    >
-                                                        {count} PDVs
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                            </div>
-
-                            {/* Botão Otimizar no rodapé da aba de colaboradores para facilidade de uso */}
-                            {sidebarActiveTab === 'colabs' && (
-                                <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800 shrink-0">
-                                    <button
-                                        onClick={handleOptimizeSimulate}
-                                        disabled={loading || adjustedRoutes.length === 0}
-                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black p-2 rounded-xl text-xs flex items-center justify-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50"
-                                    >
-                                        <RefreshIcon className="w-3.5 h-3.5 mr-1.5"/> Otimizar Rotas
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* COLUNA DIREITA: MAPA E TABELA DE CLIENTES */}
-                <div className="lg:col-span-3 flex flex-col space-y-4 min-h-0">
-                    {/* MAP CONTAINER */}
-                    <div 
-                        id="roteiro-map-container"
-                        className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-all duration-300 flex flex-col ${
-                        isMapFullscreen 
-                            ? 'fixed inset-0 z-[1100] w-screen h-screen rounded-none' 
-                            : 'relative isolate rounded-2xl h-96 z-10'
-                    }`}>
+            {/* ABAIXO: MAPA E GRADE DE AJUSTE FINO (LARGURA TOTAL 100% - FULL-WIDTH) */}
+            <div className="flex flex-col space-y-4 w-full min-h-0">
+                {/* BLOCO SUPERIOR: MAPA 100% LARGURA */}
+                <div 
+                    id="roteiro-map-container"
+                    className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-all duration-300 flex flex-col w-full ${
+                    isMapFullscreen 
+                        ? 'fixed inset-0 z-[1100] w-screen h-screen rounded-none' 
+                        : 'relative isolate rounded-2xl h-[420px] z-10'
+                }`}>
                         {/* CONTROLES FLUTUANTES DO MAPA: ALTERNADOR RÁPIDO DE QUINZENA, HEATMAP E TELA CHEIA */}
                         <div className="absolute top-3 right-3 z-[1000] flex flex-wrap items-center gap-2">
                             {scopedAdjustedRoutes.length > 0 && (
@@ -8246,7 +7832,490 @@ export const AjusteRota: React.FC = () => {
                         </div>
                     )}
                 </div>
-            </div>
+
+            {/* MODAL DE PARÂMETROS DO OTIMIZADOR (POPUP MODERNO E ESPAÇOSO) */}
+            {showParamsModal && (
+                <div className="fixed inset-0 z-[2000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 lg:p-6 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+                        {/* Header */}
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-xs shrink-0">
+                                    <CogIcon className="w-5 h-5"/>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        Parâmetros do Otimizador de Rotas
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Defina limites diários, tempos de atendimento por canal e regras de sequenciamento viário.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowParamsModal(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Conteúdo com Scroll Suave */}
+                        <div className="p-6 overflow-y-auto custom-scrollbar space-y-4 flex-1">
+                            {/* BLINDAGEM DE CARTEIRA */}
+                            <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-2xl p-3.5 text-xs text-indigo-700 dark:text-indigo-300 flex items-start space-x-2.5 shadow-2xs">
+                                <CheckCircleIcon className="w-4 h-4 mt-0.5 text-indigo-600 dark:text-indigo-400 shrink-0"/>
+                                <div>
+                                    <span className="font-black block text-sm">Carteira Blindada por Vendedor</span>
+                                    <span className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed block mt-0.5">
+                                        Clientes pertencem exclusivamente ao vendedor alocado. Periodicidades (semanal e quinzenal) são preservadas e respeitadas na roteirização.
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* GRID COM 2 COLUNAS: LIMITES DIÁRIOS & CALENDÁRIO OPERACIONAL */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* GRUPO 1: LIMITES DIÁRIOS */}
+                                <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 space-y-3">
+                                    <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 block flex items-center gap-1.5">
+                                        <span>⏱️</span> Limites Diários por Rota
+                                    </span>
+
+                                    {/* Clientes Máximo / Dia */}
+                                    <div className="flex items-center justify-between pt-1">
+                                        <label className="flex items-center space-x-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={optLimitClients} 
+                                                onChange={(e) => setOptLimitClients(e.target.checked)}
+                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                            />
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                Limitar Clientes / Dia:
+                                            </span>
+                                        </label>
+                                        <div className="flex items-center space-x-1.5">
+                                            <input 
+                                                type="number" 
+                                                value={optMaxClients} 
+                                                disabled={!optLimitClients}
+                                                onChange={(e) => setOptMaxClients(Math.max(1, Number(e.target.value)))}
+                                                className={`w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-1.5 px-2.5 text-xs font-black text-right outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitClients ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                            />
+                                            <span className="text-xs font-bold text-slate-400">PDVs</span>
+                                        </div>
+                                    </div>
+
+                                    {/* KM Máximo / Dia */}
+                                    <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                                        <label className="flex items-center space-x-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={optLimitKm} 
+                                                onChange={(e) => setOptLimitKm(e.target.checked)}
+                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                            />
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                Limitar KM / Dia:
+                                            </span>
+                                        </label>
+                                        <div className="flex items-center space-x-1.5">
+                                            <input 
+                                                type="number" 
+                                                value={optMaxKm} 
+                                                disabled={!optLimitKm}
+                                                onChange={(e) => setOptMaxKm(Number(e.target.value))}
+                                                className={`w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-1.5 px-2.5 text-xs font-black text-right outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitKm ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                            />
+                                            <span className="text-xs font-bold text-slate-400">km</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Horas Máximas / Dia */}
+                                    <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                                        <label className="flex items-center space-x-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={optLimitHours} 
+                                                onChange={(e) => setOptLimitHours(e.target.checked)}
+                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                            />
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                Limitar Horas / Dia:
+                                            </span>
+                                        </label>
+                                        <div className="flex items-center space-x-1.5">
+                                            <input 
+                                                type="number" 
+                                                value={optMaxHours} 
+                                                disabled={!optLimitHours}
+                                                step={0.5}
+                                                min={1}
+                                                max={24}
+                                                onChange={(e) => setOptMaxHours(Number(e.target.value))}
+                                                className={`w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-1.5 px-2.5 text-xs font-black text-right outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitHours ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                            />
+                                            <span className="text-xs font-bold text-slate-400">h</span>
+                                        </div>
+                                    </div>
+                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 block">
+                                        Tempo total = percurso viário OSRM + permanência calculada em cada cliente.
+                                    </span>
+
+                                    {/* Atalhos para Canais e Janelas */}
+                                    <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowChannelTimesModal(true)}
+                                            className={`w-full flex items-center justify-between py-2 px-3 rounded-xl border text-xs font-black transition cursor-pointer shadow-2xs ${
+                                                channelsInUseWithAlerts.length > 0
+                                                    ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200'
+                                                    : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300'
+                                            }`}
+                                            title="Configurar permanência em minutos por Canal de Remuneração (salvo no SQL Server corporativo)"
+                                        >
+                                            <div className="flex items-center space-x-2">
+                                                <ClockIcon className={`w-4 h-4 ${channelsInUseWithAlerts.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                                                <span>Tempos por Canal ({allDisplayChannels.length})</span>
+                                            </div>
+                                            {channelsInUseWithAlerts.length > 0 && (
+                                                <span className="flex items-center gap-1 text-[10px] font-black text-amber-700 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-900/80 px-2 py-0.5 rounded-full border border-amber-300 animate-pulse">
+                                                    <ExclamationIcon className="w-3 h-3 text-amber-600" />
+                                                    {channelsInUseWithAlerts.length} pendente{channelsInUseWithAlerts.length > 1 ? 's' : ''}
+                                                </span>
+                                            )}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenNewRestricaoModal()}
+                                            className="w-full flex items-center justify-between py-2 px-3 rounded-xl border text-xs font-black transition cursor-pointer shadow-2xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300"
+                                            title="Configurar restrições operacionais e janelas de atendimento por cliente (ex.: dias fixos, manhã, tarde)"
+                                        >
+                                            <div className="flex items-center space-x-2">
+                                                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                <span>Janelas de Clientes ({clienteRestricoes.length})</span>
+                                            </div>
+                                            {clienteRestricoes.length > 0 && (
+                                                <span className="text-[10px] font-black text-blue-700 dark:text-blue-300 bg-blue-200/80 dark:bg-blue-900/80 px-2 py-0.5 rounded-full">
+                                                    {clienteRestricoes.length} ativa{clienteRestricoes.length > 1 ? 's' : ''}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* GRUPO 2: CALENDÁRIO OPERACIONAL */}
+                                <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                                    <div className="space-y-3">
+                                        <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 block flex items-center gap-1.5">
+                                            <span>📅</span> Calendário & Jornada
+                                        </span>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">
+                                                Dias de Atendimento Ativos:
+                                            </label>
+                                            <div className="grid grid-cols-3 gap-1.5">
+                                                {WEEKDAYS.map(day => {
+                                                    const shortName = day.split('-')[0].slice(0, 3);
+                                                    const isActive = optDays.includes(day);
+                                                    return (
+                                                        <button
+                                                            key={day}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (isActive) {
+                                                                    if (optDays.length > 1) setOptDays(optDays.filter(d => d !== day));
+                                                                } else {
+                                                                    setOptDays([...optDays, day]);
+                                                                }
+                                                            }}
+                                                            className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer border ${
+                                                                isActive
+                                                                    ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs font-black'
+                                                                    : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                                                            }`}
+                                                        >
+                                                            {shortName}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                                            <label className="flex items-center justify-between cursor-pointer">
+                                                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                                                    Sábado Meio-Período
+                                                </span>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={optSatHalfPeriod} 
+                                                    onChange={(e) => setOptSatHalfPeriod(e.target.checked)}
+                                                    className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                                />
+                                            </label>
+
+                                            <label className="flex items-center justify-between cursor-pointer">
+                                                <div>
+                                                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300 block">
+                                                        Equilibrar Quinzenas
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400 block">
+                                                        Equaliza semanas 1/3 e 2/4
+                                                    </span>
+                                                </div>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={optBalanceWorkload} 
+                                                    onChange={(e) => setOptBalanceWorkload(e.target.checked)}
+                                                    className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                                />
+                                            </label>
+
+                                            <label className="flex items-center justify-between cursor-pointer pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50">
+                                                <div className="pr-2">
+                                                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300 block">
+                                                        Evitar Rotas Distantes na Sexta
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400 block">
+                                                        Prioriza rotas longas de Seg a Qui (evita tráfego rodoviário de sexta)
+                                                    </span>
+                                                </div>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={optAvoidFridayDistant} 
+                                                    onChange={(e) => setOptAvoidFridayDistant(e.target.checked)}
+                                                    className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer shrink-0"
+                                                />
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* GRUPO 3: ESTRATÉGIA DE SEQUENCIAMENTO DAS VISITAS */}
+                            <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                                        <span>🎯</span> Estratégia de Sequenciamento das Visitas
+                                    </span>
+                                    <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-bold">
+                                        {optSequenceStrategy === 'FAR_TO_NEAR' ? 'Mais Distante 1º' :
+                                         optSequenceStrategy === 'SNAKE_SWEEP' ? 'Serpente' :
+                                         optSequenceStrategy === 'CIRCUIT_TSP' ? 'Menor KM' : 'Mais Próximo 1º'}
+                                    </span>
+                                </div>
+                                <select
+                                    value={optSequenceStrategy}
+                                    onChange={(e) => setOptSequenceStrategy(e.target.value as SequenceStrategy)}
+                                    className="w-full text-xs font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl p-2.5 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-hidden cursor-pointer shadow-2xs"
+                                >
+                                    <option value="FAR_TO_NEAR">🎯 Mais Distante 1º (Começar longe e vir voltando em direção à base)</option>
+                                    <option value="SNAKE_SWEEP">🐍 Serpente / Varredura Contínua (Sem cruzamentos de trajeto)</option>
+                                    <option value="CIRCUIT_TSP">⚡ Menor Quilometragem (Circuito TSP OSRM Viário)</option>
+                                    <option value="NEAR_TO_FAR">📍 Mais Próximo 1º (Começar perto da base)</option>
+                                </select>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                                    {optSequenceStrategy === 'FAR_TO_NEAR' && 'Inicia no PDV mais distante e regressa atendendo em direção à base residencial (fim do dia mais perto de casa).'}
+                                    {optSequenceStrategy === 'SNAKE_SWEEP' && 'Varre o setor em arco contínuo tipo serpente eliminando cruzamentos e retornos repetidos.'}
+                                    {optSequenceStrategy === 'CIRCUIT_TSP' && 'Otimiza o circuito fechado para a menor distância total viária em quilômetros.'}
+                                    {optSequenceStrategy === 'NEAR_TO_FAR' && 'Inicia pelos clientes vizinhos à base e afasta-se até o ponto final.'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Rodapé com Ações */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70">
+                            <button
+                                type="button"
+                                onClick={() => setShowParamsModal(false)}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                Fechar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowParamsModal(false);
+                                    handleOptimizeSimulate();
+                                }}
+                                disabled={loading || adjustedRoutes.length === 0}
+                                className="px-5 py-2.5 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 flex items-center space-x-1.5"
+                            >
+                                <RefreshIcon className="w-4 h-4 mr-1.5"/>
+                                <span>Salvar & Otimizar Rotas Agora</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE VENDEDORES / COLABORADORES (POPUP MODERNO) */}
+            {showSellersModal && (
+                <div className="fixed inset-0 z-[2000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 lg:p-6 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+                        {/* Header */}
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-xs shrink-0">
+                                    <UserGroupIcon className="w-5 h-5"/>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        Gestão de Vendedores & Colaboradores
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                            {Array.from(new Set((scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).map(r => r.Cod_Vend))).length} no Escopo
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Selecione um vendedor para focar ou visualize desbalanceamentos quinzenais e anomalias de rota.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowSellersModal(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Conteúdo com Scroll */}
+                        <div className="p-5 overflow-y-auto custom-scrollbar space-y-3 flex-1">
+                            {/* CAMPO DE BUSCA RÁPIDA DE COLABORADOR */}
+                            <div className="relative">
+                                <SearchIcon className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={collaboratorSearchQuery}
+                                    onChange={(e) => setCollaboratorSearchQuery(e.target.value)}
+                                    placeholder="Buscar vendedor por código ou nome..."
+                                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-800 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                                {collaboratorSearchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setCollaboratorSearchQuery('')}
+                                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer p-0.5"
+                                        title="Limpar busca"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Alerta se houver vendedores desbalanceados */}
+                            {imbalancedSellersCount > 0 && (
+                                <div className="bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between">
+                                    <span className="font-bold flex items-center gap-1.5">
+                                        <span>⚠️</span>
+                                        <span>{imbalancedSellersCount} colaborador(es) com desbalanceamento quinzenal superior a 30%</span>
+                                    </span>
+                                    <span className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">Equalize alternando Sem 1/3 e Sem 2/4</span>
+                                </div>
+                            )}
+
+                            {/* Lista de Vendedores */}
+                            <div className="space-y-1.5 max-h-[480px] overflow-y-auto custom-scrollbar pr-1">
+                                <div 
+                                    className={`p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between ${selectedPromoter === 'ALL' && (!selectedSeller || selectedSeller === 'ALL') ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 shadow-2xs' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200'}`}
+                                    onClick={() => {
+                                        setSelectedPromoter('ALL');
+                                        if (scopeMode === 'vendedor') {
+                                            setSelectedSeller('');
+                                        }
+                                        setShowSellersModal(false);
+                                    }}
+                                >
+                                    <span>🌐 Todos no Escopo Geral</span>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                        {Array.from(new Set((scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).map(r => r.Cod_Vend))).length} Vendedores
+                                    </span>
+                                </div>
+
+                                {Array.from(new Set((scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).map(r => r.Cod_Vend)))
+                                    .filter(sellerId => {
+                                        if (!collaboratorSearchQuery.trim()) return true;
+                                        const q = collaboratorSearchQuery.toLowerCase().trim();
+                                        const sellerVisits = (scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).filter(v => v.Cod_Vend === sellerId);
+                                        const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
+                                        const displayName = (colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : '')).toLowerCase();
+                                        return String(sellerId).includes(q) || displayName.includes(q);
+                                    })
+                                    .map(sellerId => {
+                                        const sellerVisits = (scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes).filter(v => v.Cod_Vend === sellerId);
+                                        const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
+                                        const count = sellerVisits.length;
+                                        const color = promoterColorMap.get(String(sellerId)) || '#64748b';
+                                        const qStats = getSellerQuinzenaStats(sellerId, (scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes));
+                                        const baseAnomaly = checkCollaboratorBaseAnomaly(colab?.LatitudeBase, colab?.LongitudeBase, sellerVisits);
+                                        const displayName = formatSellerDisplayName(sellerId, colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`));
+                                        const isItemActive = selectedPromoter === String(sellerId) || (scopeMode === 'vendedor' && selectedSeller === String(sellerId));
+
+                                        return (
+                                            <div 
+                                                key={sellerId}
+                                                className={`p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between gap-2 ${isItemActive ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 shadow-2xs' : (baseAnomaly.isAnomalous ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/40 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200 hover:border-rose-400' : (qStats.isImbalanced ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200 hover:border-amber-400' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200'))}`}
+                                                onClick={() => {
+                                                    setSelectedPromoter(String(sellerId));
+                                                    if (scopeMode === 'vendedor') {
+                                                        setSelectedSeller(String(sellerId));
+                                                    }
+                                                    setShowSellersModal(false);
+                                                }}
+                                            >
+                                                <div className="flex items-center space-x-2.5 truncate min-w-0">
+                                                    <span className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white dark:ring-slate-800" style={{ backgroundColor: color }}></span>
+                                                    <span className="truncate text-xs" title={displayName}>{displayName}</span>
+                                                </div>
+
+                                                <div className="flex items-center space-x-1.5 shrink-0">
+                                                    {baseAnomaly.isAnomalous && (
+                                                        <span 
+                                                            className="bg-rose-100 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-700 px-2 py-0.5 rounded-full text-[9px] font-black flex items-center shadow-xs"
+                                                            title={`🚨 ${baseAnomaly.message}`}
+                                                        >
+                                                            {baseAnomaly.badgeText}
+                                                        </span>
+                                                    )}
+                                                    {qStats.isImbalanced && !baseAnomaly.isAnomalous && (
+                                                        <span 
+                                                            className="bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-2 py-0.5 rounded-full text-[9px] font-black flex items-center shadow-xs"
+                                                            title={`⚠️ Desbalanceamento Quinzenal: ${qStats.variationPct}% de variação\n• Semanas 1 e 3: ${qStats.v13} atendimentos\n• Semanas 2 e 4: ${qStats.v24} atendimentos\nDica: Alterne clientes quinzenais na Grade de Ajuste Fino para equilibrar.`}
+                                                        >
+                                                            ⚠️ {qStats.variationPct}%
+                                                        </span>
+                                                    )}
+                                                    <span 
+                                                        className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-lg text-[10.5px] font-black"
+                                                        title={`Total: ${count} PDVs\n• Semanas 1 e 3: ${qStats.v13}\n• Semanas 2 e 4: ${qStats.v24}`}
+                                                    >
+                                                        {count} PDVs
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end bg-slate-50/70 dark:bg-slate-900/70">
+                            <button
+                                type="button"
+                                onClick={() => setShowSellersModal(false)}
+                                className="px-5 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* MODAL OVERLAY DE PROGRESSO DA OTIMIZAÇÃO COM BARRA E PERCENTUAL */}
             {/* MODAL OVERLAY DE PROGRESSO DA OTIMIZAÇÃO COM BARRA E RESUMO ELEGANTE */}
