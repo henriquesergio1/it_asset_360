@@ -1,13 +1,13 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
-import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao } from './services/apiService';
+import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista } from './services/apiService';
 import { VisitaPrevista, Colaborador, SequenceStrategy, ClienteRestricao } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import * as XLSX from 'xlsx';
 import { ShareSimulationModal } from './ShareSimulationModal';
-import { Calendar, Sun, Sunset, AlertCircle, Info, Edit3, Trash2, Plus, Check } from 'lucide-react';
+import { Calendar, Sun, Sunset, AlertCircle, Info, Edit3, Trash2, Plus, Check, FolderOpen, Share2 } from 'lucide-react';
 import {
     CogIcon,
     SpinnerIcon,
@@ -1202,6 +1202,20 @@ export const AjusteRota: React.FC = () => {
     const [itineraryQuinzena, setItineraryQuinzena] = useState<'1_3' | '2_4'>('1_3');
     const [copiedItinerary, setCopiedItinerary] = useState(false);
     const [shareModalData, setShareModalData] = useState<{ isOpen: boolean; simId: number; periodo: string; totalKm?: number } | null>(null);
+
+    // Gestão de Simulações Salvas e Carregamento Ativo
+    const [loadedSimInfo, setLoadedSimInfo] = useState<{ id: number; name: string; desc?: string } | null>(null);
+    const [showSaveModal, setShowSaveModal] = useState(false);
+    const [simSaveName, setSimSaveName] = useState('');
+    const [simSaveDesc, setSimSaveDesc] = useState('');
+    const [simSaveOverwrite, setSimSaveOverwrite] = useState(false);
+
+    const [showSavedSimulationsModal, setShowSavedSimulationsModal] = useState(false);
+    const [savedSimulationsList, setSavedSimulationsList] = useState<any[]>([]);
+    const [loadingSavedSimulations, setLoadingSavedSimulations] = useState(false);
+    const [simSearchTerm, setSimSearchTerm] = useState('');
+    const [deletingSimId, setDeletingSimId] = useState<number | null>(null);
+    const [loadingSimId, setLoadingSimId] = useState<number | null>(null);
 
     // Modal de Diagnóstico e Reequilíbrio de Dias Sobrecarregados
     const [rebalanceDay, setRebalanceDay] = useState<string | null>(null);
@@ -4875,17 +4889,27 @@ export const AjusteRota: React.FC = () => {
         XLSX.writeFile(wb, `Ajuste_Rota_${teamType}${tag}_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
-    // Salvar Rota Ajustada no Banco (saveRotaPrevista)
-    const handleSaveDatabase = async () => {
+    // Abrir Modal para Salvar Rota com Nome Personalizado
+    const handleOpenSaveModal = () => {
         if (adjustedRoutes.length === 0) {
-            alert("Sem rotas para salvar.");
+            alert("Sem rotas para salvar. Carregue ou calcule uma rota primeiro.");
             return;
         }
 
         const tag = teamType === 'vendedores' ? '[VENDEDOR]' : '[PROMOTOR]';
-        const periodName = `${tag} ROTA AJUSTADA OTIMIZADA - ${new Date().toLocaleDateString()}`;
+        const defaultName = loadedSimInfo?.name || `${tag} ROTA AJUSTADA OTIMIZADA - ${new Date().toLocaleDateString('pt-BR')}`;
+        setSimSaveName(defaultName);
+        setSimSaveDesc(loadedSimInfo?.desc || '');
+        setSimSaveOverwrite(Boolean(loadedSimInfo?.id));
+        setShowSaveModal(true);
+    };
 
-        if (!confirm(`Deseja salvar estas alterações como um novo Roteiro Previsto?\nNome: ${periodName}`)) return;
+    // Confirmar e Salvar no Banco (saveRotaPrevista)
+    const handleConfirmSave = async () => {
+        if (!simSaveName.trim()) {
+            alert("Por favor, informe um nome para a simulação.");
+            return;
+        }
 
         setSaving(true);
         try {
@@ -4898,7 +4922,8 @@ export const AjusteRota: React.FC = () => {
 
             const snapshotData = {
                 teamType,
-                periodo: periodName,
+                periodo: simSaveName.trim(),
+                descricao: simSaveDesc.trim(),
                 totalKm: kpis.adjusted.totalKm,
                 sellers: Array.from(groups.entries()).map(([vendedorId, visits]) => ({
                     id: vendedorId,
@@ -4907,6 +4932,7 @@ export const AjusteRota: React.FC = () => {
                         Cod_Cliente: c.Cod_Cliente,
                         Razao_Social: c.Razao_Social,
                         Endereco: c.Endereco,
+                        Numero: c.Numero,
                         Bairro: c.Bairro,
                         Cidade: c.Cidade,
                         CEP: c.CEP,
@@ -4914,6 +4940,9 @@ export const AjusteRota: React.FC = () => {
                         Long: c.Long,
                         Dia_Semana: c.Dia_Semana,
                         Periodicidade: c.Periodicidade,
+                        Canal_Remuneracao: c.Canal_Remuneracao,
+                        Cod_Supervisor: c.Cod_Supervisor,
+                        Nome_Supervisor: c.Nome_Supervisor,
                         Sequencia_13: c.Sequencia_13,
                         Sequencia_24: c.Sequencia_24
                     }))
@@ -4921,10 +4950,12 @@ export const AjusteRota: React.FC = () => {
             };
 
             const payload = {
-                Periodo: periodName,
+                Periodo: simSaveName.trim(),
+                Descricao: simSaveDesc.trim() || undefined,
                 TotalKM: kpis.adjusted.totalKm,
                 UsuarioSimulacao: authUser?.Nome || 'Operador',
                 SnapshotData: snapshotData,
+                overwriteId: (simSaveOverwrite && loadedSimInfo?.id) ? loadedSimInfo.id : undefined,
                 Itens: Array.from(groups.entries()).map(([vendedorId, visits]) => {
                     const colab = getColabBySectorOrName(vendedorId, visits[0]?.Nome_Vendedor);
                     
@@ -4962,16 +4993,25 @@ export const AjusteRota: React.FC = () => {
             };
 
             const res = await saveRotaPrevista(payload);
-            const savedId = res && typeof res === 'object' && res.id ? res.id : 0;
+            const savedId = res && typeof res === 'object' && res.id ? res.id : (loadedSimInfo?.id || 0);
+
+            setLoadedSimInfo({
+                id: savedId,
+                name: simSaveName.trim(),
+                desc: simSaveDesc.trim()
+            });
+
+            setShowSaveModal(false);
+
             if (savedId) {
                 setShareModalData({
                     isOpen: true,
                     simId: savedId,
-                    periodo: periodName,
+                    periodo: simSaveName.trim(),
                     totalKm: kpis.adjusted.totalKm
                 });
             } else {
-                alert("Ajuste de Rota salvo com sucesso na base de Simulações do Fuel360!");
+                alert("Simulação de rota salva com sucesso!");
             }
         } catch (e: any) {
             alert("Erro ao salvar: " + e.message);
@@ -4979,6 +5019,164 @@ export const AjusteRota: React.FC = () => {
             setSaving(false);
         }
     };
+
+    // Gestão de Simulações Salvas (Listar, Carregar, Excluir)
+    const handleOpenSavedSimulationsModal = async () => {
+        setShowSavedSimulationsModal(true);
+        setLoadingSavedSimulations(true);
+        try {
+            const list = await getRotaPrevistaHistory();
+            setSavedSimulationsList(Array.isArray(list) ? list : []);
+        } catch (e: any) {
+            console.error("Erro ao carregar simulações:", e);
+            alert("Erro ao carregar simulações salvas: " + (e.message || e));
+        } finally {
+            setLoadingSavedSimulations(false);
+        }
+    };
+
+    const handleLoadSimulation = async (simId: number) => {
+        setLoadingSimId(simId);
+        try {
+            const data = await getSimulacaoPublica(simId);
+            if (!data || !data.snapshot) {
+                alert("Simulação não encontrada ou sem snapshot válido.");
+                return;
+            }
+
+            const snapshot = data.snapshot;
+            const restoredVisits: VisitaPrevista[] = [];
+
+            if (Array.isArray(snapshot.sellers)) {
+                snapshot.sellers.forEach((s: any) => {
+                    const sellerId = Number(s.id || s.Cod_Vend) || 0;
+                    const sellerName = s.name || s.Nome_Vendedor || `Colaborador ${sellerId}`;
+                    const clients = s.clients || s.visitas || [];
+                    clients.forEach((c: any) => {
+                        restoredVisits.push({
+                            Cod_Vend: sellerId,
+                            Nome_Vendedor: sellerName,
+                            Cod_Supervisor: Number(c.Cod_Supervisor) || 0,
+                            Nome_Supervisor: c.Nome_Supervisor || '',
+                            Cod_Cliente: Number(c.Cod_Cliente) || 0,
+                            Razao_Social: c.Razao_Social || `Cliente ${c.Cod_Cliente}`,
+                            Dia_Semana: c.Dia_Semana || 'SEGUNDA-FEIRA',
+                            Periodicidade: c.Periodicidade || 'Semanal',
+                            Data_da_Visita: c.Data_da_Visita || new Date().toISOString().split('T')[0],
+                            Endereco: c.Endereco || '',
+                            Numero: c.Numero || '',
+                            Bairro: c.Bairro || '',
+                            Cidade: c.Cidade || '',
+                            CEP: c.CEP || '',
+                            Lat: Number(c.Lat) || 0,
+                            Long: Number(c.Long) || 0,
+                            Canal_Remuneracao: c.Canal_Remuneracao || '',
+                            Sequencia_13: c.Sequencia_13 !== undefined ? Number(c.Sequencia_13) : undefined,
+                            Sequencia_24: c.Sequencia_24 !== undefined ? Number(c.Sequencia_24) : undefined
+                        });
+                    });
+                });
+            } else if (Array.isArray(snapshot.visitas)) {
+                snapshot.visitas.forEach((v: any) => {
+                    restoredVisits.push({
+                        ...v,
+                        Lat: Number(v.Lat) || 0,
+                        Long: Number(v.Long) || 0
+                    });
+                });
+            }
+
+            if (restoredVisits.length === 0) {
+                alert("Nenhum cliente ou visita encontrado nos dados desta simulação.");
+                return;
+            }
+
+            if (snapshot.teamType === 'promotores' || snapshot.teamType === 'vendedores') {
+                setTeamType(snapshot.teamType);
+            } else if (data.periodo && data.periodo.includes('[PROMOTOR]')) {
+                setTeamType('promotores');
+            } else {
+                setTeamType('vendedores');
+            }
+
+            setAdjustedRoutes(restoredVisits);
+            setOriginalRoutes(restoredVisits);
+            setScopeMode('geral');
+            setSelectedSeller('');
+            setSelectedSupervisor('');
+
+            const firstValidVisit = restoredVisits.find(v => v.Lat && v.Long && v.Lat !== 0 && v.Long !== 0);
+            if (firstValidVisit) {
+                setMapFlyToTarget({
+                    lat: firstValidVisit.Lat,
+                    lng: firstValidVisit.Long,
+                    codCliente: firstValidVisit.Cod_Cliente,
+                    timestamp: Date.now()
+                });
+            }
+
+            setLoadedSimInfo({
+                id: data.id,
+                name: data.periodo || `Simulação #${data.id}`,
+                desc: data.descricao || ''
+            });
+
+            setShowSavedSimulationsModal(false);
+        } catch (e: any) {
+            console.error("Erro ao carregar simulação:", e);
+            alert("Erro ao carregar simulação: " + (e.message || e));
+        } finally {
+            setLoadingSimId(null);
+        }
+    };
+
+    const handleDeleteSavedSimulation = async (simId: number, name: string) => {
+        if (!confirm(`Tem certeza que deseja excluir permanentemente a simulação "${name}"?\nEsta ação removerá o registro e os detalhes de cálculo associados.`)) {
+            return;
+        }
+
+        setDeletingSimId(simId);
+        try {
+            await deleteRotaPrevista(simId, 'Excluído pelo usuário no Ajuste de Rota');
+            const list = await getRotaPrevistaHistory();
+            setSavedSimulationsList(Array.isArray(list) ? list : []);
+            if (loadedSimInfo?.id === simId) {
+                setLoadedSimInfo(null);
+            }
+        } catch (e: any) {
+            alert("Erro ao excluir simulação: " + (e.message || e));
+        } finally {
+            setDeletingSimId(null);
+        }
+    };
+
+    const filteredSimulations = useMemo(() => {
+        if (!simSearchTerm.trim()) return savedSimulationsList;
+        const q = simSearchTerm.toLowerCase();
+        return savedSimulationsList.filter((s: any) => {
+            const periodo = (s.Periodo || '').toLowerCase();
+            const desc = (s.Descricao || '').toLowerCase();
+            const user = (s.UsuarioSimulacao || '').toLowerCase();
+            const data = (s.DataSimulacao || '').toLowerCase();
+            return periodo.includes(q) || desc.includes(q) || user.includes(q) || data.includes(q);
+        });
+    }, [savedSimulationsList, simSearchTerm]);
+
+    // Efeito para carregar simulação se vier via parâmetro de URL (?simId=...)
+    useEffect(() => {
+        try {
+            const hash = window.location.hash || '';
+            const search = window.location.search || '';
+            const queryStr = hash.includes('?') ? hash.split('?')[1] : search;
+            const params = new URLSearchParams(queryStr);
+            const simIdParam = params.get('simId');
+            if (simIdParam && !isNaN(Number(simIdParam))) {
+                handleLoadSimulation(Number(simIdParam));
+            }
+        } catch (e) {
+            console.error("Erro ao verificar parâmetro de rota:", e);
+        }
+    }, []);
 
     // Dados calculados do Itinerário Operacional do Dia Selecionado
     const currentItineraryData = useMemo(() => {
@@ -6921,6 +7119,20 @@ export const AjusteRota: React.FC = () => {
                                                 >
                                                     ~{operationalSummary.totalVisitsMonth} visitas/mês <span className="text-[9px] text-slate-400 font-normal">({operationalSummary.totalPdvs13} sem 1/3 • {operationalSummary.totalPdvs24} sem 2/4)</span>
                                                 </span>
+                                                {loadedSimInfo && (
+                                                    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800 shadow-2xs">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                        <span className="truncate max-w-[220px]" title={loadedSimInfo.name}>Simulação: <strong>{loadedSimInfo.name}</strong></span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setLoadedSimInfo(null)}
+                                                            className="text-emerald-700 dark:text-emerald-300 hover:text-red-500 dark:hover:text-red-400 font-black ml-1 text-[11px] cursor-pointer"
+                                                            title="Desvincular (salvar como novo roteiro)"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
 
@@ -7018,7 +7230,15 @@ export const AjusteRota: React.FC = () => {
                                             <UploadIcon className="w-3.5 h-3.5 mr-1.5 rotate-180"/> Exportar Excel (em Abas)
                                         </button>
                                         <button
-                                            onClick={handleSaveDatabase}
+                                            type="button"
+                                            onClick={handleOpenSavedSimulationsModal}
+                                            className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition h-[32px] cursor-pointer"
+                                            title="Visualizar, abrir no mapa, editar, excluir ou compartilhar simulações salvas"
+                                        >
+                                            <FolderOpen className="w-3.5 h-3.5 mr-1.5"/> Simulações Salvas
+                                        </button>
+                                        <button
+                                            onClick={handleOpenSaveModal}
                                             disabled={saving}
                                             className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition h-[32px] disabled:opacity-50 cursor-pointer"
                                         >
@@ -7993,7 +8213,7 @@ export const AjusteRota: React.FC = () => {
                                 <button
                                     onClick={() => {
                                         setShowCompareModal(false);
-                                        handleSaveDatabase();
+                                        handleOpenSaveModal();
                                     }}
                                     disabled={saving}
                                     className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition flex items-center"
@@ -10123,6 +10343,312 @@ export const AjusteRota: React.FC = () => {
                     periodo={shareModalData.periodo}
                     totalKm={shareModalData.totalKm}
                 />
+            )}
+
+            {/* MODAL PARA SALVAR SIMULAÇÃO COM NOME PERSONALIZADO */}
+            {showSaveModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9990] flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95">
+                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                                    <CheckCircleIcon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white">
+                                        Salvar Simulação de Rota
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Defina um nome e detalhes para identificação
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowSaveModal(false)}
+                                className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                            >
+                                <XCircleIcon className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-700/60 text-center">
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400">KM Total</span>
+                                    <p className="text-sm font-black text-indigo-600 dark:text-indigo-400">
+                                        {Math.round(kpis.adjusted.totalKm).toLocaleString('pt-BR')} km
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400">Visitas</span>
+                                    <p className="text-sm font-black text-slate-700 dark:text-slate-200">
+                                        {adjustedRoutes.length}
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400">Equipe</span>
+                                    <p className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase mt-0.5">
+                                        {teamType}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                                    Nome da Simulação <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={simSaveName}
+                                    onChange={(e) => setSimSaveName(e.target.value)}
+                                    placeholder="Ex: Rota Vale do Paraíba - Quinzena 1"
+                                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                    autoFocus
+                                />
+                                <p className="text-[11px] text-slate-400 mt-1">
+                                    Utilize um nome descritivo para facilitar buscas futuras e identificação pela supervisão.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                                    Descrição / Observações (Opcional)
+                                </label>
+                                <textarea
+                                    value={simSaveDesc}
+                                    onChange={(e) => setSimSaveDesc(e.target.value)}
+                                    placeholder="Ex: Reajustada sequência de quarta-feira e realocados clientes periféricos."
+                                    rows={3}
+                                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
+                                />
+                            </div>
+
+                            {loadedSimInfo && (
+                                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center justify-between">
+                                    <div className="text-xs text-amber-800 dark:text-amber-200">
+                                        <span className="font-bold">Substituir Simulação Atual?</span>
+                                        <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                                            Atualizará o registro #{loadedSimInfo.id} ({loadedSimInfo.name}) em vez de criar um novo.
+                                        </p>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer ml-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={simSaveOverwrite}
+                                            onChange={(e) => setSimSaveOverwrite(e.target.checked)}
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+                                    </label>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end space-x-3 bg-slate-50/50 dark:bg-slate-800/30">
+                            <button
+                                type="button"
+                                onClick={() => setShowSaveModal(false)}
+                                disabled={saving}
+                                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmSave}
+                                disabled={saving || !simSaveName.trim()}
+                                className="px-5 py-2.5 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl shadow-md transition flex items-center space-x-2 cursor-pointer"
+                            >
+                                {saving ? (
+                                    <>
+                                        <SpinnerIcon className="w-4 h-4 animate-spin mr-1.5" />
+                                        <span>Salvando Simulação...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check className="w-4 h-4 mr-1.5" />
+                                        <span>{simSaveOverwrite && loadedSimInfo ? 'Atualizar Simulação' : 'Salvar Simulação'}</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE GESTÃO DE SIMULAÇÕES SALVAS */}
+            {showSavedSimulationsModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9990] flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in-50 zoom-in-95">
+                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30 shrink-0">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                                    <FolderOpen className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        Simulações de Roteiro Salvas
+                                        <span className="text-xs font-normal text-slate-500 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                                            {savedSimulationsList.length}
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Visualize no mapa, edite, exclua ou gere links de conferência
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowSavedSimulationsModal(false)}
+                                className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                            >
+                                <XCircleIcon className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20 shrink-0">
+                            <div className="relative">
+                                <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={simSearchTerm}
+                                    onChange={(e) => setSimSearchTerm(e.target.value)}
+                                    placeholder="Buscar por nome da simulação, descrição, usuário ou data..."
+                                    className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                            {loadingSavedSimulations ? (
+                                <div className="py-20 text-center text-slate-400">
+                                    <SpinnerIcon className="w-8 h-8 mx-auto mb-3 animate-spin text-indigo-600" />
+                                    <p className="text-xs font-bold">Carregando simulações salvas...</p>
+                                </div>
+                            ) : filteredSimulations.length === 0 ? (
+                                <div className="py-16 text-center text-slate-400 dark:text-slate-500">
+                                    <FolderOpen className="w-12 h-12 mx-auto mb-2 opacity-40" />
+                                    <p className="text-sm font-bold">Nenhuma simulação encontrada.</p>
+                                    <p className="text-xs mt-1">Gere um ajuste de rota e clique em "Salvar Simulação" para cadastrar.</p>
+                                </div>
+                            ) : (
+                                filteredSimulations.map((sim: any) => {
+                                    const isCurrent = loadedSimInfo?.id === sim.ID_RotaHist;
+                                    const isVendedor = sim.Periodo?.includes('[VENDEDOR]');
+                                    const isPromotor = sim.Periodo?.includes('[PROMOTOR]');
+                                    const cleanName = sim.Periodo ? sim.Periodo.replace('[VENDEDOR]', '').replace('[PROMOTOR]', '').trim() : `Simulação #${sim.ID_RotaHist}`;
+                                    const isLoadingThis = loadingSimId === sim.ID_RotaHist;
+                                    const isDeletingThis = deletingSimId === sim.ID_RotaHist;
+
+                                    return (
+                                        <div
+                                            key={sim.ID_RotaHist}
+                                            className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                                                isCurrent
+                                                    ? 'bg-indigo-50/70 dark:bg-indigo-950/30 border-indigo-300 dark:border-indigo-800 shadow-xs'
+                                                    : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600'
+                                            }`}
+                                        >
+                                            <div className="space-y-1.5 flex-1 min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    {isVendedor && (
+                                                        <span className="bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-[10px] font-black px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
+                                                            Vendedor
+                                                        </span>
+                                                    )}
+                                                    {isPromotor && (
+                                                        <span className="bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[10px] font-black px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800 uppercase tracking-wider">
+                                                            Promotor
+                                                        </span>
+                                                    )}
+                                                    {isCurrent && (
+                                                        <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-black px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 uppercase tracking-wider">
+                                                            Ativa no Mapa
+                                                        </span>
+                                                    )}
+                                                    <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                                                        {cleanName}
+                                                    </h4>
+                                                </div>
+
+                                                {sim.Descricao && (
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 italic line-clamp-2">
+                                                        "{sim.Descricao}"
+                                                    </p>
+                                                )}
+
+                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400 font-medium">
+                                                    <span>📅 {sim.DataSimulacao ? new Date(sim.DataSimulacao).toLocaleString('pt-BR') : '-'}</span>
+                                                    <span>👤 {sim.UsuarioSimulacao || 'Operador'}</span>
+                                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                                        🚗 {Math.round(Number(sim.TotalKM) || 0).toLocaleString('pt-BR')} km
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleLoadSimulation(sim.ID_RotaHist)}
+                                                    disabled={isLoadingThis}
+                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-xs transition disabled:opacity-50 cursor-pointer"
+                                                    title="Carregar roteiro completo no mapa e na grade para visualização e edição"
+                                                >
+                                                    {isLoadingThis ? (
+                                                        <SpinnerIcon className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                                                    ) : (
+                                                        <LocationMarkerIcon className="w-3.5 h-3.5 mr-1.5" />
+                                                    )}
+                                                    Abrir no Mapa / Editar
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setShareModalData({
+                                                            isOpen: true,
+                                                            simId: sim.ID_RotaHist,
+                                                            periodo: sim.Periodo,
+                                                            totalKm: Number(sim.TotalKM) || 0
+                                                        });
+                                                    }}
+                                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 font-bold p-2 rounded-xl text-xs flex items-center transition cursor-pointer"
+                                                    title="Copiar Link de Conferência para o Supervisor ou Enviar por WhatsApp"
+                                                >
+                                                    <Share2 className="w-4 h-4" />
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteSavedSimulation(sim.ID_RotaHist, sim.Periodo || `Simulação #${sim.ID_RotaHist}`)}
+                                                    disabled={isDeletingThis || sim.JaCalculado}
+                                                    className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition disabled:opacity-30 cursor-pointer"
+                                                    title={sim.JaCalculado ? "Bloqueado: já vinculado a cálculo fechado" : "Excluir simulação permanentemente"}
+                                                >
+                                                    {isDeletingThis ? (
+                                                        <SpinnerIcon className="w-4 h-4 animate-spin text-red-600" />
+                                                    ) : (
+                                                        <Trash2 className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        <div className="px-6 py-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30 text-xs text-slate-500 shrink-0">
+                            <span>Total de {filteredSimulations.length} simulações</span>
+                            <button
+                                type="button"
+                                onClick={() => setShowSavedSimulationsModal(false)}
+                                className="px-4 py-2 font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

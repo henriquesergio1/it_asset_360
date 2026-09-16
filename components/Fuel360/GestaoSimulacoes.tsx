@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { getRotaPrevistaHistory, getRotaPrevistaDetails, deleteRotaPrevista, updateRotaPrevistaDiario, getCalculoHistory, getCalculoDetails, updateCalculoDiario, getSimulacaoSugestoes, updateSugestaoStatus } from './services/apiService';
 import { RotaPrevistaSaved, RotaPrevistaItem, CalculoSaved, CalculoItem } from './types';
 import { ClipboardListIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon, SpinnerIcon, ExclamationIcon, PencilIcon, CheckCircleIcon, XCircleIcon, CalculatorIcon, LocationMarkerIcon } from './icons';
-import { Share2, MessageSquare, ExternalLink, Check, X } from 'lucide-react';
+import { Share2, MessageSquare, ExternalLink, Check, X, MapPin } from 'lucide-react';
 import { ShareSimulationModal } from './ShareSimulationModal';
 
 // --- HELPER VISUAL PARA DATA ---
@@ -476,6 +476,17 @@ export const GestaoSimulacoes: React.FC = () => {
                                                 </td>
                                                 <td className="p-5 text-right">
                                                     <div className="flex items-center justify-end gap-1">
+                                                        <button 
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); 
+                                                                window.location.href = `#/fuel360/ajuste-rota?simId=${sim.ID_RotaHist}`;
+                                                            }} 
+                                                            className="text-slate-400 hover:text-emerald-600 p-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition"
+                                                            title="Abrir no Mapa e Editar no Ajuste de Rota"
+                                                        >
+                                                            <MapPin className="w-4 h-4"/>
+                                                        </button>
+
                                                         <button 
                                                             onClick={(e) => { 
                                                                 e.stopPropagation(); 
