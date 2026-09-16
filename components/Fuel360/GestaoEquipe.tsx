@@ -3,6 +3,7 @@ import React, { useState, useContext, useMemo, useRef, useEffect } from 'react';
 import { DataContext } from './context/DataContext';
 import { Colaborador, TipoVeiculoReembolso, ImportPreviewResult, DiffItem, Grupo } from './types';
 import { batchUpdateColaboradoresAddress, getImportPreview, syncColaboradores, geocodeAddress } from './services/apiService';
+import { checkCollaboratorBaseAnomaly } from './AjusteRota';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { 
@@ -250,6 +251,23 @@ const ColaboradorModal: React.FC<{
                                 <div className="space-y-1"><label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Latitude</label><input type="number" step="0.0000001" value={formData.LatitudeBase ?? ''} onChange={e => { setFormData({...formData, LatitudeBase: parseFloat(e.target.value)}); setAddressChanged(false); }} className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-xs focus:ring-2 focus:ring-blue-600 outline-none" /></div>
                                 <div className="space-y-1"><label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Longitude</label><input type="number" step="0.0000001" value={formData.LongitudeBase ?? ''} onChange={e => { setFormData({...formData, LongitudeBase: parseFloat(e.target.value)}); setAddressChanged(false); }} className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-xs focus:ring-2 focus:ring-blue-600 outline-none" /></div>
                             </div>
+                            {(() => {
+                                const anomaly = checkCollaboratorBaseAnomaly(formData.LatitudeBase, formData.LongitudeBase);
+                                if (!anomaly.isAnomalous) return null;
+                                return (
+                                    <div className="mt-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 rounded-xl p-3 flex items-start gap-2.5 text-rose-800 dark:text-rose-200 text-xs shadow-xs animate-fade-in">
+                                        <span className="text-base shrink-0">🚨</span>
+                                        <div>
+                                            <p className="font-bold flex items-center gap-1.5">
+                                                <span>Atenção: Coordenadas da Base Suspeitas!</span>
+                                                <span className="text-[10px] bg-rose-200 dark:bg-rose-900 text-rose-800 dark:text-rose-200 px-1.5 py-0.5 rounded font-black">{anomaly.badgeText}</span>
+                                            </p>
+                                            <p className="text-[11px] mt-0.5 text-rose-700 dark:text-rose-300 font-medium">{anomaly.message}</p>
+                                            <p className="text-[10px] mt-1 opacity-75 italic">Certifique-se de que o ponto de partida esteja em terra firme e acessível por via terrestre.</p>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
 
@@ -645,6 +663,7 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
     const countWithCoords = preview.filter(p => p.latitude && p.longitude).length;
     const countWithVehicle = preview.filter(p => p.tipoVeiculo).length;
     const countExisting = preview.filter(p => p.hasExisting).length;
+    const countAnomalous = preview.filter(p => checkCollaboratorBaseAnomaly(p.latitude, p.longitude).isAnomalous).length;
 
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[150] p-4">
@@ -677,6 +696,15 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                                     />
                                     <span>Sobrescrever endereços/coordenadas existentes</span>
                                 </label>
+                            </div>
+                        )}
+
+                        {countAnomalous > 0 && (
+                            <div className="bg-rose-50 dark:bg-rose-950/40 p-4 rounded-xl border border-rose-200 dark:border-rose-800/60 animate-fade-in">
+                                <p className="text-rose-800 dark:text-rose-300 text-xs font-bold flex items-center">
+                                    <span className="mr-2 text-base">🚨</span>
+                                    <span><b>{countAnomalous}</b> colaborador(es) na planilha possuem coordenadas anômalas (mar ou fora dos limites terrestres).</span>
+                                </p>
                             </div>
                         )}
                     </div>
@@ -719,7 +747,8 @@ export const GestaoEquipe: React.FC = () => {
             // Lógica do Filtro de Pendência
             const hasNoAddress = !c.EnderecoBase || c.EnderecoBase.trim().length <= 3;
             const isFlagged = c.EnderecoPendente === true || Number(c.EnderecoPendente) === 1;
-            const matchesPending = showOnlyPendingAddress ? (hasNoAddress || isFlagged) : true;
+            const baseAnom = checkCollaboratorBaseAnomaly(c.LatitudeBase, c.LongitudeBase);
+            const matchesPending = showOnlyPendingAddress ? (hasNoAddress || isFlagged || baseAnom.isAnomalous) : true;
             
             return matchesSearch && matchesGroup && matchesActive && matchesPending;
         }).sort((a, b) => {
@@ -857,6 +886,7 @@ export const GestaoEquipe: React.FC = () => {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {filteredData.map(c => {
                                 const isPendingAddr = (c.EnderecoPendente === true || Number(c.EnderecoPendente) === 1) || (!c.EnderecoBase || c.EnderecoBase.trim().length <= 3);
+                                const baseAnomaly = checkCollaboratorBaseAnomaly(c.LatitudeBase, c.LongitudeBase);
                                 return (
                                     <tr key={c.ID_Colaborador} className={`border-b border-slate-200 dark:border-slate-800 cursor-pointer transition-colors ${!c.Ativo ? 'opacity-60 bg-slate-50 dark:bg-slate-800/60' : ''}`}>
                                         <td className="p-4"><input type="checkbox" checked={selectedIds.has(c.ID_Colaborador)} onChange={() => handleSelectOne(c.ID_Colaborador)} className="rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500"/></td>
@@ -872,12 +902,20 @@ export const GestaoEquipe: React.FC = () => {
                                                 <div>
                                                     <div className="font-bold text-slate-800 dark:text-white flex items-center flex-wrap gap-2">
                                                         {c.Nome}
-                                                        {isPendingAddr && c.Ativo && (
+                                                        {baseAnomaly.isAnomalous && c.Ativo && (
+                                                            <span 
+                                                                className="bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 text-[9px] font-black px-2 py-0.5 rounded-full flex items-center shadow-2xs animate-pulse" 
+                                                                title={`🚨 ${baseAnomaly.message}`}
+                                                            >
+                                                                {baseAnomaly.badgeText}
+                                                            </span>
+                                                        )}
+                                                        {isPendingAddr && c.Ativo && !baseAnomaly.isAnomalous && (
                                                             <span className="bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-300 text-[9px] font-black px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800 flex items-center animate-pulse" title="Endereço de partida precisa ser cadastrado ou revisto">
                                                                 <ExclamationIcon className="w-2.5 h-2.5 mr-1"/> REVER ENDEREÇO
                                                             </span>
                                                         )}
-                                                        {c.EnderecoBase && !isPendingAddr && <span className="ml-1" title="Ponto de partida cadastrado"><LocationMarkerIcon className="w-3 h-3 text-emerald-500" /></span>}
+                                                        {c.EnderecoBase && !isPendingAddr && !baseAnomaly.isAnomalous && <span className="ml-1" title="Ponto de partida cadastrado"><LocationMarkerIcon className="w-3 h-3 text-emerald-500" /></span>}
                                                     </div>
                                                     <div className="text-[11px] text-slate-400 dark:text-slate-400">Setor: {c.CodigoSetor} • Pulsus: {c.ID_Pulsus}</div>
                                                 </div>
@@ -897,7 +935,7 @@ export const GestaoEquipe: React.FC = () => {
                                         </td>
                                         <td className="p-4 text-center font-bold text-xs">{c.Ativo ? <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">Ativo</span> : <span className="text-red-400 dark:text-red-400 font-extrabold">Inativo</span>}</td>
                                         <td className="p-4 text-right space-x-2">
-                                            <button onClick={() => handleEdit(c)} className={`p-1.5 rounded-lg transition ${isPendingAddr && c.Ativo ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/60' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 shadow-sm'}`} title="Editar"><PencilIcon className="w-4 h-4"/></button>
+                                            <button onClick={() => handleEdit(c)} className={`p-1.5 rounded-lg transition ${baseAnomaly.isAnomalous && c.Ativo ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800' : (isPendingAddr && c.Ativo ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/60' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 shadow-sm')}`} title="Editar"><PencilIcon className="w-4 h-4"/></button>
                                         </td>
                                     </tr>
                                 );

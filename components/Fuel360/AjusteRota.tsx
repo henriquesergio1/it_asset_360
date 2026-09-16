@@ -54,13 +54,22 @@ function createBaseIcon(color: string) {
     });
 }
 
-function createHomeIcon(promoterColor?: string) {
+function createHomeIcon(promoterColor?: string, isAnomalous?: boolean, anomalyBadge?: string) {
+    const mainGradient = isAnomalous 
+        ? 'background: linear-gradient(135deg, #ef4444 0%, #7f1d1d 100%);' 
+        : 'background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);';
+    const borderGlow = isAnomalous 
+        ? 'box-shadow: 0 0 0 3px #fee2e2, 0 0 0 5px #ef4444, 0 0 16px rgba(239, 68, 68, 0.85); animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;' 
+        : `box-shadow: 0 0 0 2px ${promoterColor || '#ef4444'};`;
+    const labelBg = isAnomalous ? 'background: #991b1b; color: #fee2e2;' : 'background: #0f172a; color: #ffffff;';
+    const labelText = isAnomalous ? (anomalyBadge || '⚠️ BASE ANÔMALA') : '🏠 BASE';
+
     return L.divIcon({
         className: 'custom-home-icon',
         html: `
             <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));">
                 <div style="
-                    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+                    ${mainGradient}
                     width: 36px;
                     height: 36px;
                     border-radius: 10px;
@@ -68,15 +77,14 @@ function createHomeIcon(promoterColor?: string) {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    box-shadow: 0 0 0 2px ${promoterColor || '#ef4444'};
+                    ${borderGlow}
                 ">
                     <svg style="width: 20px; height: 20px; fill: white;" viewBox="0 0 24 24">
                         <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                     </svg>
                 </div>
                 <div style="
-                    background: #0f172a;
-                    color: #ffffff;
+                    ${labelBg}
                     font-size: 8.5px;
                     font-weight: 900;
                     padding: 1.5px 6px;
@@ -87,7 +95,7 @@ function createHomeIcon(promoterColor?: string) {
                     letter-spacing: 0.5px;
                     text-transform: uppercase;
                 ">
-                    🏠 BASE
+                    ${labelText}
                 </div>
             </div>
         `,
@@ -282,6 +290,159 @@ const calcDist = (lat1: number, lon1: number, lat2: number, lon2: number): numbe
               Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
+};
+
+// Interface de resultado da verificação de anomalia de base
+export interface BaseAnomalyResult {
+    isAnomalous: boolean;
+    type?: 'OCEANO' | 'DISTANTE_CARTEIRA' | 'FORA_BRASIL';
+    message: string;
+    distKm?: number;
+    badgeText: string;
+}
+
+// Detecção de área oceânica do Atlântico na costa brasileira
+export const isPointInAtlanticOcean = (lat: number, lng: number): boolean => {
+    // Limites aproximados do Brasil continental e costeiro
+    if (lat < -35 || lat > 6 || lng < -74 || lng > -30) return false;
+
+    // Tabela de aproximação costeira (latitude -> longitude máxima de terra firme na costa leste)
+    // Coordenadas com longitude > limite (mais a leste) estão em alto mar / oceano aberto
+    const coastLimits: Array<[number, number]> = [
+        [5.0, -51.0],
+        [3.0, -50.2],
+        [1.0, -49.8],
+        [0.0, -49.7],
+        [-1.5, -45.0],
+        [-2.5, -44.0],
+        [-3.0, -40.5],
+        [-3.7, -38.4],
+        [-4.9, -36.5],
+        [-5.5, -35.2], // Cabo de São Roque
+        [-7.1, -34.75], // Ponta do Seixas (extremo oriental)
+        [-8.1, -34.85],
+        [-9.6, -35.6],
+        [-13.0, -38.4], // Salvador
+        [-15.0, -38.9],
+        [-17.9, -39.1], // Abrolhos / Caravelas
+        [-20.3, -40.2], // Vitória
+        [-21.7, -40.9], // Campos / Cabo de São Tomé
+        [-22.9, -41.9], // Cabo Frio
+        [-23.0, -42.8], // Maricá
+        [-23.1, -43.6], // Restinga da Marambaia
+        [-23.3, -44.4], // Ilha Grande
+        [-23.4, -44.7], // Paraty
+        [-23.6, -45.0], // Ubatuba
+        [-23.75, -45.26], // Extremo Nordeste de Ilhabela
+        [-23.95, -45.27], // Extremo Sudeste de Ilhabela (Ponta do Boi)
+        [-24.0, -46.1], // Guarujá
+        [-24.1, -46.5], // Santos / Praia Grande
+        [-24.4, -46.9], // Peruíbe
+        [-25.0, -47.7], // Ilha Comprida / Cananéia
+        [-25.6, -48.3], // Ilha do Mel / Paranaguá
+        [-26.2, -48.5], // São Francisco do Sul
+        [-27.6, -48.35], // Florianópolis (Ponta da Galheta)
+        [-28.5, -48.7], // Laguna
+        [-30.0, -50.1], // Tramandaí
+        [-32.0, -52.0], // Rio Grande
+        [-33.75, -53.3] // Chuí
+    ];
+
+    // Interpolação linear do limite costeiro para a latitude dada
+    for (let i = 0; i < coastLimits.length - 1; i++) {
+        const [lat1, lng1] = coastLimits[i];
+        const [lat2, lng2] = coastLimits[i + 1];
+        if (lat <= lat1 && lat >= lat2) {
+            const ratio = (lat - lat1) / (lat2 - lat1);
+            const maxLandLng = lng1 + ratio * (lng2 - lng1);
+            if (lng > maxLandLng + 0.005) { // tolerância de ~500m
+                return true; // Mais a leste que a terra firme = Mar aberto
+            }
+            break;
+        }
+    }
+
+    // Detecção de canal marítimo no Litoral Norte de SP
+    // Canal de São Sebastião (entre o continente e a Ilha de Ilhabela)
+    // Água do canal fica entre Longitude -45.395 e -45.378 nas latitudes -23.77 a -23.86
+    if (lat <= -23.77 && lat >= -23.86 && lng >= -45.395 && lng <= -45.378) {
+        return true;
+    }
+
+    return false;
+};
+
+// Verificador automático de anomalia de base do colaborador
+export const checkCollaboratorBaseAnomaly = (
+    baseLat?: number,
+    baseLng?: number,
+    sellerVisits?: VisitaPrevista[]
+): BaseAnomalyResult => {
+    if (!baseLat || !baseLng || isNaN(baseLat) || isNaN(baseLng)) {
+        return { isAnomalous: false, badgeText: '', message: '' };
+    }
+
+    // 1. Coordenadas fora do Brasil ou com sinais invertidos
+    if (baseLat > 5.5 || baseLat < -34.0 || baseLng > -34.5 || baseLng < -74.0) {
+        if (baseLng > -34.5 && baseLng < 0 && baseLat < 6 && baseLat > -35) {
+            return {
+                isAnomalous: true,
+                type: 'OCEANO',
+                badgeText: '🌊 Base no Mar',
+                message: 'Coordenadas situadas em alto mar no Oceano Atlântico (fora do litoral).'
+            };
+        }
+        return {
+            isAnomalous: true,
+            type: 'FORA_BRASIL',
+            badgeText: '⚠️ GPS Inválido',
+            message: 'Coordenadas fora dos limites do Brasil ou com sinais invertidos.'
+        };
+    }
+
+    // 2. Coordenadas em área marítima / mar aberto / canal
+    if (isPointInAtlanticOcean(baseLat, baseLng)) {
+        return {
+            isAnomalous: true,
+            type: 'OCEANO',
+            badgeText: '🌊 Base no Mar',
+            message: 'Coordenadas identificadas em área marítima / mar aberto.'
+        };
+    }
+
+    // 3. Distância excessiva da carteira de clientes (> 100 km)
+    if (sellerVisits && sellerVisits.length > 0) {
+        const validClients = sellerVisits.filter(v => v.Lat && v.Long && !isNaN(v.Lat) && !isNaN(v.Long));
+        if (validClients.length > 0) {
+            let minDist = Infinity;
+            let sumLat = 0;
+            let sumLng = 0;
+
+            validClients.forEach(v => {
+                sumLat += v.Lat;
+                sumLng += v.Long;
+                const d = calcDist(baseLat, baseLng, v.Lat, v.Long);
+                if (d < minDist) minDist = d;
+            });
+
+            const centroidLat = sumLat / validClients.length;
+            const centroidLng = sumLng / validClients.length;
+            const centroidDist = calcDist(baseLat, baseLng, centroidLat, centroidLng);
+
+            if (minDist > 100 || centroidDist > 100) {
+                const roundedDist = Math.round(minDist * 10) / 10;
+                return {
+                    isAnomalous: true,
+                    type: 'DISTANTE_CARTEIRA',
+                    distKm: roundedDist,
+                    badgeText: `⚠️ Base >${roundedDist}km`,
+                    message: `Base a ~${roundedDist} km do cliente mais próximo da carteira (limite de alerta: 100 km).`
+                };
+            }
+        }
+    }
+
+    return { isAnomalous: false, badgeText: '', message: '' };
 };
 
 // Helper de detecção de anomalia de coordenadas (ex: outlier a mais de 80km da base/centroide)
@@ -6646,13 +6807,14 @@ export const AjusteRota: React.FC = () => {
                                         const count = sellerVisits.length;
                                         const color = promoterColorMap.get(String(sellerId)) || '#64748b';
                                         const qStats = getSellerQuinzenaStats(sellerId, (scopeMode === 'vendedor' && selectedSeller ? adjustedRoutes : scopedAdjustedRoutes));
+                                        const baseAnomaly = checkCollaboratorBaseAnomaly(colab?.LatitudeBase, colab?.LongitudeBase, sellerVisits);
                                         const displayName = formatSellerDisplayName(sellerId, colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`));
                                         const isItemActive = selectedPromoter === String(sellerId) || (scopeMode === 'vendedor' && selectedSeller === String(sellerId));
 
                                         return (
                                             <div 
                                                 key={sellerId}
-                                                className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between gap-1.5 ${isItemActive ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : (qStats.isImbalanced ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200 hover:border-amber-400' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200')}`}
+                                                className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between gap-1.5 ${isItemActive ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : (baseAnomaly.isAnomalous ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/40 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200 hover:border-rose-400' : (qStats.isImbalanced ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200 hover:border-amber-400' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200'))}`}
                                                 onClick={() => {
                                                     setSelectedPromoter(String(sellerId));
                                                     if (scopeMode === 'vendedor') {
@@ -6666,7 +6828,15 @@ export const AjusteRota: React.FC = () => {
                                                 </div>
 
                                                 <div className="flex items-center space-x-1 shrink-0">
-                                                    {qStats.isImbalanced && (
+                                                    {baseAnomaly.isAnomalous && (
+                                                        <span 
+                                                            className="bg-rose-100 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-700 px-1.5 py-0.5 rounded text-[9px] font-black flex items-center shadow-xs"
+                                                            title={`🚨 ${baseAnomaly.message}`}
+                                                        >
+                                                            {baseAnomaly.badgeText}
+                                                        </span>
+                                                    )}
+                                                    {qStats.isImbalanced && !baseAnomaly.isAnomalous && (
                                                         <span 
                                                             className="bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-1.5 py-0.5 rounded text-[9px] font-black flex items-center shadow-xs"
                                                             title={`⚠️ Desbalanceamento Quinzenal: ${qStats.variationPct}% de variação\n• Semanas 1 e 3: ${qStats.v13} atendimentos\n• Semanas 2 e 4: ${qStats.v24} atendimentos\nDica: Alterne clientes quinzenais na Grade de Ajuste Fino para equilibrar.`}
@@ -6831,24 +7001,41 @@ export const AjusteRota: React.FC = () => {
                                     const colab = getColabBySectorOrName(vId, vVisits[0]?.Nome_Vendedor);
                                     if(colab && colab.LatitudeBase && colab.LongitudeBase) {
                                         const pColor = promoterColorMap.get(String(vId)) || '#ef4444';
+                                        const baseAnomaly = checkCollaboratorBaseAnomaly(colab.LatitudeBase, colab.LongitudeBase, vVisits);
                                         return (
                                             <Marker 
                                                 key={`base-${vId}`} 
                                                 position={[colab.LatitudeBase, colab.LongitudeBase]} 
-                                                icon={createHomeIcon(pColor)}
+                                                icon={createHomeIcon(pColor, baseAnomaly.isAnomalous, baseAnomaly.badgeText)}
                                                 zIndexOffset={1000}
                                             >
                                                 <Popup>
-                                                    <div className="text-xs p-1 space-y-1 font-sans">
+                                                    <div className="text-xs p-1 space-y-1 font-sans min-w-[200px]">
                                                         <div className="flex items-center space-x-1.5 text-red-600 dark:text-red-400 font-black">
                                                             <span>🏠</span>
                                                             <span className="uppercase tracking-wider text-[10px]">Base / Residência</span>
+                                                            {baseAnomaly.isAnomalous && (
+                                                                <span className="ml-auto bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 text-[9px] font-black px-1.5 py-0.5 rounded shadow-2xs">
+                                                                    {baseAnomaly.badgeText}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <p className="text-slate-900 dark:text-slate-100 font-bold text-sm">{formatSellerDisplayName(colab.CodigoSetor || vId, colab.Nome)}</p>
                                                         {colab.EnderecoBase && (
                                                             <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{colab.EnderecoBase}</p>
                                                         )}
-                                                        <p className="text-[9px] text-slate-400 dark:text-slate-500 italic">Ponto de partida e retorno diário do colaborador</p>
+                                                        {baseAnomaly.isAnomalous ? (
+                                                            <div className="bg-rose-50 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-700 rounded-lg p-2 mt-1.5 text-rose-800 dark:text-rose-200">
+                                                                <div className="flex items-center gap-1 font-black text-[11px] text-rose-700 dark:text-rose-300">
+                                                                    <span>🚨</span>
+                                                                    <span>ALERTA DE COORDENADA DA BASE</span>
+                                                                </div>
+                                                                <p className="text-[10px] mt-0.5 font-bold">{baseAnomaly.message}</p>
+                                                                <p className="text-[9px] mt-1 opacity-80 italic">Ponto de partida incorreto distorce a quilometragem e o tempo em trânsito.</p>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-[9px] text-slate-400 dark:text-slate-500 italic">Ponto de partida e retorno diário do colaborador</p>
+                                                        )}
                                                     </div>
                                                 </Popup>
                                             </Marker>
