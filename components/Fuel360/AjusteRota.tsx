@@ -1532,20 +1532,37 @@ export const AjusteRota: React.FC = () => {
             return defaultMins;
         }
         const canalNorm = client.Canal_Remuneracao.trim().toUpperCase();
+
+        // 1. Coincidência Exata
         if (channelServiceTimes[canalNorm] !== undefined) {
             if (channelActiveStatus[canalNorm] === false) {
                 return defaultMins;
             }
             return Number(channelServiceTimes[canalNorm]) || defaultMins;
         }
+
+        // 2. Coincidência por Palavra-Chave (canal contém a chave, com chave >= 4 letras para evitar siglas ambíguas)
         for (const [key, val] of Object.entries(channelServiceTimes)) {
-            if (canalNorm.includes(key) || key.includes(canalNorm)) {
+            if (key === 'PADRAO') continue;
+            if (key.length >= 4 && canalNorm.includes(key)) {
                 if (channelActiveStatus[key] === false) {
                     return defaultMins;
                 }
                 return Number(val) || defaultMins;
             }
         }
+
+        // 3. Coincidência Reversa (chave contém o canal, apenas se canal >= 4 letras)
+        for (const [key, val] of Object.entries(channelServiceTimes)) {
+            if (key === 'PADRAO') continue;
+            if (canalNorm.length >= 4 && key.includes(canalNorm)) {
+                if (channelActiveStatus[key] === false) {
+                    return defaultMins;
+                }
+                return Number(val) || defaultMins;
+            }
+        }
+
         return defaultMins;
     }, [channelServiceTimes, channelActiveStatus, optServiceTimePerClient]);
 
@@ -5530,14 +5547,30 @@ export const AjusteRota: React.FC = () => {
         const baseAddress = colab?.EnderecoBase || ((colab as any)?.Endereco ? `${(colab as any).Endereco}, ${(colab as any).Bairro || ''} - ${(colab as any).Cidade || ''}` : 'Base / Residência do Colaborador');
 
         let totalKm = 0;
+        let totalTravelMinutes = 0;
+        let totalServiceMinutes = 0;
         let prevLat = baseLat;
         let prevLng = baseLng;
+
+        const calcLegMinutes = (roadKm: number) => {
+            if (roadKm <= 0) return 0;
+            let speed = 30; // km/h
+            if (roadKm < 2.5) speed = 22;
+            else if (roadKm >= 15) speed = 55;
+            return Math.max(1, Math.round((roadKm / speed) * 60));
+        };
 
         const stopsWithKm = dayVisits.map((v, idx) => {
             const curLat = v.Lat || 0;
             const curLng = v.Long || 0;
             const legKm = (prevLat && prevLng && curLat && curLng) ? Math.round(calcDist(prevLat, prevLng, curLat, curLng) * 1.18 * 10) / 10 : 0;
+            const legTravelTime = calcLegMinutes(legKm);
+            const serviceTime = getClientServiceTime(v);
+
             totalKm += legKm;
+            totalTravelMinutes += legTravelTime;
+            totalServiceMinutes += serviceTime;
+
             if (curLat && curLng) {
                 prevLat = curLat;
                 prevLng = curLng;
@@ -5546,14 +5579,20 @@ export const AjusteRota: React.FC = () => {
                 ...v,
                 stopOrder: idx + 1,
                 legKm,
-                cumKm: Math.round(totalKm * 10) / 10
+                legTravelTime,
+                serviceTime,
+                legTotalTime: legTravelTime + serviceTime,
+                cumKm: Math.round(totalKm * 10) / 10,
+                cumMinutes: Math.round(totalTravelMinutes + totalServiceMinutes)
             };
         });
 
         const returnLegKm = (prevLat && prevLng && baseLat && baseLng && dayVisits.length > 0)
             ? Math.round(calcDist(prevLat, prevLng, baseLat, baseLng) * 1.18 * 10) / 10
             : 0;
+        const returnTravelTime = calcLegMinutes(returnLegKm);
         totalKm += returnLegKm;
+        totalTravelMinutes += returnTravelTime;
 
         return {
             sellerId: activeSellerId,
@@ -5567,9 +5606,13 @@ export const AjusteRota: React.FC = () => {
             stops: stopsWithKm,
             totalStops: stopsWithKm.length,
             totalKm: Math.round(totalKm * 10) / 10,
-            returnLegKm
+            returnLegKm,
+            returnTravelTime,
+            totalTravelMinutes: Math.round(totalTravelMinutes),
+            totalServiceMinutes: Math.round(totalServiceMinutes),
+            totalDurationMinutes: Math.round(totalTravelMinutes + totalServiceMinutes)
         };
-    }, [showItineraryModal, scopedAdjustedRoutes, itinerarySeller, itineraryDay, itineraryQuinzena, availableSellers, colaboradores]);
+    }, [showItineraryModal, scopedAdjustedRoutes, itinerarySeller, itineraryDay, itineraryQuinzena, availableSellers, colaboradores, getClientServiceTime]);
 
     // Disparo para o Google Maps
     const handleOpenGoogleMaps = () => {
@@ -5612,16 +5655,17 @@ export const AjusteRota: React.FC = () => {
         let text = `🚗 *ROTEIRO DE VISITAS - ${sellerName.toUpperCase()}*\n`;
         text += `📅 *${day}* (${quinzena === '1_3' ? 'Semanas 1 e 3' : 'Semanas 2 e 4'})\n`;
         text += `📍 *${totalStops} Paradas* | Estimativa Total: *${totalKm} KM*\n`;
+        text += `⏱️ Trânsito: *${formatDuration(currentItineraryData.totalTravelMinutes)}* | Atendimento: *${formatDuration(currentItineraryData.totalServiceMinutes)}* | Total: *${formatDuration(currentItineraryData.totalDurationMinutes)}*\n`;
         text += `----------------------------------------\n`;
         text += `🏠 *Partida:* ${baseAddress}\n\n`;
 
         stops.forEach(s => {
             text += `*#${s.stopOrder}* [${s.Cod_Cliente}] ${s.Razao_Social}\n`;
             text += `   📍 ${s.Endereco}\n`;
-            text += `   📏 +${s.legKm} KM (Acumulado: ${s.cumKm} KM)\n\n`;
+            text += `   🚗 Trânsito: +${s.legKm} KM (~${s.legTravelTime} min) | 🏢 Atendimento: ${s.serviceTime} min\n\n`;
         });
 
-        text += `🏁 *Retorno:* ${baseAddress} (+${returnLegKm} KM)\n`;
+        text += `🏁 *Retorno:* ${baseAddress} (+${returnLegKm} KM ~${currentItineraryData.returnTravelTime} min)\n`;
         text += `----------------------------------------\n`;
         text += `Gerado automaticamente pelo Fuel360`;
 
@@ -5704,6 +5748,9 @@ export const AjusteRota: React.FC = () => {
                             {sortField === 'Periodicidade' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
                         </span>
                     </div>
+                </th>
+                <th className="p-3 text-center bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200" title="Tempo estimado de permanência no PDV conforme canal de remuneração">
+                    Atendimento
                 </th>
                 <th className="p-3 text-center bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">Ações</th>
             </tr>
@@ -5970,6 +6017,36 @@ export const AjusteRota: React.FC = () => {
                             <option value="2 4">Quinzenal (2, 4)</option>
                         </select>
                     )}
+                </td>
+                <td className="p-3 text-center whitespace-nowrap">
+                    {(() => {
+                        const srvMins = getClientServiceTime(v);
+                        const canalName = v.Canal_Remuneracao ? v.Canal_Remuneracao.trim().toUpperCase() : '';
+                        return (
+                            <div className="inline-flex flex-col items-center">
+                                <span 
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border border-amber-200/80 dark:border-amber-800 shadow-2xs cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/80 transition"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowChannelTimesModal(true);
+                                    }}
+                                    title={`Tempo de Permanência: ${srvMins} minutos\nCanal: ${canalName || 'PADRÃO'}\nClique para abrir configuração de tempos de canais`}
+                                >
+                                    <span>🏢</span>
+                                    <span>{srvMins} min</span>
+                                </span>
+                                {canalName ? (
+                                    <span className="text-[8.5px] font-medium text-slate-400 dark:text-slate-500 truncate max-w-[85px] mt-0.5" title={`Canal de Remuneração: ${canalName}`}>
+                                        {canalName}
+                                    </span>
+                                ) : (
+                                    <span className="text-[8px] font-normal text-slate-400 dark:text-slate-500 italic mt-0.5">
+                                        Padrão
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </td>
                 <td className="p-3 text-center">
                     <div className="flex items-center justify-center space-x-1.5">
@@ -7944,8 +8021,12 @@ export const AjusteRota: React.FC = () => {
 
                                                                 {/* Tempo de Atendimento */}
                                                                 <div 
-                                                                    className="flex items-center gap-1 text-slate-600 dark:text-slate-400 whitespace-nowrap bg-slate-100/70 dark:bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60 shadow-2xs" 
-                                                                    title={`🏢 Tempo presencial de atendimento em loja (conforme canais de remuneração):\n• Semanas 1 e 3: ${formatDuration(dayMetrics.serviceTime13)}\n• Semanas 2 e 4: ${formatDuration(dayMetrics.serviceTime24)}`}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setShowChannelTimesModal(true);
+                                                                    }}
+                                                                    className="flex items-center gap-1 text-slate-600 dark:text-slate-400 whitespace-nowrap bg-slate-100/70 dark:bg-slate-800/60 hover:bg-amber-100/80 dark:hover:bg-amber-950/60 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60 hover:border-amber-300 dark:hover:border-amber-700 shadow-2xs cursor-pointer transition" 
+                                                                    title={`🏢 Tempo presencial de atendimento em loja (conforme canais de remuneração):\n• Semanas 1 e 3: ${formatDuration(dayMetrics.serviceTime13)}\n• Semanas 2 e 4: ${formatDuration(dayMetrics.serviceTime24)}\nClique para configurar os tempos por canal no SQL Server`}
                                                                 >
                                                                     <span className="text-[12px]">🏢</span>
                                                                     <span className="text-slate-400 dark:text-slate-500 font-normal">Atend:</span>
@@ -8131,7 +8212,7 @@ export const AjusteRota: React.FC = () => {
                                         <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
                                             {sortedRoutes.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={7} className="p-8 text-center text-slate-400 dark:text-slate-500">
+                                                    <td colSpan={8} className="p-8 text-center text-slate-400 dark:text-slate-500">
                                                         <p className="font-bold text-xs">Nenhum PDV encontrado para os filtros de dia da semana ou quinzena selecionados.</p>
                                                         <button
                                                             type="button"
@@ -8681,13 +8762,22 @@ export const AjusteRota: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Resumo de KM e Paradas */}
-                            <div className="flex items-center space-x-2">
-                                <span className="text-xs font-bold text-slate-500">
-                                    {currentItineraryData.totalStops} clientes no roteiro
+                            {/* Resumo de KM, Percurso, Atendimento e Total */}
+                            <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 text-xs">
+                                <span className="font-bold text-slate-500 dark:text-slate-400">
+                                    {currentItineraryData.totalStops} PDVs
                                 </span>
-                                <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-black px-2.5 py-0.5 rounded-full text-xs">
-                                    ~{currentItineraryData.totalKm} KM Total
+                                <span className="bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-black px-2.5 py-0.5 rounded-full text-xs shadow-2xs">
+                                    🛣️ ~{currentItineraryData.totalKm} KM
+                                </span>
+                                <span className="bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-sky-300 font-black px-2.5 py-0.5 rounded-full text-xs shadow-2xs" title="Tempo total estimado em trânsito viário (Base -> PDVs -> Retorno)">
+                                    🚗 {formatDuration(currentItineraryData.totalTravelMinutes)} percurso
+                                </span>
+                                <span className="bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 font-black px-2.5 py-0.5 rounded-full text-xs shadow-2xs" title="Tempo total estimado de permanência nos PDVs">
+                                    🏢 {formatDuration(currentItineraryData.totalServiceMinutes)} atend.
+                                </span>
+                                <span className="bg-indigo-100 dark:bg-indigo-950/80 text-indigo-900 dark:text-indigo-200 font-black px-2.5 py-0.5 rounded-full text-xs border border-indigo-200 dark:border-indigo-800 shadow-2xs" title="Jornada diária total prevista (Trânsito + Atendimentos)">
+                                    ⏱️ {formatDuration(currentItineraryData.totalDurationMinutes)} total
                                 </span>
                             </div>
                         </div>
@@ -8747,8 +8837,8 @@ export const AjusteRota: React.FC = () => {
                                                         })()}
                                                     </div>
                                                     <div className="flex items-center space-x-1.5 shrink-0">
-                                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                                                            +{stop.legKm} KM
+                                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400" title="Distância e tempo estimado em trânsito desde o ponto anterior">
+                                                            +{stop.legKm} KM (~{stop.legTravelTime} min)
                                                         </span>
                                                         <button
                                                             onClick={() => handleOpenWaze(stop.Lat, stop.Long)}
@@ -8765,6 +8855,24 @@ export const AjusteRota: React.FC = () => {
                                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                                                     {stop.Endereco}
                                                 </p>
+                                                {/* Detalhamento de Percurso e Atendimento */}
+                                                <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-2 text-[10px]">
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-sky-300 font-bold px-2 py-0.5 rounded border border-blue-200/80 dark:border-blue-800" title="Tempo estimado em trânsito viário até este cliente">
+                                                            <span>🚗</span>
+                                                            <span>Deslocamento: <b>~{stop.legTravelTime} min</b> ({stop.legKm} km)</span>
+                                                        </span>
+                                                        <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold px-2 py-0.5 rounded border border-amber-200/80 dark:border-amber-800" title={`Permanência estimada no PDV conforme canal de remuneração (${stop.Canal_Remuneracao || 'PADRÃO'})`}>
+                                                            <span>🏢</span>
+                                                            <span>Atendimento: <b>{stop.serviceTime} min</b></span>
+                                                            {stop.Canal_Remuneracao && <span className="opacity-75 font-normal">({stop.Canal_Remuneracao})</span>}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 ml-auto text-slate-500 dark:text-slate-400 font-bold">
+                                                        <span className="text-slate-400 dark:text-slate-500 font-normal">Subtotal Trecho:</span>
+                                                        <span className="text-indigo-600 dark:text-indigo-400 font-black">{stop.legTravelTime + stop.serviceTime} min</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -8780,7 +8888,7 @@ export const AjusteRota: React.FC = () => {
                                                     Retorno à Origem
                                                 </span>
                                                 <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
-                                                    +{currentItineraryData.returnLegKm} KM (Total: {currentItineraryData.totalKm} KM)
+                                                    +{currentItineraryData.returnLegKm} KM (~{currentItineraryData.returnTravelTime} min) • Total: {currentItineraryData.totalKm} KM
                                                 </span>
                                             </div>
                                             <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5">
@@ -8789,6 +8897,12 @@ export const AjusteRota: React.FC = () => {
                                             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                                                 {currentItineraryData.baseAddress}
                                             </p>
+                                            <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400">
+                                                <span>🏁 Encerramento da jornada diária</span>
+                                                <span className="font-bold">
+                                                    Deslocamento final: ~{currentItineraryData.returnTravelTime} min viário
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
