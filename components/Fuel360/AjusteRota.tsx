@@ -1947,6 +1947,8 @@ export const AjusteRota: React.FC = () => {
         durationMin?: number;
     }[]>([]);
     const [selectedPromoter, setSelectedPromoter] = useState<string>('ALL');
+    const [selectedTeamSellers, setSelectedTeamSellers] = useState<Set<string>>(new Set());
+    const [showTeamSellerDropdown, setShowTeamSellerDropdown] = useState(false);
 
     // Escopo de Roteirização: 'geral' (todos), 'equipe' (supervisor) ou 'vendedor' (individual)
     const [scopeMode, setScopeMode] = useState<'geral' | 'equipe' | 'vendedor'>('geral');
@@ -2237,13 +2239,64 @@ export const AjusteRota: React.FC = () => {
     const isSingleSellerView = useMemo(() => {
         if (scopeMode === 'vendedor' && selectedSeller) return true;
         if (selectedPromoter !== 'ALL') return true;
+        if (selectedTeamSellers.size === 1) return true;
         const uniqueSellersInScope = new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend));
         return uniqueSellersInScope.size === 1;
-    }, [scopeMode, selectedSeller, selectedPromoter, scopedAdjustedRoutes]);
+    }, [scopeMode, selectedSeller, selectedPromoter, selectedTeamSellers, scopedAdjustedRoutes]);
 
-    // Rotas ajustadas com os filtros interativos aplicados (dias da semana e quinzenas)
+    // Mapeamento de cores dos colaboradores
+    const promoterColorMap = useMemo(() => {
+        const map = new Map<string, string>();
+        const uniqueIds = Array.from(new Set(originalRoutes.map(v => String(v.Cod_Vend))));
+        uniqueIds.forEach((id, idx) => {
+            map.set(id, PROMOTER_COLORS[idx % PROMOTER_COLORS.length]);
+        });
+        return map;
+    }, [originalRoutes]);
+
+    // Lista de vendedores pertencentes ao escopo atual para o filtro multi-select no Ajuste Fino
+    const availableTeamSellers = useMemo(() => {
+        const sellerIds = Array.from(new Set(scopedAdjustedRoutes.map(r => String(r.Cod_Vend)))).filter(Boolean);
+        return sellerIds.map(sellerId => {
+            const sellerVisits = scopedAdjustedRoutes.filter(v => String(v.Cod_Vend) === sellerId);
+            const colab = getColabBySectorOrName(Number(sellerId), sellerVisits[0]?.Nome_Vendedor);
+            const displayName = formatSellerDisplayName(Number(sellerId), colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`));
+            const color = promoterColorMap.get(String(sellerId)) || '#64748b';
+            return {
+                id: sellerId,
+                name: displayName,
+                color,
+                count: sellerVisits.length
+            };
+        }).sort((a, b) => a.name.localeCompare(b.name));
+    }, [scopedAdjustedRoutes, getColabBySectorOrName, formatSellerDisplayName, promoterColorMap]);
+
+    const handleToggleTeamSeller = (sellerId: string) => {
+        setSelectedTeamSellers(prev => {
+            const next = new Set(prev);
+            if (next.has(sellerId)) {
+                next.delete(sellerId);
+            } else {
+                next.add(sellerId);
+            }
+            return next;
+        });
+    };
+
+    const handleSelectOnlySeller = (sellerId: string) => {
+        setSelectedTeamSellers(new Set([sellerId]));
+    };
+
+    const handleSelectAllTeamSellers = () => {
+        setSelectedTeamSellers(new Set());
+    };
+
+    // Rotas ajustadas com os filtros interativos aplicados (vendedores da equipe, dias da semana e quinzenas)
     const filteredRoutes = useMemo(() => {
         return scopedAdjustedRoutes.filter(v => {
+            if (selectedTeamSellers.size > 0 && !selectedTeamSellers.has(String(v.Cod_Vend))) {
+                return false;
+            }
             if (selectedPromoter !== 'ALL' && String(v.Cod_Vend) !== selectedPromoter) {
                 return false;
             }
@@ -2259,7 +2312,7 @@ export const AjusteRota: React.FC = () => {
             }
             return true;
         });
-    }, [scopedAdjustedRoutes, selectedPromoter, selectedDaysFilter, selectedQuinzenaFilter]);
+    }, [scopedAdjustedRoutes, selectedTeamSellers, selectedPromoter, selectedDaysFilter, selectedQuinzenaFilter]);
 
     // Pontos geográficos para renderização do Mapa de Calor (Heatmap)
     const heatmapPoints = useMemo(() => {
@@ -3328,16 +3381,6 @@ export const AjusteRota: React.FC = () => {
 
         return scored.slice(0, 20).map(s => s.client);
     }, [coordinateModalClient, adjustedRoutes, coordNeighborSearch]);
-
-    // Mapeamento de cores
-    const promoterColorMap = useMemo(() => {
-        const map = new Map<string, string>();
-        const uniqueIds = Array.from(new Set(originalRoutes.map(v => String(v.Cod_Vend))));
-        uniqueIds.forEach((id, idx) => {
-            map.set(id, PROMOTER_COLORS[idx % PROMOTER_COLORS.length]);
-        });
-        return map;
-    }, [originalRoutes]);
 
     useEffect(() => {
         setOriginalRoutes([]);
@@ -6284,6 +6327,7 @@ export const AjusteRota: React.FC = () => {
                                     onClick={() => {
                                         setScopeMode('geral');
                                         setSelectedPromoter('ALL');
+                                        setSelectedTeamSellers(new Set());
                                     }}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${scopeMode === 'geral' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                                 >
@@ -6293,6 +6337,7 @@ export const AjusteRota: React.FC = () => {
                                     onClick={() => {
                                         setScopeMode('equipe');
                                         setSelectedPromoter('ALL');
+                                        setSelectedTeamSellers(new Set());
                                         if (!selectedSupervisor && supervisors.length > 0) {
                                             setSelectedSupervisor(supervisors[0].id);
                                         }
@@ -6305,6 +6350,7 @@ export const AjusteRota: React.FC = () => {
                                     onClick={() => {
                                         setScopeMode('vendedor');
                                         setSelectedPromoter('ALL');
+                                        setSelectedTeamSellers(new Set());
                                     }}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${scopeMode === 'vendedor' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                                 >
@@ -6321,6 +6367,7 @@ export const AjusteRota: React.FC = () => {
                                         onChange={(e) => {
                                             setSelectedSupervisor(e.target.value);
                                             setSelectedPromoter('ALL');
+                                            setSelectedTeamSellers(new Set());
                                         }}
                                         className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                     >
@@ -7257,6 +7304,122 @@ export const AjusteRota: React.FC = () => {
                                             </button>
                                         </div>
 
+                                        {/* FILTRO DE VENDEDORES DA EQUIPE (SELEÇÃO ÚNICA OU MÚLTIPLA) */}
+                                        {availableTeamSellers.length > 1 && (
+                                            <div className="relative">
+                                                {showTeamSellerDropdown && (
+                                                    <div 
+                                                        className="fixed inset-0 z-40 cursor-default" 
+                                                        onClick={() => setShowTeamSellerDropdown(false)} 
+                                                    />
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowTeamSellerDropdown(prev => !prev)}
+                                                    className={`px-2.5 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer border shadow-2xs ${
+                                                        selectedTeamSellers.size > 0
+                                                            ? 'bg-indigo-50 dark:bg-indigo-950/80 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 font-black'
+                                                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                                                    }`}
+                                                    title="Filtrar colaboradores da equipe (selecione um ou vários marcando-os)"
+                                                >
+                                                    <UserGroupIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                    <span>
+                                                        {selectedTeamSellers.size === 0
+                                                            ? `Vendedores (${availableTeamSellers.length})`
+                                                            : selectedTeamSellers.size === 1
+                                                                ? `${availableTeamSellers.find(s => selectedTeamSellers.has(s.id))?.name || '1 Vendedor'}`
+                                                                : `${selectedTeamSellers.size} de ${availableTeamSellers.length} Vendedores`
+                                                        }
+                                                    </span>
+                                                    <ChevronDownIcon className={`w-3 h-3 transition-transform ${showTeamSellerDropdown ? 'rotate-180' : ''}`} />
+                                                </button>
+
+                                                {showTeamSellerDropdown && (
+                                                    <div className="absolute top-full left-0 mt-1.5 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 p-2.5 space-y-2 animate-in fade-in zoom-in-95">
+                                                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                                                Vendedores da Equipe
+                                                            </span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSelectedTeamSellers(new Set())}
+                                                                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:underline cursor-pointer"
+                                                                >
+                                                                    Marcar Todos
+                                                                </button>
+                                                                <span className="text-slate-300 dark:text-slate-600">•</span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSelectedTeamSellers(new Set())}
+                                                                    className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                                                                >
+                                                                    Resetar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-1">
+                                                            {availableTeamSellers.map(seller => {
+                                                                const isChecked = selectedTeamSellers.size === 0 || selectedTeamSellers.has(seller.id);
+                                                                return (
+                                                                    <div
+                                                                        key={seller.id}
+                                                                        className={`flex items-center justify-between p-1.5 rounded-xl transition text-xs select-none ${
+                                                                            selectedTeamSellers.has(seller.id)
+                                                                                ? 'bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 font-bold'
+                                                                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                                                                        }`}
+                                                                    >
+                                                                        <label className="flex items-center gap-2 truncate min-w-0 cursor-pointer flex-1">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={isChecked}
+                                                                                onChange={() => {
+                                                                                    if (selectedTeamSellers.size === 0) {
+                                                                                        const allExceptThis = new Set(availableTeamSellers.map(s => s.id).filter(id => id !== seller.id));
+                                                                                        setSelectedTeamSellers(allExceptThis);
+                                                                                    } else {
+                                                                                        handleToggleTeamSeller(seller.id);
+                                                                                    }
+                                                                                }}
+                                                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                                                            />
+                                                                            <span
+                                                                                className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white dark:ring-slate-800"
+                                                                                style={{ backgroundColor: seller.color }}
+                                                                            />
+                                                                            <span className="truncate text-[11px]" title={seller.name}>
+                                                                                {seller.name}
+                                                                            </span>
+                                                                        </label>
+                                                                        <div className="flex items-center gap-1 shrink-0 ml-1">
+                                                                            <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md font-mono">
+                                                                                {seller.count}
+                                                                            </span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.preventDefault();
+                                                                                    e.stopPropagation();
+                                                                                    handleSelectOnlySeller(seller.id);
+                                                                                }}
+                                                                                className="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:underline px-1 py-0.5 rounded cursor-pointer"
+                                                                                title="Exibir apenas este vendedor"
+                                                                            >
+                                                                                apenas
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
                                         {tableViewMode === 'accordion' && (
                                             <div className="flex items-center gap-1 text-[10px]">
                                                 <button
@@ -7661,145 +7824,119 @@ export const AjusteRota: React.FC = () => {
                                                         )}
                                                     </div>
 
-                                                    {/* Lado Direito: Resumo de KM, Tempo e Sequência */}
-                                                    <div className="flex items-center gap-2 sm:gap-3 text-[11px] shrink-0">
+                                                    {/* Lado Direito: Resumo Agrupado e Compacto de Tempos, KM e Sequência */}
+                                                    <div className="flex items-center gap-2 sm:gap-2.5 text-[10px] shrink-0">
                                                         {!isUnallocated && dayMetrics ? (
                                                             <>
-                                                                {/* Tempo de Percurso */}
-                                                                <div 
-                                                                    className="flex items-center gap-1 text-slate-600 dark:text-slate-400 whitespace-nowrap bg-slate-100/70 dark:bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60 shadow-2xs" 
-                                                                    title={`🚗 Tempo em trânsito / percurso viário OSRM (Base ↔ PDVs ↔ Base):\n• Semanas 1 e 3: ${formatDuration(dayMetrics.travelTime13)}\n• Semanas 2 e 4: ${formatDuration(dayMetrics.travelTime24)}`}
-                                                                >
-                                                                    <span className="text-[12px]">🚗</span>
-                                                                    <span className="text-slate-400 dark:text-slate-500 font-normal">Percurso:</span>
-                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">
-                                                                        {dayMetrics.travelTime13 === dayMetrics.travelTime24 
-                                                                            ? formatDuration(dayMetrics.travelTime13) 
-                                                                            : `${formatDuration(dayMetrics.travelTime13)} (1/3) • ${formatDuration(dayMetrics.travelTime24)} (2/4)`
-                                                                        }
-                                                                    </span>
+                                                                {/* CARD 1: TEMPOS OPERACIONAIS (PERCURSO + ATENDIMENTO EMPILHADOS) */}
+                                                                <div className="flex flex-col justify-center px-2.5 py-1 rounded-xl bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 leading-tight shrink-0 shadow-2xs">
+                                                                    <div 
+                                                                        className="flex items-center gap-1 text-slate-600 dark:text-slate-400 whitespace-nowrap"
+                                                                        title={`🚗 Tempo em trânsito / percurso viário OSRM (Base ↔ PDVs ↔ Base):\n• Semanas 1 e 3: ${formatDuration(dayMetrics.travelTime13)}\n• Semanas 2 e 4: ${formatDuration(dayMetrics.travelTime24)}`}
+                                                                    >
+                                                                        <span className="text-[11px]">🚗</span>
+                                                                        <span className="text-slate-400 dark:text-slate-500 font-normal">Percurso:</span>
+                                                                        <span className="font-bold text-slate-700 dark:text-slate-300">
+                                                                            {dayMetrics.travelTime13 === dayMetrics.travelTime24 
+                                                                                ? formatDuration(dayMetrics.travelTime13) 
+                                                                                : `${formatDuration(dayMetrics.travelTime13)} (1/3) • ${formatDuration(dayMetrics.travelTime24)} (2/4)`
+                                                                            }
+                                                                        </span>
+                                                                    </div>
+                                                                    <div 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setShowChannelTimesModal(true);
+                                                                        }}
+                                                                        className="flex items-center gap-1 text-slate-600 dark:text-slate-400 whitespace-nowrap hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer transition mt-0.5" 
+                                                                        title={`🏢 Tempo presencial de atendimento em loja (conforme canais de remuneração):\n• Semanas 1 e 3: ${formatDuration(dayMetrics.serviceTime13)}\n• Semanas 2 e 4: ${formatDuration(dayMetrics.serviceTime24)}\nClique para configurar os tempos por canal no SQL Server`}
+                                                                    >
+                                                                        <span className="text-[11px]">🏢</span>
+                                                                        <span className="text-slate-400 dark:text-slate-500 font-normal">Atend:</span>
+                                                                        <span className="font-bold text-slate-700 dark:text-slate-300">
+                                                                            {dayMetrics.serviceTime13 === dayMetrics.serviceTime24 
+                                                                                ? formatDuration(dayMetrics.serviceTime13) 
+                                                                                : `${formatDuration(dayMetrics.serviceTime13)} (1/3) • ${formatDuration(dayMetrics.serviceTime24)} (2/4)`
+                                                                            }
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
 
-                                                                {/* Tempo de Atendimento */}
-                                                                <div 
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setShowChannelTimesModal(true);
-                                                                    }}
-                                                                    className="flex items-center gap-1 text-slate-600 dark:text-slate-400 whitespace-nowrap bg-slate-100/70 dark:bg-slate-800/60 hover:bg-amber-100/80 dark:hover:bg-amber-950/60 px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700/60 hover:border-amber-300 dark:hover:border-amber-700 shadow-2xs cursor-pointer transition" 
-                                                                    title={`🏢 Tempo presencial de atendimento em loja (conforme canais de remuneração):\n• Semanas 1 e 3: ${formatDuration(dayMetrics.serviceTime13)}\n• Semanas 2 e 4: ${formatDuration(dayMetrics.serviceTime24)}\nClique para configurar os tempos por canal no SQL Server`}
-                                                                >
-                                                                    <span className="text-[12px]">🏢</span>
-                                                                    <span className="text-slate-400 dark:text-slate-500 font-normal">Atend:</span>
-                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">
-                                                                        {dayMetrics.serviceTime13 === dayMetrics.serviceTime24 
-                                                                            ? formatDuration(dayMetrics.serviceTime13) 
-                                                                            : `${formatDuration(dayMetrics.serviceTime13)} (1/3) • ${formatDuration(dayMetrics.serviceTime24)} (2/4)`
-                                                                        }
-                                                                    </span>
-                                                                </div>
-
-                                                                {/* Tempo Total */}
-                                                                <div 
-                                                                    className="flex items-center gap-1 text-slate-800 dark:text-slate-200 whitespace-nowrap bg-indigo-50/70 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-200/70 dark:border-indigo-800/50 shadow-2xs" 
-                                                                    title={`⏱️ Tempo Total da Jornada Diária (Percurso + Atendimento):\n• Semanas 1 e 3: ${formatDuration(dayMetrics.travelTime13)} percurso + ${formatDuration(dayMetrics.serviceTime13)} atend = ${formatDuration(dayMetrics.time13)}\n• Semanas 2 e 4: ${formatDuration(dayMetrics.travelTime24)} percurso + ${formatDuration(dayMetrics.serviceTime24)} atend = ${formatDuration(dayMetrics.time24)}`}
-                                                                >
-                                                                    <ClockIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                                                                    <span className="text-indigo-600/80 dark:text-indigo-400 font-normal">Total:</span>
-                                                                    <span className="font-black text-indigo-900 dark:text-indigo-200">
-                                                                        {dayMetrics.time13 === dayMetrics.time24 
-                                                                            ? formatDuration(dayMetrics.time13) 
-                                                                            : `${formatDuration(dayMetrics.time13)} (1/3) • ${formatDuration(dayMetrics.time24)} (2/4)`
-                                                                        }
-                                                                    </span>
-                                                                    {dayOverload && (
-                                                                        dayOverload.isInactiveDay ? (
-                                                                            <span 
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    setRebalanceDay(day);
-                                                                                    setSelectedRebalanceClients(new Set());
-                                                                                    setTargetRebalanceDay('');
-                                                                                }}
-                                                                                className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-rose-100 hover:bg-rose-200 text-rose-800 dark:bg-rose-950/80 dark:hover:bg-rose-900/90 dark:text-rose-300 border border-rose-300 dark:border-rose-800 inline-flex items-center gap-0.5 shrink-0 shadow-2xs cursor-pointer transition hover:scale-105 active:scale-95 select-none"
-                                                                                title={`🚨 Dia fora da jornada: ${dayRoutes.length} PDVs alocados em dia sem expediente (${formatDuration(dayOverload.maxDayTime)}). Clique para evacuar.`}
-                                                                            >
-                                                                                <span>🚨</span> Fora da Jornada
-                                                                            </span>
-                                                                        ) : dayOverload.isSevere ? (
-                                                                            <span 
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    setRebalanceDay(day);
-                                                                                    setSelectedRebalanceClients(new Set());
-                                                                                    setTargetRebalanceDay('');
-                                                                                }}
-                                                                                className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-red-100 hover:bg-red-200 text-red-800 dark:bg-red-950/80 dark:hover:bg-red-900/90 dark:text-red-300 border border-red-300 dark:border-red-800 inline-flex items-center gap-0.5 shrink-0 shadow-2xs cursor-pointer transition hover:scale-105 active:scale-95 select-none"
-                                                                                title={`🚨 Sobrecarga: jornada de ${formatDuration(dayOverload.maxDayTime)} ultrapassa o limite de ${dayOverload.dayLimitHours}h em +${dayOverload.excessH}h${dayOverload.remM > 0 ? ` ${dayOverload.remM}m` : ''}. Clique para reequilibrar.`}
-                                                                            >
-                                                                                <span>🚨</span> +{dayOverload.excessH}h{dayOverload.remM > 0 ? ` ${dayOverload.remM}m` : ''}
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span 
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    setRebalanceDay(day);
-                                                                                    setSelectedRebalanceClients(new Set());
-                                                                                    setTargetRebalanceDay('');
-                                                                                }}
-                                                                                className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-950/80 dark:hover:bg-amber-900/90 dark:text-amber-300 border border-amber-300 dark:border-amber-800 inline-flex items-center gap-0.5 shrink-0 shadow-2xs cursor-pointer transition hover:scale-105 active:scale-95 select-none"
-                                                                                title={`⚠️ Atenção: jornada de ${formatDuration(dayOverload.maxDayTime)} ultrapassa o limite de ${dayOverload.dayLimitHours}h em +${dayOverload.excessMin}m. Clique para reequilibrar.`}
-                                                                            >
-                                                                                <span>⚠️</span> +{dayOverload.excessMin}m
-                                                                            </span>
-                                                                        )
+                                                                {/* CARD 2: JORNADA TOTAL & SOBRECARGA EMPILHADOS */}
+                                                                <div className="flex flex-col justify-center px-2.5 py-1 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/50 leading-tight shrink-0 shadow-2xs">
+                                                                    <div 
+                                                                        className="flex items-center gap-1 text-slate-800 dark:text-slate-200 whitespace-nowrap"
+                                                                        title={`⏱️ Tempo Total da Jornada Diária (Percurso + Atendimento):\n• Semanas 1 e 3: ${formatDuration(dayMetrics.travelTime13)} percurso + ${formatDuration(dayMetrics.serviceTime13)} atend = ${formatDuration(dayMetrics.time13)}\n• Semanas 2 e 4: ${formatDuration(dayMetrics.travelTime24)} percurso + ${formatDuration(dayMetrics.serviceTime24)} atend = ${formatDuration(dayMetrics.time24)}`}
+                                                                    >
+                                                                        <ClockIcon className="w-3 h-3 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                                                                        <span className="text-indigo-600/80 dark:text-indigo-400 font-normal">Total:</span>
+                                                                        <span className="font-black text-indigo-900 dark:text-indigo-200">
+                                                                            {dayMetrics.time13 === dayMetrics.time24 
+                                                                                ? formatDuration(dayMetrics.time13) 
+                                                                                : `${formatDuration(dayMetrics.time13)} (1/3) • ${formatDuration(dayMetrics.time24)} (2/4)`
+                                                                            }
+                                                                        </span>
+                                                                    </div>
+                                                                    {dayOverload ? (
+                                                                        <div 
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setRebalanceDay(day);
+                                                                                setSelectedRebalanceClients(new Set());
+                                                                                setTargetRebalanceDay('');
+                                                                            }}
+                                                                            className="flex items-center gap-0.5 mt-0.5 cursor-pointer hover:underline text-[9px] font-black text-rose-600 dark:text-rose-400"
+                                                                            title={dayOverload.isInactiveDay 
+                                                                                ? `🚨 Dia fora da jornada: ${dayRoutes.length} PDVs alocados em dia sem expediente (${formatDuration(dayOverload.maxDayTime)}). Clique para evacuar.`
+                                                                                : `🚨 Sobrecarga: ultrapassa o limite de ${dayOverload.dayLimitHours}h em +${dayOverload.excessH}h${dayOverload.remM > 0 ? ` ${dayOverload.remM}m` : ''}. Clique para reequilibrar.`
+                                                                            }
+                                                                        >
+                                                                            <span>🚨</span>
+                                                                            <span>{dayOverload.isInactiveDay ? 'Fora da Jornada' : `+${dayOverload.excessH}h${dayOverload.remM > 0 ? ` ${dayOverload.remM}m` : ''}`}</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5 flex items-center gap-0.5">
+                                                                            <span>✓</span>
+                                                                            <span>Dentro da Jornada</span>
+                                                                        </div>
                                                                     )}
                                                                 </div>
 
-                                                                <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 whitespace-nowrap" title="KM estimado do circuito (ida da base, visitas sequenciadas e retorno)">
-                                                                    <LocationMarkerIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                                                    <span className="text-slate-400 dark:text-slate-500 font-normal">KM:</span>
-                                                                    <span className="font-black">
-                                                                        {dayMetrics.km13 === dayMetrics.km24 
-                                                                            ? `${dayMetrics.km13.toFixed(1)} km` 
-                                                                            : `${dayMetrics.km13.toFixed(1)} km (1/3) • ${dayMetrics.km24.toFixed(1)} km (2/4)`
-                                                                        }
-                                                                    </span>
-                                                                </div>
-
-                                                                {dayRoutes.length > 0 && (
+                                                                {/* CARD 3: CIRCUITO VIÁRIO (KM + SEQUÊNCIA EMPILHADOS) */}
+                                                                <div className="flex flex-col justify-center px-2.5 py-1 rounded-xl bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 leading-tight shrink-0 shadow-2xs">
                                                                     <div 
                                                                         className="flex items-center gap-1 text-slate-700 dark:text-slate-300 whitespace-nowrap"
-                                                                        title={`Ordem de visitação diária sequenciada pela estratégia: ${
-                                                                            optSequenceStrategy === 'FAR_TO_NEAR' ? 'Mais Distante Primeiro (volta para a base)' :
-                                                                            optSequenceStrategy === 'SNAKE_SWEEP' ? 'Serpente / Varredura Contínua' :
-                                                                            optSequenceStrategy === 'CIRCUIT_TSP' ? 'Menor Quilometragem TSP OSRM' : 'Mais Próximo Primeiro'
-                                                                        }\n• Semanas 1 e 3: #1 a #${dayMetrics?.pdvs13 ?? 0} paradas\n• Semanas 2 e 4: #1 a #${dayMetrics?.pdvs24 ?? 0} paradas`}
+                                                                        title="KM estimado do circuito (ida da base, visitas sequenciadas e retorno)"
                                                                     >
-                                                                        <span className="text-slate-400 dark:text-slate-500 font-normal">Sequência:</span>
-                                                                        <div className="flex items-center gap-1 text-[10px] font-black">
-                                                                            {dayMetrics?.pdvs13 === dayMetrics?.pdvs24 ? (
-                                                                                <span className="bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-200/60 dark:border-indigo-800">
-                                                                                    #1 a #{dayMetrics?.pdvs13 ?? dayRoutes.length}
-                                                                                </span>
-                                                                            ) : (
-                                                                                <>
-                                                                                    <span className="bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded border border-amber-200/60 dark:border-amber-800">
-                                                                                        1/3: #1 a #{dayMetrics?.pdvs13 ?? 0}
-                                                                                    </span>
-                                                                                    <span className="bg-fuchsia-50 dark:bg-fuchsia-950/60 text-fuchsia-800 dark:text-fuchsia-300 px-1.5 py-0.5 rounded border border-fuchsia-200/60 dark:border-fuchsia-800">
-                                                                                        2/4: #1 a #{dayMetrics?.pdvs24 ?? 0}
-                                                                                    </span>
-                                                                                </>
-                                                                            )}
-                                                                            <span className="text-[9px] font-normal text-slate-400 dark:text-slate-500 px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 hidden sm:inline-block">
-                                                                                {optSequenceStrategy === 'FAR_TO_NEAR' ? '🎯 Mais Distante 1º' :
-                                                                                 optSequenceStrategy === 'SNAKE_SWEEP' ? '🐍 Serpente' :
-                                                                                 optSequenceStrategy === 'CIRCUIT_TSP' ? '⚡ Menor KM' : '📍 Mais Próximo 1º'}
+                                                                        <LocationMarkerIcon className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                                        <span className="text-slate-400 dark:text-slate-500 font-normal">KM:</span>
+                                                                        <span className="font-black text-slate-800 dark:text-slate-200">
+                                                                            {dayMetrics.km13 === dayMetrics.km24 
+                                                                                ? `${dayMetrics.km13.toFixed(1)} km` 
+                                                                                : `${dayMetrics.km13.toFixed(1)} km (1/3) • ${dayMetrics.km24.toFixed(1)} km (2/4)`
+                                                                            }
+                                                                        </span>
+                                                                    </div>
+                                                                    {dayRoutes.length > 0 && (
+                                                                        <div 
+                                                                            className="flex items-center gap-1 text-slate-700 dark:text-slate-300 whitespace-nowrap mt-0.5"
+                                                                            title={`Ordem de visitação diária sequenciada: ${
+                                                                                optSequenceStrategy === 'FAR_TO_NEAR' ? 'Mais Distante 1º' :
+                                                                                optSequenceStrategy === 'SNAKE_SWEEP' ? 'Serpente' :
+                                                                                optSequenceStrategy === 'CIRCUIT_TSP' ? 'Menor KM TSP' : 'Mais Próximo 1º'
+                                                                            }`}
+                                                                        >
+                                                                            <span className="text-slate-400 dark:text-slate-500 font-normal">Seq:</span>
+                                                                            <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                                                                {dayMetrics?.pdvs13 === dayMetrics?.pdvs24 ? (
+                                                                                    `#1 a #${dayMetrics?.pdvs13 ?? dayRoutes.length}`
+                                                                                ) : (
+                                                                                    `1/3: #${dayMetrics?.pdvs13 ?? 0} • 2/4: #${dayMetrics?.pdvs24 ?? 0}`
+                                                                                )}
                                                                             </span>
                                                                         </div>
-                                                                    </div>
-                                                                )}
+                                                                    )}
+                                                                </div>
                                                             </>
                                                         ) : isUnallocated ? (
                                                             <div className="flex flex-wrap items-center gap-2">
