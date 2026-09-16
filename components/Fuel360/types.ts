@@ -301,6 +301,7 @@ export interface RotaPrevistaSaved {
     UsuarioSimulacao: string;
     Descricao?: string;
     JaCalculado?: boolean;
+    TipoProcesso?: string;
 }
 
 export interface RotaPrevistaItem {

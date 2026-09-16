@@ -166,7 +166,7 @@ const DeleteSimulacaoModal: React.FC<{
 };
 
 export const GestaoSimulacoes: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'SIMULACAO' | 'CALCULO'>('CALCULO');
+    const [activeTab, setActiveTab] = useState<'CALCULO' | 'SIMULACAO_COMBUSTIVEL' | 'SIMULACAO_AJUSTE'>('CALCULO');
     
     // Dados de Simulação (Rota Prevista)
     const [simHistory, setSimHistory] = useState<RotaPrevistaSaved[]>([]);
@@ -197,13 +197,25 @@ export const GestaoSimulacoes: React.FC = () => {
     const [updatingSugestaoId, setUpdatingSugestaoId] = useState<number | null>(null);
 
     useEffect(() => {
-        if (activeTab === 'SIMULACAO') loadSimHistory();
-        else loadCalcHistory();
+        if (activeTab === 'CALCULO') {
+            loadCalcHistory();
+        } else if (activeTab === 'SIMULACAO_COMBUSTIVEL') {
+            loadSimHistory('COMBUSTIVEL');
+        } else if (activeTab === 'SIMULACAO_AJUSTE') {
+            loadSimHistory('AJUSTE_ROTA');
+        }
     }, [activeTab]);
 
-    const loadSimHistory = async () => {
+    const loadSimHistory = async (tipo: 'COMBUSTIVEL' | 'AJUSTE_ROTA') => {
         setLoading(true);
-        try { const data = await getRotaPrevistaHistory(); setSimHistory(data); } catch (e) { console.error(e); } finally { setLoading(false); }
+        try { 
+            const data = await getRotaPrevistaHistory(tipo); 
+            setSimHistory(data); 
+        } catch (e) { 
+            console.error(e); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     const loadCalcHistory = async () => {
@@ -227,7 +239,7 @@ export const GestaoSimulacoes: React.FC = () => {
         try {
             await deleteRotaPrevista(deleteId, reason);
             setDeleteId(null);
-            loadSimHistory();
+            loadSimHistory(activeTab === 'SIMULACAO_AJUSTE' ? 'AJUSTE_ROTA' : 'COMBUSTIVEL');
         } catch (e: any) {
             alert(e.message || "Erro ao excluir");
         } finally {
@@ -282,11 +294,11 @@ export const GestaoSimulacoes: React.FC = () => {
         if (!editData) return;
         setIsEditing(true);
         try {
-            if (activeTab === 'SIMULACAO') {
+            if (activeTab === 'SIMULACAO_COMBUSTIVEL' || activeTab === 'SIMULACAO_AJUSTE') {
                 await updateRotaPrevistaDiario(editData.id, newKm, reason);
                 // Reload details and list
                 if (expandedSim) { const d = await getRotaPrevistaDetails(expandedSim); setSimDetails(d); }
-                loadSimHistory();
+                loadSimHistory(activeTab === 'SIMULACAO_AJUSTE' ? 'AJUSTE_ROTA' : 'COMBUSTIVEL');
             } else {
                 await updateCalculoDiario(editData.id, newKm, reason);
                 // Reload details and list
@@ -346,18 +358,24 @@ export const GestaoSimulacoes: React.FC = () => {
                     <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">Gestão de Simulações e Cálculos</h2>
                     <p className="text-slate-500 dark:text-slate-400 font-medium">Auditoria, ajuste e exclusão de históricos.</p>
                 </div>
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 flex space-x-1 shadow-sm mt-4 md:mt-0 transition-colors">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 flex flex-wrap gap-1 shadow-sm mt-4 md:mt-0 transition-colors">
                     <button 
                         onClick={() => setActiveTab('CALCULO')} 
-                        className={`px-4 py-2 text-sm font-bold rounded-md flex items-center transition-all ${activeTab === 'CALCULO' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                        className={`px-3.5 py-2 text-xs font-bold rounded-md flex items-center transition-all cursor-pointer ${activeTab === 'CALCULO' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
-                        <CalculatorIcon className="w-4 h-4 mr-2"/> Cálculos Fechados
+                        <CalculatorIcon className="w-4 h-4 mr-1.5"/> Cálculos Fechados
                     </button>
                     <button 
-                        onClick={() => setActiveTab('SIMULACAO')} 
-                        className={`px-4 py-2 text-sm font-bold rounded-md flex items-center transition-all ${activeTab === 'SIMULACAO' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                        onClick={() => setActiveTab('SIMULACAO_COMBUSTIVEL')} 
+                        className={`px-3.5 py-2 text-xs font-bold rounded-md flex items-center transition-all cursor-pointer ${activeTab === 'SIMULACAO_COMBUSTIVEL' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
-                        <LocationMarkerIcon className="w-4 h-4 mr-2"/> Simulações de Rota
+                        <MapPin className="w-4 h-4 mr-1.5"/> Rota Combustível
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('SIMULACAO_AJUSTE')} 
+                        className={`px-3.5 py-2 text-xs font-bold rounded-md flex items-center transition-all cursor-pointer ${activeTab === 'SIMULACAO_AJUSTE' ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                    >
+                        <LocationMarkerIcon className="w-4 h-4 mr-1.5"/> Ajuste de Rota
                     </button>
                 </div>
             </div>
@@ -437,13 +455,13 @@ export const GestaoSimulacoes: React.FC = () => {
                             </table>
                         )}
 
-                        {/* --- TABELA DE SIMULAÇÕES --- */}
-                        {activeTab === 'SIMULACAO' && (
+                        {/* --- TABELA DE SIMULAÇÕES (ROTA COMBUSTÍVEL OU AJUSTE DE ROTA) --- */}
+                        {(activeTab === 'SIMULACAO_COMBUSTIVEL' || activeTab === 'SIMULACAO_AJUSTE') && (
                             <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
-                                <thead className="bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 uppercase font-bold text-xs border-b border-indigo-100 dark:border-indigo-900">
+                                <thead className={`${activeTab === 'SIMULACAO_AJUSTE' ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-100 dark:border-purple-900' : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-100 dark:border-indigo-900'} uppercase font-bold text-xs border-b`}>
                                     <tr>
                                         <th className="p-5 w-10"></th>
-                                        <th className="p-5">Período Simulado</th>
+                                        <th className="p-5">{activeTab === 'SIMULACAO_AJUSTE' ? 'Simulação / Vendedor' : 'Período Simulado'}</th>
                                         <th className="p-5">Data Criação</th>
                                         <th className="p-5">Criado Por</th>
                                         <th className="p-5 text-right">Total KM</th>
@@ -452,7 +470,7 @@ export const GestaoSimulacoes: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {simHistory.length === 0 ? <tr><td colSpan={7} className="p-12 text-center text-slate-400 dark:text-slate-500">Nenhuma simulação encontrada.</td></tr> : 
+                                    {simHistory.length === 0 ? <tr><td colSpan={7} className="p-12 text-center text-slate-400 dark:text-slate-500">Nenhuma simulação {activeTab === 'SIMULACAO_AJUSTE' ? 'de ajuste de rota' : 'de rota combustível'} encontrada.</td></tr> : 
                                     simHistory.map(sim => (
                                         <React.Fragment key={sim.ID_RotaHist}>
                                             <tr onClick={() => toggleExpandSim(sim.ID_RotaHist)} className={`cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40 ${expandedSim === sim.ID_RotaHist ? 'bg-slate-50 dark:bg-slate-800/60' : ''}`}>
@@ -479,10 +497,14 @@ export const GestaoSimulacoes: React.FC = () => {
                                                         <button 
                                                             onClick={(e) => { 
                                                                 e.stopPropagation(); 
-                                                                window.location.href = `#/fuel360/ajuste-rota?simId=${sim.ID_RotaHist}`;
+                                                                if (activeTab === 'SIMULACAO_AJUSTE') {
+                                                                    window.location.href = `#/fuel360/ajuste-rota?simId=${sim.ID_RotaHist}`;
+                                                                } else {
+                                                                    window.location.href = `#/fuel360/roteirizador`;
+                                                                }
                                                             }} 
-                                                            className="text-slate-400 hover:text-emerald-600 p-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition"
-                                                            title="Abrir no Mapa e Editar no Ajuste de Rota"
+                                                            className="text-slate-400 hover:text-emerald-600 p-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition cursor-pointer"
+                                                            title={activeTab === 'SIMULACAO_AJUSTE' ? "Abrir no Mapa e Editar no Ajuste de Rota" : "Ir para Rota Combustível"}
                                                         >
                                                             <MapPin className="w-4 h-4"/>
                                                         </button>

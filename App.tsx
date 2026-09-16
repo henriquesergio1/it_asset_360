@@ -525,7 +525,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           ) : (
             <>
               <SidebarLink to="/fuel360/calculo" icon={Calculator} label="Cálculo Reembolso" collapsed={isEffectiveCollapsed} module="FUEL" />
-              <SidebarLink to="/fuel360/roteirizador" icon={MapPin} label="Roteirizador" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/roteirizador" icon={MapPin} label="Rota Combustível" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/ajuste-rota" icon={Navigation} label="Ajuste de Rota" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/geolocalizador" icon={Crosshair} label="Geolocalizador ERP" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/comparativo" icon={TrendingUp} label="Previsto x Realizado" collapsed={isEffectiveCollapsed} module="FUEL" />

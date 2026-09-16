@@ -2260,7 +2260,8 @@ async function ensureFuelTablesExist(pool) {
                     DataSimulacao DATETIME DEFAULT GETDATE(),
                     TotalKM FLOAT DEFAULT 0,
                     UsuarioSimulacao NVARCHAR(255) DEFAULT 'Administrador TI',
-                    JaCalculado BIT DEFAULT 0
+                    JaCalculado BIT DEFAULT 0,
+                    TipoProcesso NVARCHAR(50) DEFAULT 'COMBUSTIVEL'
                 )
             `);
         } else {
@@ -2271,6 +2272,9 @@ async function ensureFuelTablesExist(pool) {
             }
             if (!cols.includes('snapshotdata')) {
                 await pool.request().query("ALTER TABLE FuelSimulacoesHistorico ADD SnapshotData NVARCHAR(MAX) NULL");
+            }
+            if (!cols.includes('tipoprocesso')) {
+                await pool.request().query("ALTER TABLE FuelSimulacoesHistorico ADD TipoProcesso NVARCHAR(50) DEFAULT 'COMBUSTIVEL'");
             }
         }
 
@@ -3962,7 +3966,15 @@ app.get('/api/fuel360/roteiro/historico', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
-        const result = await pool.request().query('SELECT * FROM FuelSimulacoesHistorico ORDER BY ID_RotaHist DESC');
+        const { tipo } = req.query;
+        let query = 'SELECT * FROM FuelSimulacoesHistorico';
+        if (tipo === 'AJUSTE_ROTA') {
+            query += " WHERE TipoProcesso = 'AJUSTE_ROTA'";
+        } else if (tipo === 'COMBUSTIVEL') {
+            query += " WHERE TipoProcesso = 'COMBUSTIVEL' OR TipoProcesso IS NULL";
+        }
+        query += ' ORDER BY ID_RotaHist DESC';
+        const result = await pool.request().query(query);
         res.json(result.recordset || []);
     } catch (err) {
         console.error('Erro ao buscar histórico de simulações:', err);
@@ -3971,8 +3983,9 @@ app.get('/api/fuel360/roteiro/historico', async (req, res) => {
 });
 
 app.post('/api/fuel360/roteiro/historico', async (req, res) => {
-    const { Periodo, TotalKM, Descricao, overwriteId, Itens, UsuarioSimulacao, criadoPor, usuario, _adminUser, SnapshotData } = req.body;
+    const { Periodo, TotalKM, Descricao, overwriteId, Itens, UsuarioSimulacao, criadoPor, usuario, _adminUser, SnapshotData, TipoProcesso } = req.body;
     const userSim = UsuarioSimulacao || criadoPor || usuario || _adminUser || 'Operador';
+    const tipoProc = TipoProcesso === 'AJUSTE_ROTA' ? 'AJUSTE_ROTA' : 'COMBUSTIVEL';
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
@@ -3993,10 +4006,11 @@ app.post('/api/fuel360/roteiro/historico', async (req, res) => {
             .input('TotalKM', sql.Float, TotalKM || 0)
             .input('UsuarioSimulacao', sql.NVarChar, userSim)
             .input('SnapshotData', sql.NVarChar, snapshotStr)
+            .input('TipoProcesso', sql.NVarChar, tipoProc)
             .query(`
-                INSERT INTO FuelSimulacoesHistorico (Periodo, Descricao, TotalKM, UsuarioSimulacao, SnapshotData)
+                INSERT INTO FuelSimulacoesHistorico (Periodo, Descricao, TotalKM, UsuarioSimulacao, SnapshotData, TipoProcesso)
                 OUTPUT INSERTED.ID_RotaHist
-                VALUES (@Periodo, @Descricao, @TotalKM, @UsuarioSimulacao, @SnapshotData)
+                VALUES (@Periodo, @Descricao, @TotalKM, @UsuarioSimulacao, @SnapshotData, @TipoProcesso)
             `);
 
         const idRotaHist = histRes.recordset[0].ID_RotaHist;

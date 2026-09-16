@@ -5450,6 +5450,7 @@ export const AjusteRota: React.FC = () => {
                 TotalKM: scopeKm,
                 UsuarioSimulacao: authUser?.Nome || 'Operador',
                 SnapshotData: snapshotData,
+                TipoProcesso: 'AJUSTE_ROTA',
                 overwriteId: (simSaveOverwrite && loadedSimInfo?.id) ? loadedSimInfo.id : undefined,
                 Itens: Array.from(groups.entries()).map(([vendedorId, visits]) => {
                     const colab = getColabBySectorOrName(vendedorId, visits[0]?.Nome_Vendedor);
@@ -5515,12 +5516,12 @@ export const AjusteRota: React.FC = () => {
         }
     };
 
-    // Gestão de Simulações Salvas (Listar, Carregar, Excluir)
+    // Gestão de Simulações Salvas (Listar, Carregar, Excluir) - Estritamente do Ajuste de Rota
     const handleOpenSavedSimulationsModal = async () => {
         setShowSavedSimulationsModal(true);
         setLoadingSavedSimulations(true);
         try {
-            const list = await getRotaPrevistaHistory();
+            const list = await getRotaPrevistaHistory('AJUSTE_ROTA');
             setSavedSimulationsList(Array.isArray(list) ? list : []);
         } catch (e: any) {
             console.error("Erro ao carregar simulações:", e);
@@ -5633,7 +5634,7 @@ export const AjusteRota: React.FC = () => {
         setDeletingSimId(simId);
         try {
             await deleteRotaPrevista(simId, 'Excluído pelo usuário no Ajuste de Rota');
-            const list = await getRotaPrevistaHistory();
+            const list = await getRotaPrevistaHistory('AJUSTE_ROTA');
             setSavedSimulationsList(Array.isArray(list) ? list : []);
             if (loadedSimInfo?.id === simId) {
                 setLoadedSimInfo(null);
@@ -11277,13 +11278,13 @@ export const AjusteRota: React.FC = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
-                                        Simulações de Roteiro Salvas
+                                        Simulações de Ajuste de Rota Salvas
                                         <span className="text-xs font-normal text-slate-500 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full">
                                             {savedSimulationsList.length}
                                         </span>
                                     </h3>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        Visualize no mapa, edite, exclua ou gere links de conferência
+                                        Visualize no mapa, reabra na grade, exclua ou gere links de conferência de rotas
                                     </p>
                                 </div>
                             </div>

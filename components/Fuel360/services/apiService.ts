@@ -178,7 +178,8 @@ const RealService = {
     checkRotaPrevistaExists: (periodo: string, totalKm: number): Promise<{ exists: boolean; id?: number; periodo?: string; totalKm?: number; descricao?: string }> => 
         apiRequest(`/roteiro/exists?periodo=${encodeURIComponent(periodo)}&totalKm=${totalKm}`),
     saveRotaPrevista: (payload: any): Promise<{ success: boolean; id?: number }> => apiRequest('/roteiro/historico', 'POST', payload),
-    getRotaPrevistaHistory: (): Promise<RotaPrevistaSaved[]> => apiRequest('/roteiro/historico'),
+    getRotaPrevistaHistory: (tipo?: string): Promise<RotaPrevistaSaved[]> => 
+        apiRequest(tipo ? `/roteiro/historico?tipo=${encodeURIComponent(tipo)}` : '/roteiro/historico'),
     getRotaPrevistaDetails: (id: number): Promise<RotaPrevistaItem[]> => apiRequest(`/roteiro/historico/${id}`),
     deleteRotaPrevista: (id: number, reason: string): Promise<void> => apiRequest(`/roteiro/historico/${id}`, 'DELETE', { reason }),
     updateRotaPrevistaDiario: (id: number, km: number, reason: string): Promise<void> => apiRequest(`/roteiro/diario/${id}`, 'PUT', { km, reason }),
@@ -618,7 +619,7 @@ const MockService = {
     },
     checkRotaPrevistaExists: async (): Promise<{ exists: boolean; id?: number; periodo?: string; totalKm?: number; descricao?: string }> => ({ exists: false }),
     saveRotaPrevista: async (): Promise<{ success: boolean; id?: number }> => ({ success: true, id: 1 }),
-    getRotaPrevistaHistory: async () => [],
+    getRotaPrevistaHistory: async (tipo?: string) => [],
     getRotaPrevistaDetails: async () => [],
     deleteRotaPrevista: async () => {},
     updateRotaPrevistaDiario: async () => {},
