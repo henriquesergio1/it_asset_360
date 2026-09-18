@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.190.0',
+    date: 'Hoje',
+    title: 'Fuel360: Trava Corporativa de Quinzena Permitida e Blindagem do Balanceador de Rotas',
+    changes: [
+      'Trava de Quinzena nos Parâmetros de Janela: Novo controle corporativo de Quinzena Permitida (Livre, 1 e 3, 2 e 4) na tabela FuelClienteRestricoes.',
+      'Blindagem do Algoritmo de Balanceamento: Ao rodar novas simulações ou rebalanceamento automático, o motor de rotas respeita compulsoriamente a quinzena fixada pelo supervisor e analista, sem revertê-la.',
+      'Aplicação com 1 Clique Integrada: Ao aprovar sugestão de mudança de semana de um supervisor, a restrição de quinzena é cadastrada automaticamente com auditoria completa.'
+    ]
+  },
+  {
     version: '3.189.1',
     date: 'Hoje',
     title: 'Fuel360: Rastreabilidade e Histórico de Críticas nos Parâmetros de Janela',

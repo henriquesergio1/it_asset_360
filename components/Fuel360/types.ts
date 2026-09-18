@@ -338,6 +338,8 @@ export interface ClienteRestricao {
     Razao_Social?: string;
     DiasPermitidos?: string; // ex.: 'SEGUNDA-FEIRA,QUARTA-FEIRA' ou null
     TurnoPermitido?: 'MANHA' | 'TARDE' | 'QUALQUER';
+    QuinzenaPermitida?: '1_3' | '2_4' | 'QUALQUER';
+    FrequenciaPermitida?: 'SEMANAL' | 'QUINZENAL' | 'QUALQUER';
     HoraInicio?: string;
     HoraFim?: string;
     Observacao?: string;

@@ -2379,6 +2379,8 @@ async function ensureFuelTablesExist(pool) {
                     Razao_Social NVARCHAR(255) NULL,
                     DiasPermitidos NVARCHAR(255) NULL,
                     TurnoPermitido NVARCHAR(50) DEFAULT 'QUALQUER',
+                    QuinzenaPermitida NVARCHAR(20) DEFAULT 'QUALQUER',
+                    FrequenciaPermitida NVARCHAR(20) DEFAULT 'QUALQUER',
                     HoraInicio NVARCHAR(10) NULL,
                     HoraFim NVARCHAR(10) NULL,
                     Observacao NVARCHAR(500) NULL,
@@ -2388,6 +2390,15 @@ async function ensureFuelTablesExist(pool) {
                 );
                 CREATE INDEX IX_FuelClienteRestricoes_CodCliente ON FuelClienteRestricoes(Cod_Cliente);
             `);
+        } else {
+            const checkColQuinzena = await pool.request().query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelClienteRestricoes' AND COLUMN_NAME = 'QuinzenaPermitida'");
+            if (checkColQuinzena.recordset.length === 0) {
+                await pool.request().query("ALTER TABLE FuelClienteRestricoes ADD QuinzenaPermitida NVARCHAR(20) DEFAULT 'QUALQUER';");
+            }
+            const checkColFreq = await pool.request().query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelClienteRestricoes' AND COLUMN_NAME = 'FrequenciaPermitida'");
+            if (checkColFreq.recordset.length === 0) {
+                await pool.request().query("ALTER TABLE FuelClienteRestricoes ADD FrequenciaPermitida NVARCHAR(20) DEFAULT 'QUALQUER';");
+            }
         }
 
         const checkParamOtim = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelParametrosOtimizacao'");
@@ -2994,7 +3005,7 @@ app.get('/api/fuel360/cliente-restricoes', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
-        const result = await pool.request().query("SELECT ID_Restricao, Cod_Cliente, Razao_Social, DiasPermitidos, TurnoPermitido, HoraInicio, HoraFim, Observacao, ISNULL(Ativo, 1) as Ativo, DataAtualizacao, UsuarioAtualizacao FROM FuelClienteRestricoes ORDER BY Cod_Cliente ASC");
+        const result = await pool.request().query("SELECT ID_Restricao, Cod_Cliente, Razao_Social, DiasPermitidos, TurnoPermitido, ISNULL(QuinzenaPermitida, 'QUALQUER') as QuinzenaPermitida, ISNULL(FrequenciaPermitida, 'QUALQUER') as FrequenciaPermitida, HoraInicio, HoraFim, Observacao, ISNULL(Ativo, 1) as Ativo, DataAtualizacao, UsuarioAtualizacao FROM FuelClienteRestricoes ORDER BY Cod_Cliente ASC");
         const auditRes = await pool.request().query("SELECT TOP 1 UsuarioAtualizacao as usuario, DataAtualizacao as dataHora FROM FuelClienteRestricoes WHERE DataAtualizacao IS NOT NULL ORDER BY DataAtualizacao DESC");
         const lastAudit = auditRes.recordset && auditRes.recordset.length > 0 ? auditRes.recordset[0] : null;
         res.json({ success: true, restricoes: result.recordset || [], lastAudit });
@@ -3023,6 +3034,8 @@ app.post('/api/fuel360/cliente-restricoes/batch', async (req, res) => {
             const razaoSocial = item.Razao_Social ? String(item.Razao_Social).trim() : null;
             const diasPermitidos = item.DiasPermitidos ? String(item.DiasPermitidos).trim() : null;
             const turnoPermitido = item.TurnoPermitido ? String(item.TurnoPermitido).trim().toUpperCase() : 'QUALQUER';
+            const quinzenaPermitida = item.QuinzenaPermitida ? String(item.QuinzenaPermitida).trim().toUpperCase() : 'QUALQUER';
+            const frequenciaPermitida = item.FrequenciaPermitida ? String(item.FrequenciaPermitida).trim().toUpperCase() : 'QUALQUER';
             const horaInicio = item.HoraInicio ? String(item.HoraInicio).trim() : null;
             const horaFim = item.HoraFim ? String(item.HoraFim).trim() : null;
             const observacao = item.Observacao ? String(item.Observacao).trim() : null;
@@ -3033,6 +3046,8 @@ app.post('/api/fuel360/cliente-restricoes/batch', async (req, res) => {
                 .input('Razao_Social', sql.NVarChar(255), razaoSocial)
                 .input('DiasPermitidos', sql.NVarChar(255), diasPermitidos)
                 .input('TurnoPermitido', sql.NVarChar(50), turnoPermitido)
+                .input('QuinzenaPermitida', sql.NVarChar(20), quinzenaPermitida)
+                .input('FrequenciaPermitida', sql.NVarChar(20), frequenciaPermitida)
                 .input('HoraInicio', sql.NVarChar(10), horaInicio)
                 .input('HoraFim', sql.NVarChar(10), horaFim)
                 .input('Observacao', sql.NVarChar(500), observacao)
@@ -3044,6 +3059,8 @@ app.post('/api/fuel360/cliente-restricoes/batch', async (req, res) => {
                         SET Razao_Social = ISNULL(@Razao_Social, Razao_Social),
                             DiasPermitidos = @DiasPermitidos,
                             TurnoPermitido = @TurnoPermitido,
+                            QuinzenaPermitida = @QuinzenaPermitida,
+                            FrequenciaPermitida = @FrequenciaPermitida,
                             HoraInicio = @HoraInicio,
                             HoraFim = @HoraFim,
                             Observacao = @Observacao,
@@ -3052,8 +3069,8 @@ app.post('/api/fuel360/cliente-restricoes/batch', async (req, res) => {
                             UsuarioAtualizacao = @Usuario
                         WHERE Cod_Cliente = @Cod_Cliente
                     ELSE
-                        INSERT INTO FuelClienteRestricoes (Cod_Cliente, Razao_Social, DiasPermitidos, TurnoPermitido, HoraInicio, HoraFim, Observacao, Ativo, DataAtualizacao, UsuarioAtualizacao)
-                        VALUES (@Cod_Cliente, @Razao_Social, @DiasPermitidos, @TurnoPermitido, @HoraInicio, @HoraFim, @Observacao, @Ativo, GETDATE(), @Usuario)
+                        INSERT INTO FuelClienteRestricoes (Cod_Cliente, Razao_Social, DiasPermitidos, TurnoPermitido, QuinzenaPermitida, FrequenciaPermitida, HoraInicio, HoraFim, Observacao, Ativo, DataAtualizacao, UsuarioAtualizacao)
+                        VALUES (@Cod_Cliente, @Razao_Social, @DiasPermitidos, @TurnoPermitido, @QuinzenaPermitida, @FrequenciaPermitida, @HoraInicio, @HoraFim, @Observacao, @Ativo, GETDATE(), @Usuario)
                 `);
         }
 
@@ -3064,7 +3081,7 @@ app.post('/api/fuel360/cliente-restricoes/batch', async (req, res) => {
             .input('Detalhes', sql.NVarChar(sql.MAX), `Atualizadas particularidades de ${restricoes.length} cliente(s) no banco por ${userName}.`)
             .query("INSERT INTO FuelLogsSistema (DataHora, Usuario, Acao, Detalhes) VALUES (GETDATE(), @Usuario, @Acao, @Detalhes)");
 
-        const updated = await pool.request().query("SELECT ID_Restricao, Cod_Cliente, Razao_Social, DiasPermitidos, TurnoPermitido, HoraInicio, HoraFim, Observacao, ISNULL(Ativo, 1) as Ativo, DataAtualizacao, UsuarioAtualizacao FROM FuelClienteRestricoes ORDER BY Cod_Cliente ASC");
+        const updated = await pool.request().query("SELECT ID_Restricao, Cod_Cliente, Razao_Social, DiasPermitidos, TurnoPermitido, ISNULL(QuinzenaPermitida, 'QUALQUER') as QuinzenaPermitida, ISNULL(FrequenciaPermitida, 'QUALQUER') as FrequenciaPermitida, HoraInicio, HoraFim, Observacao, ISNULL(Ativo, 1) as Ativo, DataAtualizacao, UsuarioAtualizacao FROM FuelClienteRestricoes ORDER BY Cod_Cliente ASC");
         const lastAudit = { usuario: userName, dataHora: new Date().toISOString() };
         res.json({ success: true, message: 'Particularidades de clientes atualizadas com sucesso.', restricoes: updated.recordset || [], lastAudit });
     } catch (err) {
@@ -4282,6 +4299,53 @@ app.post('/api/fuel360/roteiro/sugestoes/:id/aplicar', async (req, res) => {
                 `);
             restricaoCriada = true;
             detalhesAcao.push(`Exceção de janela/horário criada para cliente #${codCliente} (${turnoPermitido}${horaInicio ? ` ${horaInicio}-${horaFim || ''}` : ''})`);
+        }
+
+        // 2.1 Se for alteração de Semana/Periodicidade (1 3 <-> 2 4 ou Semanal) -> Registrar trava corporativa em FuelClienteRestricoes
+        if (codCliente && (sug.SemanaSugerida || tipoAjuste === 'MUDANCA_SEMANA')) {
+            const semStr = (sug.SemanaSugerida || '').toUpperCase();
+            let quinzenaPerm = null;
+            let freqPerm = null;
+
+            if (semStr.includes('2') && semStr.includes('4')) {
+                quinzenaPerm = '2_4';
+                freqPerm = 'QUINZENAL';
+            } else if (semStr.includes('1') && semStr.includes('3')) {
+                quinzenaPerm = '1_3';
+                freqPerm = 'QUINZENAL';
+            } else if (semStr.includes('SEMANAL')) {
+                quinzenaPerm = 'QUALQUER';
+                freqPerm = 'SEMANAL';
+            } else if (semStr.includes('QUINZENAL')) {
+                freqPerm = 'QUINZENAL';
+            }
+
+            if (quinzenaPerm || freqPerm) {
+                await pool.request()
+                    .input('Cod_Cliente', sql.Int, codCliente)
+                    .input('Razao_Social', sql.NVarChar(255), sug.ClienteNome || null)
+                    .input('QuinzenaPermitida', sql.NVarChar(20), quinzenaPerm || 'QUALQUER')
+                    .input('FrequenciaPermitida', sql.NVarChar(20), freqPerm || 'QUALQUER')
+                    .input('Observacao', sql.NVarChar(500), `[Exceção via Crítica Supervisor] Fixada quinzena/frequência ${sug.SemanaSugerida || ''}`.substring(0, 500))
+                    .input('Usuario', sql.NVarChar(255), userName)
+                    .query(`
+                        IF EXISTS (SELECT 1 FROM FuelClienteRestricoes WHERE Cod_Cliente = @Cod_Cliente)
+                            UPDATE FuelClienteRestricoes 
+                            SET Razao_Social = ISNULL(@Razao_Social, Razao_Social),
+                                QuinzenaPermitida = ISNULL(@QuinzenaPermitida, QuinzenaPermitida),
+                                FrequenciaPermitida = ISNULL(@FrequenciaPermitida, FrequenciaPermitida),
+                                Observacao = @Observacao,
+                                Ativo = 1,
+                                DataAtualizacao = GETDATE(),
+                                UsuarioAtualizacao = @Usuario
+                            WHERE Cod_Cliente = @Cod_Cliente
+                        ELSE
+                            INSERT INTO FuelClienteRestricoes (Cod_Cliente, Razao_Social, DiasPermitidos, TurnoPermitido, QuinzenaPermitida, FrequenciaPermitida, HoraInicio, HoraFim, Observacao, Ativo, DataAtualizacao, UsuarioAtualizacao)
+                            VALUES (@Cod_Cliente, @Razao_Social, NULL, 'QUALQUER', @QuinzenaPermitida, @FrequenciaPermitida, NULL, NULL, @Observacao, 1, GETDATE(), @Usuario)
+                    `);
+                restricaoCriada = true;
+                detalhesAcao.push(`Trava de quinzena/frequência registrada em parâmetros de janela (${sug.SemanaSugerida})`);
+            }
         }
 
         // 3. Se for alteração de Dia da Semana ou de Semana/Periodicidade -> Atualizar SnapshotData da simulação no histórico

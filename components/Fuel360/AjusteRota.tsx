@@ -1791,6 +1791,7 @@ export const AjusteRota: React.FC = () => {
     const [formRazaoSocial, setFormRazaoSocial] = useState<string>('');
     const [formDiasPermitidos, setFormDiasPermitidos] = useState<string[]>([]);
     const [formTurnoPermitido, setFormTurnoPermitido] = useState<'MANHA' | 'TARDE' | 'QUALQUER'>('QUALQUER');
+    const [formQuinzenaPermitida, setFormQuinzenaPermitida] = useState<'1_3' | '2_4' | 'QUALQUER'>('QUALQUER');
     const [formObservacao, setFormObservacao] = useState<string>('');
     const [editingRestricaoId, setEditingRestricaoId] = useState<number | null>(null);
 
@@ -1848,6 +1849,7 @@ export const AjusteRota: React.FC = () => {
             setFormRazaoSocial('');
             setFormDiasPermitidos([]);
             setFormTurnoPermitido('QUALQUER');
+            setFormQuinzenaPermitida('QUALQUER');
             setFormObservacao('');
         }
         setShowRestricoesModal(true);
@@ -1868,6 +1870,7 @@ export const AjusteRota: React.FC = () => {
                 Razao_Social: formRazaoSocial.trim() || undefined,
                 DiasPermitidos: formDiasPermitidos.length > 0 ? formDiasPermitidos.join(',') : undefined,
                 TurnoPermitido: formTurnoPermitido,
+                QuinzenaPermitida: formQuinzenaPermitida,
                 Observacao: formObservacao.trim() || undefined,
                 Ativo: true
             };
@@ -1882,6 +1885,7 @@ export const AjusteRota: React.FC = () => {
                 setFormRazaoSocial('');
                 setFormDiasPermitidos([]);
                 setFormTurnoPermitido('QUALQUER');
+                setFormQuinzenaPermitida('QUALQUER');
                 setFormObservacao('');
             } else {
                 setRestricaoSaveFeedback({ type: 'error', message: res?.message || 'Erro ao salvar no banco.' });
@@ -1908,6 +1912,7 @@ export const AjusteRota: React.FC = () => {
                     setFormRazaoSocial('');
                     setFormDiasPermitidos([]);
                     setFormTurnoPermitido('QUALQUER');
+                    setFormQuinzenaPermitida('QUALQUER');
                     setFormObservacao('');
                 }
             }
@@ -4206,16 +4211,36 @@ export const AjusteRota: React.FC = () => {
 
                 bucket.semanais.push(...semanais);
 
-                if (optBalanceWorkload) {
-                    quinzenais.sort((a, b) => a.polarAngle - b.polarAngle);
+                // Separação de Quinzenais com Trava Corporativa (FuelClienteRestricoes)
+                const fixed13: typeof uniqueClients = [];
+                const fixed24: typeof uniqueClients = [];
+                const dynamicQuinzenais: typeof uniqueClients = [];
 
-                    const q13: typeof uniqueClients = [];
-                    const q24: typeof uniqueClients = [];
+                quinzenais.forEach(c => {
+                    const restr = clienteRestricoesMap.get(c.sampleVisit.Cod_Cliente);
+                    if (restr && restr.Ativo !== false && restr.QuinzenaPermitida === '1_3') {
+                        c.tipo = 'QUINZENAL_1_3';
+                        c.originalPeriodicidade = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (1,3)' : '1 3';
+                        fixed13.push(c);
+                    } else if (restr && restr.Ativo !== false && restr.QuinzenaPermitida === '2_4') {
+                        c.tipo = 'QUINZENAL_2_4';
+                        c.originalPeriodicidade = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
+                        fixed24.push(c);
+                    } else {
+                        dynamicQuinzenais.push(c);
+                    }
+                });
+
+                if (optBalanceWorkload) {
+                    dynamicQuinzenais.sort((a, b) => a.polarAngle - b.polarAngle);
+
+                    const q13: typeof uniqueClients = [...fixed13];
+                    const q24: typeof uniqueClients = [...fixed24];
 
                     const satGroups = new Map<string, typeof uniqueClients>();
                     const nonSat: typeof uniqueClients = [];
 
-                    quinzenais.forEach(c => {
+                    dynamicQuinzenais.forEach(c => {
                         const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
                         const isSat = clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
                         if (isSat) {
@@ -4256,7 +4281,7 @@ export const AjusteRota: React.FC = () => {
                         }
                     });
 
-                    // Clientes não-satélites: distribui alternadamente equilibrando as quinzenas
+                    // Clientes não-satélites dinâmicos: distribui alternadamente equilibrando as quinzenas
                     nonSat.sort((a, b) => a.polarAngle - b.polarAngle);
                     nonSat.forEach(c => {
                         if (q13.length <= q24.length) {
@@ -4267,11 +4292,23 @@ export const AjusteRota: React.FC = () => {
                     });
 
                     // Equalização fina: garante que a diferença entre q13 e q24 seja no máximo 1 cliente
-                    while (Math.abs(q13.length - q24.length) > 1) {
+                    // Salvaguarda: NUNCA move clientes com quinzena fixada (fixed13 / fixed24)!
+                    let maxLoop = 15;
+                    while (Math.abs(q13.length - q24.length) > 1 && maxLoop-- > 0) {
                         if (q13.length > q24.length + 1) {
-                            q24.push(q13.pop()!);
+                            const movableIdx = q13.findLastIndex(c => !fixed13.includes(c));
+                            if (movableIdx !== -1) {
+                                q24.push(q13.splice(movableIdx, 1)[0]);
+                            } else {
+                                break;
+                            }
                         } else if (q24.length > q13.length + 1) {
-                            q13.push(q24.pop()!);
+                            const movableIdx = q24.findLastIndex(c => !fixed24.includes(c));
+                            if (movableIdx !== -1) {
+                                q13.push(q24.splice(movableIdx, 1)[0]);
+                            } else {
+                                break;
+                            }
                         }
                     }
 
@@ -4288,7 +4325,12 @@ export const AjusteRota: React.FC = () => {
                     bucket.quinzenais24.push(...q24);
                 } else {
                     quinzenais.forEach(c => {
-                        if (c.tipo === 'QUINZENAL_2_4') {
+                        const restr = clienteRestricoesMap.get(c.sampleVisit.Cod_Cliente);
+                        if (restr && restr.Ativo !== false && restr.QuinzenaPermitida === '2_4') {
+                            bucket.quinzenais24.push(c);
+                        } else if (restr && restr.Ativo !== false && restr.QuinzenaPermitida === '1_3') {
+                            bucket.quinzenais13.push(c);
+                        } else if (c.tipo === 'QUINZENAL_2_4') {
                             bucket.quinzenais24.push(c);
                         } else {
                             bucket.quinzenais13.push(c);
@@ -4297,23 +4339,39 @@ export const AjusteRota: React.FC = () => {
                 }
 
                 // Salvaguarda Rígida de Não-Vacância Diária (Antivazio):
-                // Se qualquer ciclo ativo (1/3 ou 2/4) ficou com 0 visitas mas o outro tem >= 2 visitas, equilibra imediatamente
+                // Só move clientes que NÃO possuem quinzena corporativa fixada!
                 if (bucket.semanais.length + bucket.quinzenais13.length === 0 && bucket.quinzenais24.length >= 2) {
-                    const moveCount = Math.floor(bucket.quinzenais24.length / 2);
-                    const moved = bucket.quinzenais24.splice(0, moveCount);
-                    moved.forEach(c => {
-                        c.tipo = 'QUINZENAL_1_3';
-                        c.originalPeriodicidade = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (1,3)' : '1 3';
-                    });
-                    bucket.quinzenais13.push(...moved);
+                    const movableCount = bucket.quinzenais24.filter(c => !fixed24.includes(c)).length;
+                    if (movableCount > 0) {
+                        const moveTarget = Math.min(movableCount, Math.floor(bucket.quinzenais24.length / 2));
+                        let movedSoFar = 0;
+                        for (let i = bucket.quinzenais24.length - 1; i >= 0 && movedSoFar < moveTarget; i--) {
+                            const cand = bucket.quinzenais24[i];
+                            if (!fixed24.includes(cand)) {
+                                const [moved] = bucket.quinzenais24.splice(i, 1);
+                                moved.tipo = 'QUINZENAL_1_3';
+                                moved.originalPeriodicidade = moved.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (1,3)' : '1 3';
+                                bucket.quinzenais13.push(moved);
+                                movedSoFar++;
+                            }
+                        }
+                    }
                 } else if (bucket.semanais.length + bucket.quinzenais24.length === 0 && bucket.quinzenais13.length >= 2) {
-                    const moveCount = Math.floor(bucket.quinzenais13.length / 2);
-                    const moved = bucket.quinzenais13.splice(0, moveCount);
-                    moved.forEach(c => {
-                        c.tipo = 'QUINZENAL_2_4';
-                        c.originalPeriodicidade = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
-                    });
-                    bucket.quinzenais24.push(...moved);
+                    const movableCount = bucket.quinzenais13.filter(c => !fixed13.includes(c)).length;
+                    if (movableCount > 0) {
+                        const moveTarget = Math.min(movableCount, Math.floor(bucket.quinzenais13.length / 2));
+                        let movedSoFar = 0;
+                        for (let i = bucket.quinzenais13.length - 1; i >= 0 && movedSoFar < moveTarget; i--) {
+                            const cand = bucket.quinzenais13[i];
+                            if (!fixed13.includes(cand)) {
+                                const [moved] = bucket.quinzenais13.splice(i, 1);
+                                moved.tipo = 'QUINZENAL_2_4';
+                                moved.originalPeriodicidade = moved.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
+                                bucket.quinzenais24.push(moved);
+                                movedSoFar++;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -10408,6 +10466,58 @@ export const AjusteRota: React.FC = () => {
                                             {formTurnoPermitido === 'QUALQUER' && 'Sem restrição horária: segue o circuito de menor quilometragem.'}
                                         </span>
                                     </div>
+
+                                    {/* Quinzena Permitida / Trava Corporativa de Ciclo */}
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                                            Quinzena Permitida (Trava Corporativa):
+                                        </label>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormQuinzenaPermitida('1_3')}
+                                                className={`py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 border cursor-pointer ${
+                                                    formQuinzenaPermitida === '1_3'
+                                                        ? 'bg-purple-600 text-white border-purple-700 shadow-xs font-black ring-2 ring-purple-400/40'
+                                                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                <Calendar className="w-4 h-4" />
+                                                <span>📅 1 e 3 (Ímpares)</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormQuinzenaPermitida('2_4')}
+                                                className={`py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 border cursor-pointer ${
+                                                    formQuinzenaPermitida === '2_4'
+                                                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs font-black ring-2 ring-indigo-400/40'
+                                                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                <Calendar className="w-4 h-4" />
+                                                <span>📅 2 e 4 (Pares)</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormQuinzenaPermitida('QUALQUER')}
+                                                className={`py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 border cursor-pointer ${
+                                                    formQuinzenaPermitida === 'QUALQUER'
+                                                        ? 'bg-slate-700 text-white border-slate-800 shadow-xs font-black ring-2 ring-slate-400/40'
+                                                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                <ClockIcon className="w-4 h-4" />
+                                                <span>🔄 Qualquer / Livre</span>
+                                            </button>
+                                        </div>
+                                        <span className="text-[9.5px] text-slate-400 dark:text-slate-500 mt-1 block">
+                                            {formQuinzenaPermitida === '1_3' && 'Fixa o cliente nas Semanas 1 e 3. O algoritmo de balanceamento não poderá movê-lo.'}
+                                            {formQuinzenaPermitida === '2_4' && 'Fixa o cliente nas Semanas 2 e 4. O algoritmo de balanceamento não poderá movê-lo.'}
+                                            {formQuinzenaPermitida === 'QUALQUER' && 'Ciclo livre: o balanceador aloca dinamicamente entre 1/3 ou 2/4 para otimizar o peso diário.'}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {/* Observação Operacional */}
@@ -10495,6 +10605,7 @@ export const AjusteRota: React.FC = () => {
                                                 <th className="p-3">Cliente / Razão Social</th>
                                                 <th className="p-3 text-center">Dias Permitidos</th>
                                                 <th className="p-3 text-center">Turno</th>
+                                                <th className="p-3 text-center">Quinzena</th>
                                                 <th className="p-3">Observação & Auditoria</th>
                                                 <th className="p-3 text-center">Ações</th>
                                             </tr>
@@ -10568,6 +10679,23 @@ export const AjusteRota: React.FC = () => {
                                                                     </span>
                                                                 )}
                                                             </td>
+                                                            <td className="p-3 text-center">
+                                                                {r.QuinzenaPermitida === '1_3' && (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-black bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border border-purple-300">
+                                                                        📅 1 e 3
+                                                                    </span>
+                                                                )}
+                                                                {r.QuinzenaPermitida === '2_4' && (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-black bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-300">
+                                                                        📅 2 e 4
+                                                                    </span>
+                                                                )}
+                                                                {(!r.QuinzenaPermitida || r.QuinzenaPermitida === 'QUALQUER') && (
+                                                                    <span className="text-[10px] text-slate-400 font-normal italic">
+                                                                        Livre
+                                                                    </span>
+                                                                )}
+                                                            </td>
                                                             <td className="p-3 text-[10px] text-slate-500 dark:text-slate-400">
                                                                 <div className="truncate max-w-[220px]" title={cleanObs || r.Observacao || '-'}>
                                                                     {cleanObs || r.Observacao || '-'}
@@ -10593,6 +10721,7 @@ export const AjusteRota: React.FC = () => {
                                                                         setFormRazaoSocial(r.Razao_Social || '');
                                                                         setFormDiasPermitidos(r.DiasPermitidos ? r.DiasPermitidos.split(',').map(s => s.trim()) : []);
                                                                         setFormTurnoPermitido((r.TurnoPermitido as any) || 'QUALQUER');
+                                                                        setFormQuinzenaPermitida((r.QuinzenaPermitida as any) || 'QUALQUER');
                                                                         setFormObservacao(r.Observacao || '');
                                                                         setRestricaoSaveFeedback(null);
                                                                     }}
@@ -10616,7 +10745,7 @@ export const AjusteRota: React.FC = () => {
                                             })}
                                             {clienteRestricoes.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={6} className="p-8 text-center text-slate-400 dark:text-slate-500">
+                                                    <td colSpan={7} className="p-8 text-center text-slate-400 dark:text-slate-500">
                                                         <p className="font-bold text-xs">Nenhuma particularidade cadastrada ainda.</p>
                                                         <p className="text-[11px] mt-1">Utilize o formulário acima para cadastrar restrições de dias ou turnos por cliente.</p>
                                                     </td>
