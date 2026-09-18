@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.190.1',
+    date: 'Hoje',
+    title: 'Infraestrutura: Correção de Build do Docker Compose e Suporte Debian Slim',
+    changes: [
+      'Compatibilidade com node:20-slim: Migração da imagem base do Dockerfile de Alpine para Debian Slim, garantindo suporte nativo ao glibc para o motor nativo do Tailwind CSS v4 (@tailwindcss/oxide), Vite e esbuild.',
+      'Resolução Tolerante de Dependências: Inclusão do parâmetro --legacy-peer-deps na instalação de pacotes para evitar falhas de compilação por divergências paritárias no npm 10.',
+      'Saneamento do .dockerignore e Lockfile: Limpeza de caracteres corrompidos no arquivo .dockerignore e sincronização completa do package-lock.json.'
+    ]
+  },
+  {
     version: '3.190.0',
     date: 'Hoje',
     title: 'Fuel360: Trava Corporativa de Quinzena Permitida e Blindagem do Balanceador de Rotas',
