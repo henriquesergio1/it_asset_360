@@ -1,5 +1,5 @@
-# Imagem oficial do Node.js Slim (Debian glibc para compatibilidade total com Tailwind v4, Vite e esbuild)
-FROM node:20-slim
+# Imagem oficial do Node.js Alpine (leveza e mínimo consumo de disco)
+FROM node:20-alpine
 
 # Define o diretório de trabalho
 WORKDIR /app
@@ -7,8 +7,8 @@ WORKDIR /app
 # Copia arquivos de pacotes
 COPY package*.json ./
 
-# Instala todas as dependências com tolerância a dependências paritárias
-RUN npm install --legacy-peer-deps
+# Instala dependências com tolerância a peer deps e limpa o cache imediatamente para liberar disco
+RUN npm install --legacy-peer-deps --no-audit --no-fund && npm cache clean --force
 
 # Copia todo o código-fonte da aplicação
 COPY . .

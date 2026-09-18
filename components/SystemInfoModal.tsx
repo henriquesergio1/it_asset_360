@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.190.2',
+    date: 'Hoje',
+    title: 'Infraestrutura: Otimização de Espaço em Disco e Reversão para Alpine',
+    changes: [
+      'Reversão para node:20-alpine: Restauração da imagem base oficial Alpine com consumo ultrabaixo de disco e memória.',
+      'Limpeza de Cache no Build: Inclusão de limpeza forçada do cache do npm (npm cache clean --force) e flags --no-audit e --no-fund na mesma camada de instalação para liberar espaço imediato em disco.',
+      'Instruções de Manutenção Docker: Diretrizes para liberação de espaço em disco no servidor host.'
+    ]
+  },
+  {
     version: '3.190.1',
     date: 'Hoje',
     title: 'Infraestrutura: Correção de Build do Docker Compose e Suporte Debian Slim',
