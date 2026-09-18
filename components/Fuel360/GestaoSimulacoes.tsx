@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { getRotaPrevistaHistory, getRotaPrevistaDetails, deleteRotaPrevista, updateRotaPrevistaDiario, getCalculoHistory, getCalculoDetails, updateCalculoDiario, getSimulacaoSugestoes, updateSugestaoStatus } from './services/apiService';
+import { getRotaPrevistaHistory, getRotaPrevistaDetails, deleteRotaPrevista, updateRotaPrevistaDiario, getCalculoHistory, getCalculoDetails, updateCalculoDiario, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao } from './services/apiService';
+import { useAuth } from './context/AuthContext';
 import { RotaPrevistaSaved, RotaPrevistaItem, CalculoSaved, CalculoItem } from './types';
 import { ClipboardListIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon, SpinnerIcon, ExclamationIcon, PencilIcon, CheckCircleIcon, XCircleIcon, CalculatorIcon, LocationMarkerIcon } from './icons';
 import { Share2, MessageSquare, ExternalLink, Check, X, MapPin } from 'lucide-react';
@@ -191,10 +192,19 @@ export const GestaoSimulacoes: React.FC = () => {
     // Modal de Compartilhamento para Supervisor
     const [shareModalData, setShareModalData] = useState<{ isOpen: boolean; simId: number; periodo: string; totalKm?: number } | null>(null);
 
+    const { user: authUser } = useAuth();
+
     // Modal de Sugestões de Supervisores
     const [viewingSuggestions, setViewingSuggestions] = useState<{ simId: number; periodo: string; list: any[] } | null>(null);
     const [loadingSuggestions, setLoadingSuggestions] = useState(false);
     const [updatingSugestaoId, setUpdatingSugestaoId] = useState<number | null>(null);
+    const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!actionSuccessMsg) return;
+        const timer = setTimeout(() => setActionSuccessMsg(null), 5000);
+        return () => clearTimeout(timer);
+    }, [actionSuccessMsg]);
 
     useEffect(() => {
         if (activeTab === 'CALCULO') {
@@ -264,14 +274,41 @@ export const GestaoSimulacoes: React.FC = () => {
     const handleUpdateStatus = async (sugestaoId: number, newStatus: 'PENDENTE' | 'APLICADO' | 'REJEITADO') => {
         setUpdatingSugestaoId(sugestaoId);
         try {
-            await updateSugestaoStatus(sugestaoId, newStatus);
-            setViewingSuggestions(prev => {
-                if (!prev) return null;
-                return {
-                    ...prev,
-                    list: prev.list.map(s => s.ID_Sugestao === sugestaoId ? { ...s, Status: newStatus } : s)
-                };
-            });
+            if (newStatus === 'APLICADO') {
+                const res = await aplicarSugestao(sugestaoId, { usuario: authUser?.Nome || 'Analista de Rotas' });
+                if (res && res.success) {
+                    setViewingSuggestions(prev => {
+                        if (!prev) return null;
+                        return {
+                            ...prev,
+                            list: prev.list.map(s => s.ID_Sugestao === sugestaoId ? { ...s, Status: 'APLICADO' } : s)
+                        };
+                    });
+                    const actions: string[] = [];
+                    if (res.codCliente) {
+                        if (res.diaSugerido) actions.push(`Cliente #${res.codCliente} movido para ${res.diaSugerido}`);
+                        if (res.semanaSugerida) actions.push(`Periodicidade alterada para ${res.semanaSugerida}`);
+                    }
+                    if (res.restricaoCriada) {
+                        actions.push('Exceção cadastrada nos parâmetros de janela do cliente');
+                    }
+                    setActionSuccessMsg(actions.length > 0 ? `✓ Sucesso com 1 clique! ${actions.join(' • ')}.` : `✓ Sugestão #${sugestaoId} aplicada com sucesso!`);
+                    loadSimHistory(activeTab === 'SIMULACAO_AJUSTE' ? 'AJUSTE_ROTA' : 'COMBUSTIVEL');
+                } else {
+                    alert(res?.error || res?.message || 'Erro ao aplicar sugestão.');
+                }
+            } else {
+                await updateSugestaoStatus(sugestaoId, newStatus);
+                setViewingSuggestions(prev => {
+                    if (!prev) return null;
+                    return {
+                        ...prev,
+                        list: prev.list.map(s => s.ID_Sugestao === sugestaoId ? { ...s, Status: newStatus } : s)
+                    };
+                });
+                loadSimHistory(activeTab === 'SIMULACAO_AJUSTE' ? 'AJUSTE_ROTA' : 'COMBUSTIVEL');
+                setActionSuccessMsg(`✓ Status da sugestão atualizado para ${newStatus}.`);
+            }
         } catch (err: any) {
             alert('Erro ao atualizar status da sugestão: ' + err.message);
         } finally {
@@ -645,6 +682,13 @@ export const GestaoSimulacoes: React.FC = () => {
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
+
+                        {actionSuccessMsg && (
+                            <div className="mx-6 mt-4 p-3 bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-semibold flex items-center justify-between animate-in fade-in">
+                                <span>{actionSuccessMsg}</span>
+                                <button onClick={() => setActionSuccessMsg(null)} className="text-emerald-500 hover:text-emerald-700 font-bold ml-2">✕</button>
+                            </div>
+                        )}
 
                         {/* Body */}
                         <div className="p-6 overflow-y-auto space-y-4 flex-1">

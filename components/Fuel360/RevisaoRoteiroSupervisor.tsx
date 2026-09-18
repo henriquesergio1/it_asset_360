@@ -954,6 +954,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                 diaSugerido: tipoAjuste === 'MUDANCA_DIA' ? diaSugerido : null,
                 semanaAtual: selectedClientForSuggestion?.Periodicidade || selectedWeek,
                 semanaSugerida: tipoAjuste === 'MUDANCA_SEMANA' ? semanaSugerida : null,
+                turnoSugerido: tipoAjuste === 'HORARIO_ESPECIFICO' ? turnoSugerido : null,
                 tipoAjuste,
                 observacao: obsFinal
             };

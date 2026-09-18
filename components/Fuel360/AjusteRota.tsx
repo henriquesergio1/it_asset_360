@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
-import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, getSimulacoesPendentesCount } from './services/apiService';
+import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount } from './services/apiService';
 import { VisitaPrevista, Colaborador, SequenceStrategy, ClienteRestricao } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -5532,6 +5532,13 @@ export const AjusteRota: React.FC = () => {
     const [criticasSimList, setCriticasSimList] = useState<any[]>([]);
     const [loadingCriticas, setLoadingCriticas] = useState(false);
     const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+    const [criticaToast, setCriticaToast] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!criticaToast) return;
+        const timer = setTimeout(() => setCriticaToast(null), 5000);
+        return () => clearTimeout(timer);
+    }, [criticaToast]);
 
     const loadPendingCriticasCount = useCallback(async () => {
         try {
@@ -5565,24 +5572,91 @@ export const AjusteRota: React.FC = () => {
     const handleUpdateCriticaStatus = async (sugId: number, newStatus: string) => {
         setActionLoadingId(sugId);
         try {
-            const res = await updateSugestaoStatus(sugId, newStatus);
-            if (res.success) {
-                setCriticasSimList(prev => prev.map(s => s.ID_Sugestao === sugId ? { ...s, Status: newStatus } : s));
-                setSavedSimulationsList(prev => prev.map(s => {
-                    if (s.ID_RotaHist === viewingCriticasSim?.id) {
-                        const currentPending = Number(s.SugestoesPendentes) || 0;
-                        return {
-                            ...s,
-                            SugestoesPendentes: Math.max(0, currentPending - 1)
-                        };
+            if (newStatus === 'APLICADO') {
+                // Aplicação Automática com 1 Clique (atualiza rotas ativas/snapshot e cria restrição de janela)
+                const res = await aplicarSugestao(sugId, { usuario: authUser?.Nome || 'Analista de Rotas' });
+                if (res && res.success) {
+                    const cod = res.codCliente ? Number(res.codCliente) : null;
+                    const actionsPerformed: string[] = [];
+
+                    // 1. Atualizar rota ativa em memória se o cliente estiver presente
+                    if (cod) {
+                        setAdjustedRoutes(prev => prev.map(r => {
+                            if (Number(r.Cod_Cliente) === cod) {
+                                return {
+                                    ...r,
+                                    ...(res.diaSugerido ? { Dia_Semana: res.diaSugerido } : {}),
+                                    ...(res.semanaSugerida ? { Periodicidade: res.semanaSugerida } : {})
+                                };
+                            }
+                            return r;
+                        }));
+
+                        if (res.diaSugerido) {
+                            actionsPerformed.push(`Cliente #${cod} movido para ${res.diaSugerido}`);
+                        }
+                        if (res.semanaSugerida) {
+                            actionsPerformed.push(`Periodicidade alterada para ${res.semanaSugerida}`);
+                        }
                     }
-                    return s;
-                }));
-                loadPendingCriticasCount();
+
+                    // 2. Se criou exceção de horário/janela, recarregar restrições de clientes
+                    if (res.restricaoCriada) {
+                        try {
+                            const restrRes = await getClienteRestricoes();
+                            if (restrRes && restrRes.success && Array.isArray(restrRes.restricoes)) {
+                                setClienteRestricoes(restrRes.restricoes);
+                            }
+                        } catch (e) {
+                            console.warn("Aviso ao recarregar restrições de clientes:", e);
+                        }
+                        actionsPerformed.push(`Exceção de horário cadastrada nos parâmetros de janela`);
+                    }
+
+                    // 3. Atualizar status e contadores na interface
+                    setCriticasSimList(prev => prev.map(s => s.ID_Sugestao === sugId ? { ...s, Status: 'APLICADO' } : s));
+                    setSavedSimulationsList(prev => prev.map(s => {
+                        if (s.ID_RotaHist === viewingCriticasSim?.id) {
+                            const currentPending = Number(s.SugestoesPendentes) || 0;
+                            return {
+                                ...s,
+                                SugestoesPendentes: Math.max(0, currentPending - 1)
+                            };
+                        }
+                        return s;
+                    }));
+                    loadPendingCriticasCount();
+
+                    // 4. Feedback elegante via Toast
+                    const feedbackMsg = actionsPerformed.length > 0
+                        ? `✓ Sucesso com 1 clique! ${actionsPerformed.join(' • ')}.`
+                        : `✓ Sugestão #${sugId} aplicada com sucesso!`;
+                    setCriticaToast(feedbackMsg);
+                } else {
+                    alert(res?.error || res?.message || 'Erro ao aplicar sugestão.');
+                }
+            } else {
+                // Rejeitar ou alterar status simples
+                const res = await updateSugestaoStatus(sugId, newStatus);
+                if (res && res.success) {
+                    setCriticasSimList(prev => prev.map(s => s.ID_Sugestao === sugId ? { ...s, Status: newStatus } : s));
+                    setSavedSimulationsList(prev => prev.map(s => {
+                        if (s.ID_RotaHist === viewingCriticasSim?.id) {
+                            const currentPending = Number(s.SugestoesPendentes) || 0;
+                            return {
+                                ...s,
+                                SugestoesPendentes: Math.max(0, currentPending - 1)
+                            };
+                        }
+                        return s;
+                    }));
+                    loadPendingCriticasCount();
+                    setCriticaToast(`✓ Status da sugestão atualizado para ${newStatus}.`);
+                }
             }
         } catch (e: any) {
-            console.error("Erro ao atualizar status da crítica:", e);
-            alert("Erro ao atualizar status: " + (e.message || e));
+            console.error("Erro ao atualizar/aplicar status da crítica:", e);
+            alert("Erro ao processar crítica: " + (e.message || e));
         } finally {
             setActionLoadingId(null);
         }
@@ -11733,6 +11807,19 @@ export const AjusteRota: React.FC = () => {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {criticaToast && (
+                <div className="fixed bottom-6 right-6 z-[99999] max-w-md bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-400/30 animate-in fade-in slide-in-from-bottom-5 duration-300">
+                    <span className="text-xl">⚡</span>
+                    <span className="text-sm font-semibold tracking-wide leading-snug">{criticaToast}</span>
+                    <button
+                        onClick={() => setCriticaToast(null)}
+                        className="ml-auto text-emerald-200 hover:text-white p-1 rounded-lg transition text-xs font-bold"
+                    >
+                        ✕
+                    </button>
                 </div>
             )}
         </div>

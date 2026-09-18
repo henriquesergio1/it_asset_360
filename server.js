@@ -4204,6 +4204,180 @@ app.put('/api/fuel360/roteiro/sugestoes/:id/status', async (req, res) => {
     }
 });
 
+// Aplicar sugestão do supervisor com 1 clique (atualiza rota ativa/snapshot e cria exceção de janela caso seja horário)
+app.post('/api/fuel360/roteiro/sugestoes/:id/aplicar', async (req, res) => {
+    try {
+        const sugId = parseInt(req.params.id, 10);
+        const { usuario } = req.body || {};
+        const userName = usuario || 'Analista de Rotas';
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+
+        // 1. Buscar a sugestão
+        const sugRes = await pool.request()
+            .input('ID', sql.Int, sugId)
+            .query('SELECT * FROM FuelSimulacaoSugestoes WHERE ID_Sugestao = @ID');
+
+        if (!sugRes.recordset || sugRes.recordset.length === 0) {
+            return res.status(404).json({ error: 'Sugestão não encontrada.' });
+        }
+
+        const sug = sugRes.recordset[0];
+        const codCliente = sug.Cod_Cliente ? parseInt(sug.Cod_Cliente, 10) : null;
+        const tipoAjuste = (sug.TipoAjuste || '').toUpperCase();
+        const obs = sug.Observacao || '';
+        let restricaoCriada = false;
+        let rotaSnapshotAtualizada = false;
+        let detalhesAcao = [];
+
+        // 2. Se for HORARIO_ESPECIFICO ou envolver horário/janela/turno -> Criar exceção em FuelClienteRestricoes
+        if (codCliente && (tipoAjuste === 'HORARIO_ESPECIFICO' || tipoAjuste.includes('HORARIO') || tipoAjuste.includes('TURNO') || obs.includes('[Janela/Turno') || obs.toLowerCase().includes('turno'))) {
+            let turnoPermitido = 'QUALQUER';
+            let horaInicio = null;
+            let horaFim = null;
+
+            const obsUpper = obs.toUpperCase();
+            if (obsUpper.includes('MANHA') || obsUpper.includes('MANHÃ')) {
+                turnoPermitido = 'MANHA';
+                horaInicio = '08:00';
+                horaFim = '12:00';
+            } else if (obsUpper.includes('TARDE')) {
+                turnoPermitido = 'TARDE';
+                horaInicio = '13:00';
+                horaFim = '18:00';
+            }
+
+            // Tentar extrair horário específico de formato "HH:MM às HH:MM" ou similar
+            const horaMatches = obs.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g);
+            if (horaMatches && horaMatches.length >= 2) {
+                horaInicio = horaMatches[0];
+                horaFim = horaMatches[1];
+            } else if (horaMatches && horaMatches.length === 1) {
+                horaInicio = horaMatches[0];
+            }
+
+            await pool.request()
+                .input('Cod_Cliente', sql.Int, codCliente)
+                .input('Razao_Social', sql.NVarChar(255), sug.ClienteNome || null)
+                .input('TurnoPermitido', sql.NVarChar(50), turnoPermitido)
+                .input('HoraInicio', sql.NVarChar(10), horaInicio)
+                .input('HoraFim', sql.NVarChar(10), horaFim)
+                .input('Observacao', sql.NVarChar(500), `[Exceção via Crítica Supervisor] ${obs}`.substring(0, 500))
+                .input('Usuario', sql.NVarChar(255), userName)
+                .query(`
+                    IF EXISTS (SELECT 1 FROM FuelClienteRestricoes WHERE Cod_Cliente = @Cod_Cliente)
+                        UPDATE FuelClienteRestricoes 
+                        SET Razao_Social = ISNULL(@Razao_Social, Razao_Social),
+                            TurnoPermitido = @TurnoPermitido,
+                            HoraInicio = ISNULL(@HoraInicio, HoraInicio),
+                            HoraFim = ISNULL(@HoraFim, HoraFim),
+                            Observacao = @Observacao,
+                            Ativo = 1,
+                            DataAtualizacao = GETDATE(),
+                            UsuarioAtualizacao = @Usuario
+                        WHERE Cod_Cliente = @Cod_Cliente
+                    ELSE
+                        INSERT INTO FuelClienteRestricoes (Cod_Cliente, Razao_Social, TurnoPermitido, HoraInicio, HoraFim, Observacao, Ativo, DataAtualizacao, UsuarioAtualizacao)
+                        VALUES (@Cod_Cliente, @Razao_Social, @TurnoPermitido, @HoraInicio, @HoraFim, @Observacao, 1, GETDATE(), @Usuario)
+                `);
+            restricaoCriada = true;
+            detalhesAcao.push(`Exceção de janela/horário criada para cliente #${codCliente} (${turnoPermitido}${horaInicio ? ` ${horaInicio}-${horaFim || ''}` : ''})`);
+        }
+
+        // 3. Se for alteração de Dia da Semana ou de Semana/Periodicidade -> Atualizar SnapshotData da simulação no histórico
+        if (sug.ID_RotaHist && codCliente && (sug.DiaSugerido || sug.SemanaSugerida || tipoAjuste === 'MUDANCA_DIA' || tipoAjuste === 'MUDANCA_SEMANA')) {
+            const histRes = await pool.request()
+                .input('ID', sql.Int, sug.ID_RotaHist)
+                .query('SELECT SnapshotData FROM FuelSimulacoesHistorico WHERE ID_RotaHist = @ID');
+
+            if (histRes.recordset && histRes.recordset.length > 0 && histRes.recordset[0].SnapshotData) {
+                try {
+                    let snapshot = JSON.parse(histRes.recordset[0].SnapshotData);
+                    let changed = false;
+
+                    // Se o snapshot tiver estrutura de sellers
+                    if (Array.isArray(snapshot.sellers)) {
+                        snapshot.sellers.forEach(seller => {
+                            const clients = seller.clients || seller.visitas || [];
+                            clients.forEach(c => {
+                                const cId = Number(c.Cod_Cliente || c.id);
+                                if (cId === codCliente) {
+                                    if (sug.DiaSugerido) {
+                                        c.Dia_Semana = sug.DiaSugerido;
+                                        changed = true;
+                                    }
+                                    if (sug.SemanaSugerida) {
+                                        c.Periodicidade = sug.SemanaSugerida;
+                                        changed = true;
+                                    }
+                                }
+                            });
+                        });
+                    }
+
+                    // Se o snapshot tiver visitas diretas
+                    if (Array.isArray(snapshot.visitas)) {
+                        snapshot.visitas.forEach(v => {
+                            const cId = Number(v.Cod_Cliente || v.id);
+                            if (cId === codCliente) {
+                                if (sug.DiaSugerido) {
+                                    v.Dia_Semana = sug.DiaSugerido;
+                                    changed = true;
+                                }
+                                if (sug.SemanaSugerida) {
+                                    v.Periodicidade = sug.SemanaSugerida;
+                                    changed = true;
+                                }
+                            }
+                        });
+                    }
+
+                    if (changed) {
+                        await pool.request()
+                            .input('ID', sql.Int, sug.ID_RotaHist)
+                            .input('SnapshotData', sql.NVarChar(sql.MAX), JSON.stringify(snapshot))
+                            .query('UPDATE FuelSimulacoesHistorico SET SnapshotData = @SnapshotData WHERE ID_RotaHist = @ID');
+                        rotaSnapshotAtualizada = true;
+                        if (sug.DiaSugerido) detalhesAcao.push(`Dia alterado para ${sug.DiaSugerido}`);
+                        if (sug.SemanaSugerida) detalhesAcao.push(`Periodicidade alterada para ${sug.SemanaSugerida}`);
+                    }
+                } catch (snapErr) {
+                    console.warn('[Fuel360 WARN] Falha ao atualizar SnapshotData da simulação:', snapErr.message);
+                }
+            }
+        }
+
+        // 4. Marcar o status da sugestão como APLICADO
+        await pool.request()
+            .input('ID', sql.Int, sugId)
+            .input('Status', sql.NVarChar(50), 'APLICADO')
+            .query('UPDATE FuelSimulacaoSugestoes SET Status = @Status WHERE ID_Sugestao = @ID');
+
+        // 5. Registrar log de auditoria
+        await pool.request()
+            .input('Usuario', sql.NVarChar(255), userName)
+            .input('Acao', sql.NVarChar(255), 'APLICAR_SUGESTAO_SUPERVISOR')
+            .input('Detalhes', sql.NVarChar(sql.MAX), `Sugestão #${sugId} aplicada automaticamente por ${userName}. Ações: ${detalhesAcao.join('; ') || 'Status atualizado para APLICADO'}.`)
+            .query("INSERT INTO FuelLogsSistema (DataHora, Usuario, Acao, Detalhes) VALUES (GETDATE(), @Usuario, @Acao, @Detalhes)");
+
+        res.json({
+            success: true,
+            message: 'Sugestão aplicada com sucesso!',
+            sugId,
+            codCliente,
+            tipoAjuste,
+            diaSugerido: sug.DiaSugerido,
+            semanaSugerida: sug.SemanaSugerida,
+            restricaoCriada,
+            rotaSnapshotAtualizada,
+            detalhes: detalhesAcao
+        });
+    } catch (err) {
+        console.error('Erro ao aplicar sugestão do supervisor:', err);
+        res.status(500).json({ error: err.message || 'Erro ao aplicar sugestão' });
+    }
+});
+
 // Contagem global de sugestões pendentes do supervisor para rotas/simulações
 app.get('/api/fuel360/roteiro/sugestoes/pendentes-count', async (req, res) => {
     try {

@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.189.0',
+    date: 'Hoje',
+    title: 'Fuel360: Aplicação Automática com 1 Clique de Críticas e Criação de Exceções de Janela',
+    changes: [
+      'Aplicação Automática com 1 Clique: Ao aprovar sugestões de alteração de dia da semana ou de periodicidade/semana de um cliente, o remanejamento é aplicado imediatamente na rota ativa e no snapshot da simulação, dispensando manipulações manuais na grade.',
+      'Criação Automática de Exceções de Janela: Sugestões de horário específico ou turno (Manhã/Tarde) cadastram automaticamente a particularidade do cliente nos parâmetros corporativos (FuelClienteRestricoes), passando a valer instantaneamente no motor de rotas e no mapa.',
+      'Sincronização em Tempo Real: Atualização instantânea dos indicadores de status para "APLICADO", recálculo de pendências e badges de críticas em todo o sistema.'
+    ]
+  },
+  {
     version: '3.188.6',
     date: 'Hoje',
     title: 'Fuel360: Botão de Simulações Salvas, Alertas de Críticas no Menu e Correção de Tema Escuro',

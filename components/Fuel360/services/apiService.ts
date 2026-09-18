@@ -187,6 +187,7 @@ const RealService = {
     getSimulacaoSugestoes: (id: number): Promise<any[]> => apiRequest(`/roteiro/simulacao/${id}/sugestoes`),
     saveSimulacaoSugestao: (id: number, payload: any): Promise<{ success: boolean; id: number }> => apiRequest(`/roteiro/simulacao/${id}/sugestoes`, 'POST', payload),
     updateSugestaoStatus: (id: number, status: string): Promise<{ success: boolean }> => apiRequest(`/roteiro/sugestoes/${id}/status`, 'PUT', { status }),
+    aplicarSugestao: (id: number, payload?: any): Promise<any> => apiRequest(`/roteiro/sugestoes/${id}/aplicar`, 'POST', payload),
     getSimulacoesPendentesCount: (): Promise<{ count: number }> => apiRequest('/roteiro/sugestoes/pendentes-count'),
 
     // Gestão de Cálculos Fechados
@@ -628,6 +629,7 @@ const MockService = {
     getSimulacaoSugestoes: async (id: number) => [],
     saveSimulacaoSugestao: async () => ({ success: true, id: 1 }),
     updateSugestaoStatus: async () => ({ success: true }),
+    aplicarSugestao: async (id: number, payload?: any) => ({ success: true, message: 'Sugestão aplicada com sucesso (mock)' }),
     getSimulacoesPendentesCount: async () => ({ count: 0 }),
     getCalculoHistory: async () => [],
     getCalculoDetails: async () => [],
@@ -672,7 +674,7 @@ export const {
     getRelatorioReembolso, getRelatorioAnalitico, logAction, getSystemLogs, getVisitasPrevistas, getPromoterClients,
     saveRotaPrevista, checkRotaPrevistaExists, getRotaPrevistaHistory, getRotaPrevistaDetails,
     deleteRotaPrevista, updateRotaPrevistaDiario, getCalculoHistory, getCalculoDetails, updateCalculoDiario,
-    getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, updateSugestaoStatus, getSimulacoesPendentesCount,
+    getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount,
     moveColaboradoresToGroup, bulkUpdateColaboradores, corrigirAusenciasHistorico, getSugestoesVinculo, batchUpdateColaboradoresAddress,
     getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao,
     geocodeAddress, getOSRMData, getOSRMTable, calcDistance
