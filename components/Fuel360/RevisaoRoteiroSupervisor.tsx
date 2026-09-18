@@ -322,7 +322,8 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     const [supervisorName, setSupervisorName] = useState<string>(() => {
         return localStorage.getItem('fuel360_supervisor_name') || '';
     });
-    const [tipoAjuste, setTipoAjuste] = useState<string>('DIA_ESPECIFICO');
+    const [tipoAjuste, setTipoAjuste] = useState<string>('HORARIO_ESPECIFICO');
+    const [turnoSugerido, setTurnoSugerido] = useState<string>('MANHA');
     const [diaSugerido, setDiaSugerido] = useState<string>('TERÇA-FEIRA');
     const [semanaSugerida, setSemanaSugerida] = useState<string>('1_3');
     const [observacao, setObservacao] = useState<string>('');
@@ -404,18 +405,22 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         return defaultMins;
     }, [channelServiceTimes]);
 
-    // Extrair Lista de Vendedores / Setores da Simulação
+    // Extrair Lista de Vendedores / Setores da Simulação com padronização Cód - Nome
     const sellersList = useMemo(() => {
         if (!simulacaoData || !simulacaoData.snapshot) return [];
         const snapshot = simulacaoData.snapshot;
 
         // Se o snapshot tiver lista de setores/vendedores
         if (Array.isArray(snapshot.sellers)) {
-            return snapshot.sellers.map((s: any) => ({
-                id: String(s.id || s.Cod_Vend || s.Nome),
-                name: s.name || s.Nome || `Vendedor ${s.id}`,
-                clients: s.clients || s.visitas || []
-            }));
+            return snapshot.sellers.map((s: any) => {
+                const sId = String(s.id || s.Cod_Vend || s.Nome);
+                const rawName = s.name || s.Nome || `Vendedor ${sId}`;
+                return {
+                    id: sId,
+                    name: formatSellerDisplayName(sId, rawName),
+                    clients: s.clients || s.visitas || []
+                };
+            });
         }
 
         // Se o snapshot tiver lista de visitas diretas
@@ -423,8 +428,13 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             const map = new Map<string, { id: string; name: string; clients: any[] }>();
             snapshot.visitas.forEach((v: any) => {
                 const sId = String(v.Cod_Vend || v.Nome_Vendedor || '1');
+                const rawName = v.Nome_Vendedor || `Vendedor ${sId}`;
                 if (!map.has(sId)) {
-                    map.set(sId, { id: sId, name: v.Nome_Vendedor || `Vendedor ${sId}`, clients: [] });
+                    map.set(sId, { 
+                        id: sId, 
+                        name: formatSellerDisplayName(sId, rawName), 
+                        clients: [] 
+                    });
                 }
                 map.get(sId)?.clients.push(v);
             });
@@ -450,6 +460,38 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         const s = sellersList.find(item => item.id === selectedSeller);
         return s ? s.clients : [];
     }, [sellersList, selectedSeller]);
+
+    // Identificação do Supervisor vinculado ao vendedor selecionado (com formato Cód - Nome)
+    const currentSupervisor = useMemo<string>(() => {
+        if (!currentSellerClients || currentSellerClients.length === 0) return '';
+        const found = currentSellerClients.find((c: any) => c.Nome_Supervisor || c.nome_supervisor || c.NomeSupervisor);
+        if (!found) {
+            const currentSellerObj = sellersList.find(s => s.id === selectedSeller);
+            const rawSellerCode = currentSellerObj?.id || selectedSeller;
+            const colabList: any[] = simulacaoData?.collaborators || [];
+            const colab = colabList.find(c => String(c.CodigoSetor) === String(rawSellerCode) || String(c.ID_Pulsus) === String(rawSellerCode));
+            if (colab && (colab.Nome_Supervisor || colab.NomeSupervisor || colab.Supervisor)) {
+                const sNome = (colab.Nome_Supervisor || colab.NomeSupervisor || colab.Supervisor).trim();
+                const sCod = colab.Cod_Supervisor || colab.CodSupervisor || '';
+                return sCod && sNome ? (sNome.startsWith(`${sCod} -`) ? sNome : `${sCod} - ${sNome}`) : sNome;
+            }
+            return '';
+        }
+        const sCod = found.Cod_Supervisor || found.cod_supervisor || found.CodSupervisor || '';
+        const sNome = String(found.Nome_Supervisor || found.nome_supervisor || found.NomeSupervisor || '').trim();
+        if (sCod && sNome) {
+            if (sNome.startsWith(`${sCod} -`)) return sNome;
+            return `${sCod} - ${sNome}`;
+        }
+        return sNome || (sCod ? `Supervisor ${sCod}` : '');
+    }, [currentSellerClients, sellersList, selectedSeller, simulacaoData]);
+
+    // Auto-preenchimento do nome do supervisor quando identificado
+    useEffect(() => {
+        if (currentSupervisor) {
+            setSupervisorName(currentSupervisor);
+        }
+    }, [currentSupervisor]);
 
     // Informações da Base do Vendedor Selecionado (Partida Stop 0 e Retorno)
     const activeBaseInfo = useMemo(() => {
@@ -872,8 +914,12 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     // Abrir Modal de Sugestão
     const handleOpenSuggestionModal = (client?: any) => {
         setSelectedClientForSuggestion(client || null);
-        setTipoAjuste(client ? 'DIA_ESPECIFICO' : 'OUTRO');
+        setTipoAjuste(client ? 'HORARIO_ESPECIFICO' : 'OUTRO');
+        setTurnoSugerido('MANHA');
         setObservacao('');
+        if (currentSupervisor) {
+            setSupervisorName(currentSupervisor);
+        }
         setIsSuggestionModalOpen(true);
     };
 
@@ -884,11 +930,21 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             return;
         }
 
-        const name = supervisorName.trim() || 'Supervisor da Equipe';
+        const name = supervisorName.trim() || currentSupervisor || 'Supervisor da Equipe';
         localStorage.setItem('fuel360_supervisor_name', name);
         setSavingSuggestion(true);
 
         try {
+            let obsFinal = observacao.trim();
+            if (tipoAjuste === 'HORARIO_ESPECIFICO') {
+                const turnoLabel = turnoSugerido === 'MANHA'
+                    ? 'Turno Manhã (08:00 às 12:00)'
+                    : turnoSugerido === 'TARDE'
+                    ? 'Turno Tarde (13:00 às 18:00)'
+                    : 'Horário Agendado / Janela Específica';
+                obsFinal = `[Janela/Turno Solicitado: ${turnoLabel}] ${obsFinal}`;
+            }
+
             const payload = {
                 supervisorNome: name,
                 codCliente: selectedClientForSuggestion?.Cod_Cliente || selectedClientForSuggestion?.id || null,
@@ -899,7 +955,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                 semanaAtual: selectedClientForSuggestion?.Periodicidade || selectedWeek,
                 semanaSugerida: tipoAjuste === 'MUDANCA_SEMANA' ? semanaSugerida : null,
                 tipoAjuste,
-                observacao: observacao.trim()
+                observacao: obsFinal
             };
 
             const res = await saveSimulacaoSugestao(simId, payload);
@@ -991,6 +1047,14 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     ))}
                                 </select>
                             </div>
+
+                            {/* IDENTIFICAÇÃO DO SUPERVISOR VINCULADO */}
+                            {currentSupervisor && (
+                                <div className="hidden md:flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-xl border border-emerald-200/80 dark:border-emerald-800 text-xs font-bold" title="Supervisor vinculado a este setor/vendedor">
+                                    <UserCheck size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                    <span className="truncate max-w-[180px]">Sup: {currentSupervisor}</span>
+                                </div>
+                            )}
 
                             {/* ALTERNADOR DE TEMA */}
                             <ThemeToggle />
@@ -1312,7 +1376,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                                         <span className="text-[10px] text-slate-500 font-mono">PDV {v.Cod_Cliente}</span>
                                                     </div>
                                                     <p className="font-bold text-slate-900 leading-tight">
-                                                        {v.Razao_Social || v.nome}
+                                                        {v.Cod_Cliente ? `${v.Cod_Cliente} - ${v.Razao_Social || v.nome}` : (v.Razao_Social || v.nome)}
                                                     </p>
                                                     <p className="text-[10px] text-slate-500">
                                                         {v.Endereco || 'Endereço não cadastrado'} - {v.Bairro}
@@ -1441,7 +1505,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-1.5 flex-wrap">
                                                     <span className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
-                                                        {v.Razao_Social || v.nome}
+                                                        {v.Cod_Cliente ? `${v.Cod_Cliente} - ${v.Razao_Social || v.nome}` : (v.Razao_Social || v.nome)}
                                                     </span>
                                                     {/* BADGE DE FREQUÊNCIA (1 3 / 2 4 / 1 2 3 4) */}
                                                     <span
@@ -1527,9 +1591,16 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                         <div className="space-y-3 text-xs">
                             {/* Nome do Supervisor */}
                             <div>
-                                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500">
-                                    Seu Nome (Supervisor)
-                                </label>
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                        Seu Nome (Supervisor)
+                                    </label>
+                                    {currentSupervisor && (
+                                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                                            Vinculado automaticamente
+                                        </span>
+                                    )}
+                                </div>
                                 <input
                                     type="text"
                                     placeholder="Ex: Carlos Silva"
@@ -1544,7 +1615,9 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                 <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase">Cliente Selecionado</span>
                                     <div className="font-black text-slate-900 dark:text-white text-xs mt-0.5">
-                                        {selectedClientForSuggestion.Razao_Social || selectedClientForSuggestion.nome}
+                                        {selectedClientForSuggestion.Cod_Cliente
+                                            ? `${selectedClientForSuggestion.Cod_Cliente} - ${selectedClientForSuggestion.Razao_Social || selectedClientForSuggestion.nome}`
+                                            : (selectedClientForSuggestion.Razao_Social || selectedClientForSuggestion.nome)}
                                     </div>
                                     <div className="text-[10px] text-slate-500 mt-0.5">
                                         Dia Atual: <b>{selectedClientForSuggestion.Dia_Semana || selectedDay}</b> • Semana: <b>{selectedClientForSuggestion.Periodicidade || selectedWeek}</b>
@@ -1566,7 +1639,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     onChange={e => setTipoAjuste(e.target.value)}
                                     className={`${UI_INPUT_BASE} font-bold cursor-pointer`}
                                 >
-                                    <option value="DIA_ESPECIFICO">Cliente só atende em dia específico</option>
+                                    <option value="HORARIO_ESPECIFICO">Horário específico de atendimento (Janela / Turno)</option>
                                     <option value="MUDANCA_DIA">Alterar dia de atendimento</option>
                                     <option value="MUDANCA_SEMANA">Alterar semana de atendimento</option>
                                     <option value="MUDANCA_SETOR">Transferir para outro setor / vendedor</option>
@@ -1575,6 +1648,23 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                             </div>
 
                             {/* Campos Condicionais */}
+                            {tipoAjuste === 'HORARIO_ESPECIFICO' && (
+                                <div>
+                                    <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500">
+                                        Janela / Turno Solicitado
+                                    </label>
+                                    <select
+                                        value={turnoSugerido}
+                                        onChange={e => setTurnoSugerido(e.target.value)}
+                                        className={`${UI_INPUT_BASE} font-bold cursor-pointer`}
+                                    >
+                                        <option value="MANHA">Manhã (08:00 às 12:00)</option>
+                                        <option value="TARDE">Tarde (13:00 às 18:00)</option>
+                                        <option value="HORARIO_MARCADO">Horário Agendado / Janela Específica (informar abaixo)</option>
+                                    </select>
+                                </div>
+                            )}
+
                             {tipoAjuste === 'MUDANCA_DIA' && (
                                 <div>
                                     <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500">
@@ -1694,7 +1784,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
 
                                         {sug.ClienteNome && (
                                             <div className="font-bold text-slate-800 dark:text-slate-200">
-                                                PDV: {sug.ClienteNome} (Cód {sug.Cod_Cliente})
+                                                PDV: {sug.Cod_Cliente ? `${sug.Cod_Cliente} - ${sug.ClienteNome}` : sug.ClienteNome}
                                             </div>
                                         )}
 
@@ -1703,7 +1793,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                         </div>
 
                                         <div className="flex items-center gap-3 text-[10px] text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                                            <span>Tipo: <b>{sug.TipoAjuste}</b></span>
+                                            <span>Tipo: <b>{sug.TipoAjuste === 'HORARIO_ESPECIFICO' ? 'Horário Específico' : sug.TipoAjuste === 'DIA_ESPECIFICO' ? 'Dia Específico' : sug.TipoAjuste === 'MUDANCA_DIA' ? 'Mudança de Dia' : sug.TipoAjuste === 'MUDANCA_SEMANA' ? 'Mudança de Semana' : sug.TipoAjuste === 'MUDANCA_SETOR' ? 'Mudança de Setor' : (sug.TipoAjuste || 'Geral')}</b></span>
                                             {sug.DiaSugerido && <span>Dia Sugerido: <b>{sug.DiaSugerido}</b></span>}
                                             {sug.SemanaSugerida && <span>Semana Sugerida: <b>{sug.SemanaSugerida}</b></span>}
                                         </div>
