@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.190.3',
+    date: 'Hoje',
+    title: 'Infraestrutura: Compatibilidade glibc no Alpine e Resolução Nativa Linux no Dockerfile',
+    changes: [
+      'Inclusão de libc6-compat no Alpine: Adicionada biblioteca de compatibilidade C para suporte aos binários do compilador esbuild/vite em ambiente Alpine musl.',
+      'Cópia Limpa de Dependências: Cópia isolada do package.json no estágio de build, eliminando interferência de lockfile gerado no ambiente Windows na resolução de binários nativos de Linux.',
+      'Simplificação do comando de instalação: Remoção de operações desnecessárias de cache cleaning, mantendo instalação com tolerância a dependências paritárias.'
+    ]
+  },
+  {
     version: '3.190.2',
     date: 'Hoje',
     title: 'Infraestrutura: Otimização de Espaço em Disco e Reversão para Alpine',

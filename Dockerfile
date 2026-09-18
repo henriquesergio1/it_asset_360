@@ -1,14 +1,17 @@
 # Imagem oficial do Node.js Alpine (leveza e mínimo consumo de disco)
 FROM node:20-alpine
 
+# Suporte de compatibilidade glibc para o compilador esbuild/vite no Alpine
+RUN apk add --no-cache libc6-compat
+
 # Define o diretório de trabalho
 WORKDIR /app
 
-# Copia arquivos de pacotes
-COPY package*.json ./
+# Copia apenas package.json (sem lockfile de host) para resolução nativa Linux
+COPY package.json ./
 
-# Instala dependências com tolerância a peer deps e limpa o cache imediatamente para liberar disco
-RUN npm install --legacy-peer-deps --no-audit --no-fund && npm cache clean --force
+# Instala dependências com tolerância a peer deps
+RUN npm install --legacy-peer-deps
 
 # Copia todo o código-fonte da aplicação
 COPY . .
