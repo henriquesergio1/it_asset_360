@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao } from './services/apiService';
+import { getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, getOSRMData } from './services/apiService';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -40,6 +40,34 @@ import {
     UI_BADGE_SUCCESS
 } from '../../constants';
 
+// --- PALETA CROMÁTICA OFICIAL POR DIA DA SEMANA ---
+export const DAY_COLORS: Record<string, { bg: string; text: string; border: string; hex: string; label: string }> = {
+    'SEGUNDA-FEIRA': { bg: 'bg-blue-600', text: 'text-blue-600', border: 'border-blue-500', hex: '#2563eb', label: 'SEG' },
+    'TERÇA-FEIRA':   { bg: 'bg-purple-600', text: 'text-purple-600', border: 'border-purple-500', hex: '#7c3aed', label: 'TER' },
+    'QUARTA-FEIRA':  { bg: 'bg-emerald-600', text: 'text-emerald-600', border: 'border-emerald-500', hex: '#059669', label: 'QUA' },
+    'QUINTA-FEIRA':  { bg: 'bg-amber-600', text: 'text-amber-600', border: 'border-amber-500', hex: '#d97706', label: 'QUI' },
+    'SEXTA-FEIRA':   { bg: 'bg-rose-600', text: 'text-rose-600', border: 'border-rose-500', hex: '#e11d48', label: 'SEX' },
+    'SÁBADO':        { bg: 'bg-cyan-600', text: 'text-cyan-600', border: 'border-cyan-500', hex: '#0891b2', label: 'SÁB' },
+    'DOMINGO':       { bg: 'bg-slate-600', text: 'text-slate-600', border: 'border-slate-500', hex: '#64748b', label: 'DOM' },
+    'SEM ATENDIMENTO': { bg: 'bg-red-600', text: 'text-red-600', border: 'border-red-500', hex: '#ef4444', label: 'SEM ATEND.' }
+};
+
+const WEEKDAYS = ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA'];
+
+const normalizeDiaSemana = (dia: string | number | undefined): string => {
+    if (dia !== undefined && dia !== null && String(dia).trim() !== '') {
+        const d = String(dia).trim().toUpperCase();
+        if (d === '1' || d.includes('SEG')) return 'SEGUNDA-FEIRA';
+        if (d === '2' || d.includes('TER')) return 'TERÇA-FEIRA';
+        if (d === '3' || d.includes('QUA')) return 'QUARTA-FEIRA';
+        if (d === '4' || d.includes('QUI')) return 'QUINTA-FEIRA';
+        if (d === '5' || d.includes('SEX')) return 'SEXTA-FEIRA';
+        if (d === '6' || d.includes('SAB') || d.includes('SÁB')) return 'SÁBADO';
+        if (d === '7' || d.includes('DOM')) return 'SEGUNDA-FEIRA';
+    }
+    return 'SEGUNDA-FEIRA';
+};
+
 // --- HELPER PARA FORMATAÇÃO DE MINUTOS EM HORAS/MINUTOS ---
 const formatMinutesToHours = (totalMinutes: number): string => {
     if (isNaN(totalMinutes) || totalMinutes <= 0) return '0 min';
@@ -50,9 +78,9 @@ const formatMinutesToHours = (totalMinutes: number): string => {
     return `${hours}h ${mins}min`;
 };
 
-// --- FUNÇÃO PARA CRIAR ÍCONE DE PARADA NUMERADA NO MAPA ---
-const createNumberedPinIcon = (seq: number, isSelected: boolean = false) => {
-    const bg = isSelected ? '#ef4444' : '#2563eb';
+// --- FUNÇÃO PARA CRIAR ÍCONE DE PARADA NUMERADA NO MAPA COM COR DINÂMICA ---
+const createNumberedPinIcon = (seq: number, isSelected: boolean = false, bgColor?: string) => {
+    const bg = isSelected ? '#ef4444' : (bgColor || '#2563eb');
     return L.divIcon({
         className: 'custom-numbered-pin',
         iconSize: [32, 42],
@@ -213,9 +241,9 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     const filteredVisits = useMemo(() => {
         return currentSellerClients.filter((c: any) => {
             // Normalizar Dia da Semana
-            const diaC = String(c.Dia_Semana || c.dia || '').toUpperCase().trim();
+            const diaC = normalizeDiaSemana(c.Dia_Semana || c.dia);
             const diaFiltro = selectedDay.toUpperCase().trim();
-            if (selectedDay !== 'ALL' && !diaC.includes(diaFiltro.replace('-FEIRA', ''))) {
+            if (selectedDay !== 'ALL' && diaC !== diaFiltro) {
                 return false;
             }
 
@@ -232,31 +260,203 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
 
             return true;
         }).sort((a: any, b: any) => {
+            if (selectedDay === 'ALL') {
+                const orderDays = ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'];
+                const diaA = normalizeDiaSemana(a.Dia_Semana || a.dia);
+                const diaB = normalizeDiaSemana(b.Dia_Semana || b.dia);
+                const idxA = orderDays.indexOf(diaA);
+                const idxB = orderDays.indexOf(diaB);
+                if (idxA !== idxB) return idxA - idxB;
+            }
             const seqA = Number(a.Sequencia_13 || a.Sequencia_24 || a.sequencia || a.ordem || 999);
             const seqB = Number(b.Sequencia_13 || b.Sequencia_24 || b.sequencia || b.ordem || 999);
             return seqA - seqB;
         });
     }, [currentSellerClients, selectedDay, selectedWeek]);
 
+    // Contagens de Clientes por Ciclo (Todas, Sem 1/3, Sem 2/4) para o vendedor selecionado
+    const cycleCounts = useMemo(() => {
+        const total = currentSellerClients.length;
+        let c13 = 0;
+        let c24 = 0;
+        currentSellerClients.forEach((c: any) => {
+            const per = String(c.Periodicidade || c.periodicidade || '').toUpperCase();
+            const is24 = per.includes('2_4') || per.includes('2 E 4') || per.includes('24');
+            const is13 = per.includes('1_3') || per.includes('1 E 3') || per.includes('13');
+            if (is13) c13++;
+            else if (is24) c24++;
+            else {
+                c13++;
+                c24++;
+            }
+        });
+        return { total, c13, c24 };
+    }, [currentSellerClients]);
+
+    // Clientes filtrados apenas pelo Ciclo selecionado
+    const clientsInCurrentCycle = useMemo(() => {
+        return currentSellerClients.filter((c: any) => {
+            if (selectedWeek === 'ALL') return true;
+            const per = String(c.Periodicidade || c.periodicidade || '').toUpperCase();
+            if (selectedWeek === '13' && (per.includes('2_4') || per.includes('2 E 4') || per.includes('24'))) return false;
+            if (selectedWeek === '24' && (per.includes('1_3') || per.includes('1 E 3') || per.includes('13'))) return false;
+            return true;
+        });
+    }, [currentSellerClients, selectedWeek]);
+
+    // Contagem e KM estimado por Dia da Semana no Ciclo atual
+    const dayStats = useMemo(() => {
+        const stats: Record<string, { count: number; estimatedKm: number }> = {};
+        const daysToInspect = ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'];
+        daysToInspect.forEach(d => {
+            stats[d] = { count: 0, estimatedKm: 0 };
+        });
+
+        daysToInspect.forEach(day => {
+            const dayVisits = clientsInCurrentCycle.filter((c: any) => normalizeDiaSemana(c.Dia_Semana || c.dia) === day)
+                .sort((a: any, b: any) => {
+                    const seqA = Number(a.Sequencia_13 || a.Sequencia_24 || a.sequencia || a.ordem || 999);
+                    const seqB = Number(b.Sequencia_13 || b.Sequencia_24 || b.sequencia || b.ordem || 999);
+                    return seqA - seqB;
+                });
+            stats[day].count = dayVisits.length;
+            let km = 0;
+            for (let i = 0; i < dayVisits.length - 1; i++) {
+                const p1 = dayVisits[i];
+                const p2 = dayVisits[i + 1];
+                const lat1 = Number(p1.Lat || p1.Latitude);
+                const lon1 = Number(p1.Long || p1.Longitude);
+                const lat2 = Number(p2.Lat || p2.Latitude);
+                const lon2 = Number(p2.Long || p2.Longitude);
+                if (!isNaN(lat1) && !isNaN(lon1) && !isNaN(lat2) && !isNaN(lon2)) {
+                    const dLat = (lat2 - lat1) * 111;
+                    const dLon = (lon2 - lon1) * 111;
+                    km += Math.sqrt(dLat * dLat + dLon * dLon) * 1.25;
+                }
+            }
+            stats[day].estimatedKm = Math.round(km * 10) / 10;
+        });
+
+        return stats;
+    }, [clientsInCurrentCycle]);
+
+    // Mapeamento de visitas agrupadas por dia da semana
+    const dayVisitsMap = useMemo(() => {
+        const map = new Map<string, any[]>();
+        filteredVisits.forEach((v: any) => {
+            const day = normalizeDiaSemana(v.Dia_Semana || v.dia);
+            if (!map.has(day)) map.set(day, []);
+            map.get(day)!.push(v);
+        });
+        return map;
+    }, [filteredVisits]);
+
+    // Cache de trajetos viários reais OSRM
+    const osrmCacheRef = useRef<Map<string, { geometry: [number, number][]; distance: number }>>(new Map());
+    const [roadTracks, setRoadTracks] = useState<Array<{ day: string; color: string; points: [number, number][]; distance: number }>>([]);
+
+    // Efeito para carregar trajetos viários reais OSRM
+    useEffect(() => {
+        let isMounted = true;
+
+        const calculateTracks = async () => {
+            if (filteredVisits.length === 0) {
+                setRoadTracks([]);
+                return;
+            }
+
+            const daysToDraw: string[] = selectedDay === 'ALL'
+                ? Array.from(new Set(filteredVisits.map((v: any) => normalizeDiaSemana(v.Dia_Semana || v.dia))))
+                : [selectedDay];
+
+            const initialTracks: Array<{ day: string; color: string; points: [number, number][]; distance: number }> = [];
+
+            daysToDraw.forEach((day: string) => {
+                const dayVisits = filteredVisits.filter((v: any) => normalizeDiaSemana(v.Dia_Semana || v.dia) === day);
+                const dayPts = dayVisits
+                    .map((v: any) => {
+                        const lat = Number(v.Lat || v.Latitude);
+                        const lon = Number(v.Long || v.Longitude);
+                        return (!isNaN(lat) && !isNaN(lon) && Math.abs(lat) > 0.001) ? [lat, lon] as [number, number] : null;
+                    })
+                    .filter(Boolean) as [number, number][];
+
+                const color = DAY_COLORS[day]?.hex || '#2563eb';
+                const cacheKey = `${selectedSeller}-${selectedWeek}-${day}-${dayVisits.map(v => v.Cod_Cliente || v.id).join(',')}`;
+                const cached = osrmCacheRef.current.get(cacheKey);
+
+                if (cached) {
+                    initialTracks.push({ day, color, points: cached.geometry, distance: cached.distance });
+                } else {
+                    initialTracks.push({ day, color, points: dayPts, distance: 0 });
+                }
+            });
+
+            if (isMounted) setRoadTracks(initialTracks);
+
+            for (const day of daysToDraw) {
+                const dayVisits = filteredVisits.filter((v: any) => normalizeDiaSemana(v.Dia_Semana || v.dia) === day);
+                const validDayVisits = dayVisits.filter((v: any) => {
+                    const lat = Number(v.Lat || v.Latitude);
+                    const lon = Number(v.Long || v.Longitude);
+                    return !isNaN(lat) && !isNaN(lon) && Math.abs(lat) > 0.001;
+                });
+
+                if (validDayVisits.length < 2) continue;
+
+                const cacheKey = `${selectedSeller}-${selectedWeek}-${day}-${dayVisits.map(v => v.Cod_Cliente || v.id).join(',')}`;
+                if (osrmCacheRef.current.has(cacheKey)) continue;
+
+                try {
+                    const osrm = await getOSRMData(validDayVisits, false);
+                    if (!isMounted) return;
+
+                    if (osrm && osrm.geometry && osrm.geometry.length > 0) {
+                        const entry = { geometry: osrm.geometry as [number, number][], distance: osrm.distance || 0 };
+                        osrmCacheRef.current.set(cacheKey, entry);
+
+                        setRoadTracks(prev => prev.map(t => {
+                            if (t.day === day) {
+                                return { ...t, points: entry.geometry, distance: entry.distance };
+                            }
+                            return t;
+                        }));
+                    }
+                } catch (err) {
+                    console.warn(`[OSRM] Falha ao obter traçado viário para ${day}:`, err);
+                }
+            }
+        };
+
+        calculateTracks();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [filteredVisits, selectedDay, selectedSeller, selectedWeek]);
+
     // Métricas de Tempo da Rota Selecionada
     const metrics = useMemo(() => {
         const totalVisitas = filteredVisits.length;
-        // Padrão de 20 min por visita (ou campo salvo)
         const tempoAtendimentoMin = totalVisitas * 20;
 
-        // Cálculo aproximado de KM e Percurso viário entre as visitas ordenadas
         let totalKm = 0;
-        for (let i = 0; i < filteredVisits.length - 1; i++) {
-            const p1 = filteredVisits[i];
-            const p2 = filteredVisits[i + 1];
-            if (p1.Lat && p1.Long && p2.Lat && p2.Long) {
-                const dLat = (p2.Lat - p1.Lat) * 111;
-                const dLon = (p2.Long - p1.Long) * 111;
-                totalKm += Math.sqrt(dLat * dLat + dLon * dLon) * 1.25; // Fator viário
+        const hasOsrmDistances = roadTracks.some(t => t.distance > 0);
+        if (hasOsrmDistances) {
+            totalKm = roadTracks.reduce((acc, t) => acc + (t.distance || 0), 0);
+        } else {
+            // Fallback enquanto OSRM responde
+            for (let i = 0; i < filteredVisits.length - 1; i++) {
+                const p1 = filteredVisits[i];
+                const p2 = filteredVisits[i + 1];
+                if (p1.Lat && p1.Long && p2.Lat && p2.Long) {
+                    const dLat = (p2.Lat - p1.Lat) * 111;
+                    const dLon = (p2.Long - p1.Long) * 111;
+                    totalKm += Math.sqrt(dLat * dLat + dLon * dLon) * 1.25;
+                }
             }
         }
 
-        // Velocidade média urbana de ~25 km/h para cálculo de percurso
         const tempoPercursoMin = Math.round((totalKm / 25) * 60);
         const tempoTotalMin = tempoAtendimentoMin + tempoPercursoMin;
 
@@ -267,7 +467,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             tempoPercursoMin,
             tempoTotalMin
         };
-    }, [filteredVisits]);
+    }, [filteredVisits, roadTracks]);
 
     // Limites do Mapa
     const mapBounds = useMemo<L.LatLngBoundsExpression | null>(() => {
@@ -287,19 +487,6 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             ];
         }
         return pts as L.LatLngBoundsExpression;
-    }, [filteredVisits]);
-
-    // Coordenadas para Polyline
-    const routePolyline = useMemo<[number, number][]>(() => {
-        const pts: [number, number][] = [];
-        filteredVisits.forEach((v: any) => {
-            const lat = Number(v.Lat || v.Latitude);
-            const lon = Number(v.Long || v.Longitude);
-            if (!isNaN(lat) && !isNaN(lon) && Math.abs(lat) > 0.001) {
-                pts.push([lat, lon]);
-            }
-        });
-        return pts;
     }, [filteredVisits]);
 
     // Abrir Modal de Sugestão
@@ -444,14 +631,17 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                 </div>
             </div>
 
-            {/* SELETORES E FILTROS DE SETOR, SEMANA E DIA */}
+            {/* SELETORES E FILTROS DE SETOR, CICLO E DIA DA SEMANA */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {/* Seletor de Vendedor / Setor */}
-                    <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 ml-1 text-slate-500 dark:text-slate-400">
-                            Selecione o Vendedor / Setor
+                {/* LINHA 1: SELETOR DE VENDEDOR / SETOR */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center space-x-2">
+                        <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                            Vendedor / Setor:
                         </label>
+                    </div>
+                    <div className="flex-1 max-w-md">
                         <select
                             value={selectedSeller}
                             onChange={e => setSelectedSeller(e.target.value)}
@@ -464,41 +654,125 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                             ))}
                         </select>
                     </div>
+                </div>
 
-                    {/* Seletor de Semana (1 e 3 vs 2 e 4) */}
-                    <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 ml-1 text-slate-500 dark:text-slate-400">
-                            Semana de Atendimento
-                        </label>
-                        <select
-                            value={selectedWeek}
-                            onChange={e => setSelectedWeek(e.target.value)}
-                            className={`${UI_INPUT_BASE} text-xs py-2 font-bold cursor-pointer`}
-                        >
-                            <option value="ALL">Todas as Semanas (Visão Geral)</option>
-                            <option value="13">Semana 1 e 3 (Ímpar)</option>
-                            <option value="24">Semana 2 e 4 (Par)</option>
-                        </select>
+                {/* LINHA 2: BOTÕES EM PÍLULA DE CICLO (PERIODICIDADE) E DIAS DA SEMANA (PADRÃO ROTEIRIZADOR) */}
+                <div className="flex flex-wrap items-center gap-4 text-xs">
+                    {/* GRUPO CICLO */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                            Ciclo:
+                        </span>
+                        <div className="inline-flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700 gap-1">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedWeek('ALL')}
+                                className={`px-3 py-1.5 rounded-xl font-black transition cursor-pointer text-xs ${
+                                    selectedWeek === 'ALL'
+                                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                }`}
+                            >
+                                Todas ({cycleCounts.total})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedWeek('13')}
+                                className={`px-3 py-1.5 rounded-xl font-black transition cursor-pointer text-xs flex items-center gap-1.5 ${
+                                    selectedWeek === '13'
+                                        ? 'bg-amber-500 text-white shadow-sm'
+                                        : 'text-slate-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-amber-600'
+                                }`}
+                            >
+                                <span className="w-2 h-2 rounded-full bg-amber-400 border border-white shrink-0" />
+                                <span>Sem 1/3: <strong>{cycleCounts.c13}</strong></span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedWeek('24')}
+                                className={`px-3 py-1.5 rounded-xl font-black transition cursor-pointer text-xs flex items-center gap-1.5 ${
+                                    selectedWeek === '24'
+                                        ? 'bg-purple-600 text-white shadow-sm'
+                                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 hover:text-purple-600'
+                                }`}
+                            >
+                                <span className="w-2 h-2 rounded-full bg-purple-400 border border-white shrink-0" />
+                                <span>Sem 2/4: <strong>{cycleCounts.c24}</strong></span>
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Seletor do Dia da Semana */}
-                    <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 ml-1 text-slate-500 dark:text-slate-400">
-                            Dia da Semana
-                        </label>
-                        <select
-                            value={selectedDay}
-                            onChange={e => setSelectedDay(e.target.value)}
-                            className={`${UI_INPUT_BASE} text-xs py-2 font-bold cursor-pointer`}
-                        >
-                            <option value="ALL">Todos os Dias</option>
-                            <option value="SEGUNDA-FEIRA">Segunda-feira</option>
-                            <option value="TERÇA-FEIRA">Terça-feira</option>
-                            <option value="QUARTA-FEIRA">Quarta-feira</option>
-                            <option value="QUINTA-FEIRA">Quinta-feira</option>
-                            <option value="SEXTA-FEIRA">Sexta-feira</option>
-                            <option value="SÁBADO">Sábado</option>
-                        </select>
+                    <div className="h-6 w-px bg-slate-200 dark:border-slate-800 hidden md:block" />
+
+                    {/* GRUPO DIAS DA SEMANA */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                            Dias:
+                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedDay('ALL')}
+                                className={`px-3 py-1.5 rounded-xl font-black transition cursor-pointer text-xs border ${
+                                    selectedDay === 'ALL'
+                                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm'
+                                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                                }`}
+                            >
+                                🌈 Todos ({clientsInCurrentCycle.length})
+                            </button>
+
+                            {WEEKDAYS.map(day => {
+                                const cfg = DAY_COLORS[day] || { hex: '#2563eb', label: day.slice(0, 3) };
+                                const stat = dayStats[day] || { count: 0, estimatedKm: 0 };
+                                const isSelected = selectedDay === day;
+                                return (
+                                    <button
+                                        key={day}
+                                        type="button"
+                                        onClick={() => setSelectedDay(day)}
+                                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                                            isSelected
+                                                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm ring-2 ring-offset-1'
+                                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                                        }`}
+                                        style={isSelected ? { borderColor: cfg.hex, boxShadow: `0 0 0 1.5px ${cfg.hex}` } : {}}
+                                    >
+                                        <span
+                                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                                            style={{ backgroundColor: cfg.hex }}
+                                        />
+                                        <span>{cfg.label}: <strong style={!isSelected ? { color: cfg.hex } : {}}>{stat.count}</strong></span>
+                                        {stat.count > 0 && (
+                                            <span className="text-[10px] text-slate-400 font-medium">
+                                                • {stat.estimatedKm}km
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+
+                            {dayStats['SÁBADO'] && dayStats['SÁBADO'].count > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedDay('SÁBADO')}
+                                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                                        selectedDay === 'SÁBADO'
+                                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm ring-2 ring-cyan-500'
+                                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                                    }`}
+                                >
+                                    <span
+                                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                                        style={{ backgroundColor: DAY_COLORS['SÁBADO'].hex }}
+                                    />
+                                    <span>SÁB: <strong>{dayStats['SÁBADO'].count}</strong></span>
+                                    <span className="text-[10px] text-slate-400 font-medium">
+                                        • {dayStats['SÁBADO'].estimatedKm}km
+                                    </span>
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -590,18 +864,21 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     attribution='&copy; OpenStreetMap contributors'
                                 />
 
-                                {/* Traçado Viário da Rota */}
-                                {routePolyline.length > 1 && (
-                                    <Polyline
-                                        positions={routePolyline}
-                                        pathOptions={{
-                                            color: '#2563eb',
-                                            weight: 3.5,
-                                            dashArray: '6, 6',
-                                            opacity: 0.8
-                                        }}
-                                    />
-                                )}
+                                {/* Traçado Viário da Rota com Malha OSRM Real */}
+                                {roadTracks.map((track) => {
+                                    if (!track.points || track.points.length < 2) return null;
+                                    return (
+                                        <Polyline
+                                            key={`track-${track.day}`}
+                                            positions={track.points}
+                                            pathOptions={{
+                                                color: track.color,
+                                                weight: 4,
+                                                opacity: 0.85
+                                            }}
+                                        />
+                                    );
+                                })}
 
                                 {/* Marcadores Numerados dos Clientes */}
                                 {filteredVisits.map((v: any, index: number) => {
@@ -609,17 +886,27 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     const lon = Number(v.Long || v.Longitude);
                                     if (isNaN(lat) || isNaN(lon) || Math.abs(lat) < 0.001) return null;
 
-                                    const seq = index + 1;
+                                    const dayKey = normalizeDiaSemana(v.Dia_Semana || v.dia);
+                                    const dayVisitsList = dayVisitsMap.get(dayKey) || [];
+                                    const daySeq = dayVisitsList.findIndex((item: any) => 
+                                        (v.Cod_Cliente && item.Cod_Cliente === v.Cod_Cliente) || 
+                                        (v.id && item.id === v.id)
+                                    ) + 1;
+                                    const pinSeq = selectedDay === 'ALL' ? (daySeq > 0 ? daySeq : index + 1) : (index + 1);
+                                    const pinColor = DAY_COLORS[dayKey]?.hex || '#2563eb';
+
                                     return (
                                         <Marker
                                             key={`visit-${v.Cod_Cliente || index}-${index}`}
                                             position={[lat, lon]}
-                                            icon={createNumberedPinIcon(seq)}
+                                            icon={createNumberedPinIcon(pinSeq, false, pinColor)}
                                         >
                                             <Popup>
                                                 <div className="text-xs p-1 space-y-1.5 font-sans min-w-[200px]">
                                                     <div className="flex items-center justify-between gap-2 border-b pb-1">
-                                                        <span className="font-extrabold text-blue-600">Parada #{seq}</span>
+                                                        <span className="font-extrabold" style={{ color: pinColor }}>
+                                                            Parada #{pinSeq} ({DAY_COLORS[dayKey]?.label || dayKey})
+                                                        </span>
                                                         <span className="text-[10px] text-slate-500 font-mono">PDV {v.Cod_Cliente}</span>
                                                     </div>
                                                     <p className="font-bold text-slate-900 leading-tight">
@@ -629,7 +916,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                                         {v.Endereco || 'Endereço não cadastrado'} - {v.Bairro}
                                                     </p>
                                                     <div className="flex items-center justify-between text-[10px] text-slate-600 bg-slate-100 p-1 rounded">
-                                                        <span>Dia: <b>{v.Dia_Semana || selectedDay}</b></span>
+                                                        <span>Dia: <b style={{ color: pinColor }}>{v.Dia_Semana || selectedDay}</b></span>
                                                         <span>Sem: <b>{v.Periodicidade || selectedWeek}</b></span>
                                                     </div>
                                                     <button
@@ -663,8 +950,8 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                 Sequência de Visitas ({filteredVisits.length})
                             </h3>
                         </div>
-                        <span className="text-[11px] text-slate-400">
-                            {selectedDay}
+                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            {selectedDay === 'ALL' ? 'Todos os Dias' : selectedDay}
                         </span>
                     </div>
 
@@ -675,19 +962,40 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                             </div>
                         ) : (
                             filteredVisits.map((v: any, idx: number) => {
-                                const seq = idx + 1;
+                                const dayKey = normalizeDiaSemana(v.Dia_Semana || v.dia);
+                                const dayVisitsList = dayVisitsMap.get(dayKey) || [];
+                                const daySeq = dayVisitsList.findIndex((item: any) => 
+                                    (v.Cod_Cliente && item.Cod_Cliente === v.Cod_Cliente) || 
+                                    (v.id && item.id === v.id)
+                                ) + 1;
+                                const pinSeq = selectedDay === 'ALL' ? (daySeq > 0 ? daySeq : idx + 1) : (idx + 1);
+                                const pinColor = DAY_COLORS[dayKey]?.hex || '#2563eb';
+
                                 return (
                                     <div
                                         key={`item-${v.Cod_Cliente || idx}-${idx}`}
                                         className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 flex items-start justify-between gap-3 hover:border-blue-400 transition-all"
                                     >
                                         <div className="flex items-start gap-2.5">
-                                            <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
-                                                {seq}
+                                            <div
+                                                className="w-6 h-6 rounded-full text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-2xs"
+                                                style={{ backgroundColor: pinColor }}
+                                            >
+                                                {pinSeq}
                                             </div>
                                             <div>
-                                                <div className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
-                                                    {v.Razao_Social || v.nome}
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                                                        {v.Razao_Social || v.nome}
+                                                    </span>
+                                                    {selectedDay === 'ALL' && (
+                                                        <span
+                                                            className="text-[9px] font-black px-1.5 py-0.2 rounded text-white shadow-2xs"
+                                                            style={{ backgroundColor: pinColor }}
+                                                        >
+                                                            {DAY_COLORS[dayKey]?.label || dayKey}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="text-[10px] text-slate-500 mt-0.5">
                                                     PDV {v.Cod_Cliente} • {v.Endereco || v.Bairro || 'Endereço não informado'}
