@@ -13,8 +13,6 @@ import {
     ChevronRight,
     MessageSquarePlus,
     Share2,
-    Copy,
-    Check,
     CheckCircle2,
     AlertCircle,
     Building2,
@@ -306,7 +304,6 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     const [semanaSugerida, setSemanaSugerida] = useState<string>('1_3');
     const [observacao, setObservacao] = useState<string>('');
     const [savingSuggestion, setSavingSuggestion] = useState<boolean>(false);
-    const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
     // Carregar Dados da Simulação
     const loadSimulation = async () => {
@@ -804,14 +801,6 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         }
     };
 
-    // Copiar Link da Página
-    const handleCopyPageLink = () => {
-        const url = window.location.href;
-        navigator.clipboard.writeText(url);
-        setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2000);
-    };
-
     // Renderização de Estados de Carregamento
     if (loading) {
         return (
@@ -840,271 +829,258 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-3 sm:p-6 transition-colors duration-200">
-            <div className="space-y-6 max-w-[1800px] mx-auto pb-12">
-                {/* CABEÇALHO DA TELA DE REVISÃO */}
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl border border-emerald-500/20">
-                            <UserCheck size={28} />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
-                                    Validação de Rota • Supervisor
-                                </span>
-                                <span className="text-[10px] font-bold text-slate-400">
-                                    ID #{simulacaoData.id} • v{SYSTEM_VERSION}
-                                </span>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-3 sm:p-5 transition-colors duration-200">
+            <div className="space-y-4 max-w-[1800px] mx-auto pb-8">
+                {/* BLOCO ÚNICO INTEGRADO E COMPACTO: IDENTIFICAÇÃO, SELETOR, AÇÕES, FILTROS E MÉTRICAS */}
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4.5 shadow-sm space-y-3">
+                    {/* LINHA 1: CABEÇALHO COMPACTO INTEGRADO COM SELETOR DE VENDEDOR E AÇÕES */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20 shrink-0">
+                                <UserCheck size={18} />
                             </div>
-                            <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
-                                {simulacaoData.periodo}
-                            </h2>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                Criado por <strong>{simulacaoData.usuarioSimulacao}</strong> • KM Total: <strong>{Math.round(simulacaoData.totalKm)} km</strong>
-                            </p>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+                                        Validação de Rota
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-400">
+                                        ID #{simulacaoData.id} • v{SYSTEM_VERSION}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <h2 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate max-w-[260px] sm:max-w-md" title={simulacaoData.periodo}>
+                                        {simulacaoData.periodo}
+                                    </h2>
+                                    <span className="text-[10px] text-slate-400 hidden sm:inline shrink-0">
+                                        • por <strong>{simulacaoData.usuarioSimulacao}</strong>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                        {/* ALTERNADOR DE TEMA VISUAL CLARO / ESCURO */}
-                        <ThemeToggle />
+                        <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
+                            {/* SELETOR DE VENDEDOR / SETOR */}
+                            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <Users className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                <select
+                                    value={selectedSeller}
+                                    onChange={e => setSelectedSeller(e.target.value)}
+                                    className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer pr-1 py-0.5 max-w-[230px] sm:max-w-xs"
+                                >
+                                    {sellersList.map(s => (
+                                        <option key={s.id} value={s.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                                            {s.name} ({s.clients.length} PDVs)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-                        <button
-                            onClick={() => setIsHistoryModalOpen(true)}
-                            className={`${UI_BUTTON_SECONDARY} text-xs py-2 px-3 flex items-center gap-2 relative`}
-                        >
-                            <Briefcase size={14} className="text-blue-500" />
-                            Sugestões Enviadas
-                            {sugestoes.length > 0 && (
-                                <span className="ml-1 bg-blue-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
-                                    {sugestoes.length}
-                                </span>
-                            )}
-                        </button>
+                            {/* ALTERNADOR DE TEMA */}
+                            <ThemeToggle />
 
-                    <button
-                        onClick={() => handleOpenSuggestionModal()}
-                        className={`${UI_BUTTON_SUCCESS} text-xs py-2 px-4 flex items-center gap-2 shadow-md`}
-                    >
-                        <MessageSquarePlus size={14} />
-                        Sugerir Ajuste Geral
-                    </button>
-
-                    <button
-                        onClick={handleCopyPageLink}
-                        className={`${UI_BUTTON_SECONDARY} text-xs py-2 px-3 flex items-center gap-1.5`}
-                        title="Copiar link para enviar ao supervisor"
-                    >
-                        {copiedLink ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                        {copiedLink ? 'Link Copiado!' : 'Copiar Link'}
-                    </button>
-                </div>
-            </div>
-
-            {/* SELETORES E FILTROS DE SETOR, CICLO E DIA DA SEMANA */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
-                {/* LINHA 1: SELETOR DE VENDEDOR / SETOR */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center space-x-2">
-                        <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                        <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                            Vendedor / Setor:
-                        </label>
-                    </div>
-                    <div className="flex-1 max-w-md">
-                        <select
-                            value={selectedSeller}
-                            onChange={e => setSelectedSeller(e.target.value)}
-                            className={`${UI_INPUT_BASE} text-xs py-2 font-bold cursor-pointer`}
-                        >
-                            {sellersList.map(s => (
-                                <option key={s.id} value={s.id}>
-                                    {s.name} ({s.clients.length} PDVs)
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-
-                {/* LINHA 2: BOTÕES EM PÍLULA DE CICLO (PERIODICIDADE) E DIAS DA SEMANA (PADRÃO ROTEIRIZADOR) */}
-                <div className="flex flex-wrap items-center gap-4 text-xs">
-                    {/* GRUPO CICLO */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                            Ciclo:
-                        </span>
-                        <div className="inline-flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700 gap-1">
+                            {/* BOTÕES DE AÇÃO */}
                             <button
-                                type="button"
-                                onClick={() => setSelectedWeek('ALL')}
-                                className={`px-3 py-1.5 rounded-xl font-black transition cursor-pointer text-xs ${
-                                    selectedWeek === 'ALL'
-                                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
-                                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                }`}
+                                onClick={() => setIsHistoryModalOpen(true)}
+                                className={`${UI_BUTTON_SECONDARY} text-xs py-1.5 px-2.5 flex items-center gap-1.5 relative`}
                             >
-                                Todas ({cycleCounts.total})
+                                <Briefcase size={13} className="text-blue-500" />
+                                <span>Sugestões</span>
+                                {sugestoes.length > 0 && (
+                                    <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                                        {sugestoes.length}
+                                    </span>
+                                )}
                             </button>
+
                             <button
-                                type="button"
-                                onClick={() => setSelectedWeek('13')}
-                                className={`px-3 py-1.5 rounded-xl font-black transition cursor-pointer text-xs flex items-center gap-1.5 ${
-                                    selectedWeek === '13'
-                                        ? 'bg-amber-500 text-white shadow-sm'
-                                        : 'text-slate-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-amber-600'
-                                }`}
+                                onClick={() => handleOpenSuggestionModal()}
+                                className={`${UI_BUTTON_SUCCESS} text-xs py-1.5 px-3 flex items-center gap-1.5 shadow-xs font-bold`}
                             >
-                                <span className="w-2 h-2 rounded-full bg-amber-400 border border-white shrink-0" />
-                                <span>Sem 1/3: <strong>{cycleCounts.c13}</strong></span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setSelectedWeek('24')}
-                                className={`px-3 py-1.5 rounded-xl font-black transition cursor-pointer text-xs flex items-center gap-1.5 ${
-                                    selectedWeek === '24'
-                                        ? 'bg-purple-600 text-white shadow-sm'
-                                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 hover:text-purple-600'
-                                }`}
-                            >
-                                <span className="w-2 h-2 rounded-full bg-purple-400 border border-white shrink-0" />
-                                <span>Sem 2/4: <strong>{cycleCounts.c24}</strong></span>
+                                <MessageSquarePlus size={13} />
+                                <span>Sugerir Ajuste</span>
                             </button>
                         </div>
                     </div>
 
-                    <div className="h-6 w-px bg-slate-200 dark:border-slate-800 hidden md:block" />
-
-                    {/* GRUPO DIAS DA SEMANA */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                            Dias:
-                        </span>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                            <button
-                                type="button"
-                                onClick={() => setSelectedDay('ALL')}
-                                className={`px-3 py-1.5 rounded-xl font-black transition cursor-pointer text-xs border ${
-                                    selectedDay === 'ALL'
-                                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm'
-                                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-400'
-                                }`}
-                            >
-                                🌈 Todos ({clientsInCurrentCycle.length})
-                            </button>
-
-                            {WEEKDAYS.map(day => {
-                                const cfg = DAY_COLORS[day] || { hex: '#2563eb', label: day.slice(0, 3) };
-                                const stat = dayStats[day] || { count: 0, estimatedKm: 0 };
-                                const isSelected = selectedDay === day;
-                                return (
-                                    <button
-                                        key={day}
-                                        type="button"
-                                        onClick={() => setSelectedDay(day)}
-                                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
-                                            isSelected
-                                                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm ring-2 ring-offset-1'
-                                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-400'
-                                        }`}
-                                        style={isSelected ? { borderColor: cfg.hex, boxShadow: `0 0 0 1.5px ${cfg.hex}` } : {}}
-                                    >
-                                        <span
-                                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                                            style={{ backgroundColor: cfg.hex }}
-                                        />
-                                        <span>{cfg.label}: <strong style={!isSelected ? { color: cfg.hex } : {}}>{stat.count}</strong></span>
-                                        {stat.count > 0 && (
-                                            <span className="text-[10px] text-slate-400 font-medium">
-                                                • {stat.estimatedKm}km
-                                            </span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-
-                            {dayStats['SÁBADO'] && dayStats['SÁBADO'].count > 0 && (
+                    {/* LINHA 2: BOTÕES EM PÍLULA DE CICLO E DIAS DA SEMANA */}
+                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                        {/* GRUPO CICLO */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                Ciclo:
+                            </span>
+                            <div className="inline-flex bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 gap-1">
                                 <button
                                     type="button"
-                                    onClick={() => setSelectedDay('SÁBADO')}
-                                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
-                                        selectedDay === 'SÁBADO'
-                                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm ring-2 ring-cyan-500'
-                                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                                    onClick={() => setSelectedWeek('ALL')}
+                                    className={`px-2.5 py-1 rounded-lg font-black transition cursor-pointer text-xs ${
+                                        selectedWeek === 'ALL'
+                                            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
+                                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                     }`}
                                 >
-                                    <span
-                                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                                        style={{ backgroundColor: DAY_COLORS['SÁBADO'].hex }}
-                                    />
-                                    <span>SÁB: <strong>{dayStats['SÁBADO'].count}</strong></span>
-                                    <span className="text-[10px] text-slate-400 font-medium">
-                                        • {dayStats['SÁBADO'].estimatedKm}km
-                                    </span>
+                                    Todas ({cycleCounts.total})
                                 </button>
-                            )}
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedWeek('13')}
+                                    className={`px-2.5 py-1 rounded-lg font-black transition cursor-pointer text-xs flex items-center gap-1.5 ${
+                                        selectedWeek === '13'
+                                            ? 'bg-amber-500 text-white shadow-xs'
+                                            : 'text-slate-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-amber-600'
+                                    }`}
+                                >
+                                    <span className="w-2 h-2 rounded-full bg-amber-400 border border-white shrink-0" />
+                                    <span>Sem 1/3: <strong>{cycleCounts.c13}</strong></span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedWeek('24')}
+                                    className={`px-2.5 py-1 rounded-lg font-black transition cursor-pointer text-xs flex items-center gap-1.5 ${
+                                        selectedWeek === '24'
+                                            ? 'bg-purple-600 text-white shadow-xs'
+                                            : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 hover:text-purple-600'
+                                    }`}
+                                >
+                                    <span className="w-2 h-2 rounded-full bg-purple-400 border border-white shrink-0" />
+                                    <span>Sem 2/4: <strong>{cycleCounts.c24}</strong></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden md:block" />
+
+                        {/* GRUPO DIAS DA SEMANA */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                Dias:
+                            </span>
+                            <div className="flex flex-wrap items-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedDay('ALL')}
+                                    className={`px-2.5 py-1 rounded-lg font-black transition cursor-pointer text-xs border ${
+                                        selectedDay === 'ALL'
+                                            ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
+                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                                    }`}
+                                >
+                                    🌈 Todos ({clientsInCurrentCycle.length})
+                                </button>
+
+                                {WEEKDAYS.map(day => {
+                                    const cfg = DAY_COLORS[day] || { hex: '#2563eb', label: day.slice(0, 3) };
+                                    const stat = dayStats[day] || { count: 0, estimatedKm: 0 };
+                                    const isSelected = selectedDay === day;
+                                    return (
+                                        <button
+                                            key={day}
+                                            type="button"
+                                            onClick={() => setSelectedDay(day)}
+                                            className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 border cursor-pointer ${
+                                                isSelected
+                                                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs ring-2 ring-offset-1'
+                                                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                                            }`}
+                                            style={isSelected ? { borderColor: cfg.hex, boxShadow: `0 0 0 1.5px ${cfg.hex}` } : {}}
+                                        >
+                                            <span
+                                                className="w-2 h-2 rounded-full shrink-0"
+                                                style={{ backgroundColor: cfg.hex }}
+                                            />
+                                            <span>{cfg.label}: <strong style={!isSelected ? { color: cfg.hex } : {}}>{stat.count}</strong></span>
+                                            {stat.count > 0 && (
+                                                <span className="text-[9px] text-slate-400 font-medium">
+                                                    • {stat.estimatedKm}km
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+
+                                {dayStats['SÁBADO'] && dayStats['SÁBADO'].count > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedDay('SÁBADO')}
+                                        className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 border cursor-pointer ${
+                                            selectedDay === 'SÁBADO'
+                                                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs ring-2 ring-cyan-500'
+                                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                                        }`}
+                                    >
+                                        <span
+                                            className="w-2 h-2 rounded-full shrink-0"
+                                            style={{ backgroundColor: DAY_COLORS['SÁBADO'].hex }}
+                                        />
+                                        <span>SÁB: <strong>{dayStats['SÁBADO'].count}</strong></span>
+                                        <span className="text-[9px] text-slate-400 font-medium">
+                                            • {dayStats['SÁBADO'].estimatedKm}km
+                                        </span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* LINHA 3: CARDS DE MÉTRICAS E TEMPOS DA ROTA (COMPACTADOS) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center justify-between text-slate-500 text-[9px] font-extrabold uppercase tracking-wider">
+                                <span>PDVs no Dia</span>
+                                <Building2 size={12} className="text-blue-500" />
+                            </div>
+                            <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
+                                {metrics.totalVisitas}
+                            </div>
+                            <div className="text-[9px] text-slate-400 leading-tight">visitas programadas</div>
+                        </div>
+
+                        <div className="bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center justify-between text-slate-500 text-[9px] font-extrabold uppercase tracking-wider">
+                                <span>Distância Estimada</span>
+                                <Navigation size={12} className="text-emerald-500" />
+                            </div>
+                            <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 leading-tight">
+                                {metrics.totalKm} km
+                            </div>
+                            <div className="text-[9px] text-slate-400 leading-tight">deslocamento viário</div>
+                        </div>
+
+                        <div className="bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center justify-between text-slate-500 text-[9px] font-extrabold uppercase tracking-wider">
+                                <span>Tempo Atendimento</span>
+                                <Clock size={12} className="text-amber-500" />
+                            </div>
+                            <div className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 leading-tight">
+                                {formatMinutesToHours(metrics.tempoAtendimentoMin)}
+                            </div>
+                            <div className="text-[9px] text-slate-400 leading-tight">~20 min por visita</div>
+                        </div>
+
+                        <div className="bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center justify-between text-slate-500 text-[9px] font-extrabold uppercase tracking-wider">
+                                <span>Tempo Percurso</span>
+                                <Navigation size={12} className="text-indigo-500" />
+                            </div>
+                            <div className="text-base sm:text-lg font-black text-indigo-600 dark:text-indigo-400 leading-tight">
+                                {formatMinutesToHours(metrics.tempoPercursoMin)}
+                            </div>
+                            <div className="text-[9px] text-slate-400 leading-tight">deslocamento entre pontos</div>
+                        </div>
+
+                        <div className="bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800">
+                            <div className="flex items-center justify-between text-blue-700 dark:text-blue-300 text-[9px] font-extrabold uppercase tracking-wider">
+                                <span>Tempo Total Jornada</span>
+                                <Clock size={12} className="text-blue-600" />
+                            </div>
+                            <div className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-300 leading-tight">
+                                {formatMinutesToHours(metrics.tempoTotalMin)}
+                            </div>
+                            <div className="text-[9px] text-blue-600 font-bold leading-tight">Atendimento + Percurso</div>
                         </div>
                     </div>
                 </div>
-
-                {/* CARDS DE MÉTRICAS E TEMPOS DA ROTA (ATENDIMENTO, PERCURSO E TOTAL) */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
-                        <div className="flex items-center justify-between text-slate-500 text-[10px] font-extrabold uppercase tracking-wider">
-                            <span>PDVs no Dia</span>
-                            <Building2 size={14} className="text-blue-500" />
-                        </div>
-                        <div className="text-xl font-black text-slate-900 dark:text-white mt-0.5">
-                            {metrics.totalVisitas}
-                        </div>
-                        <div className="text-[10px] text-slate-500">visitas programadas</div>
-                    </div>
-
-                    <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
-                        <div className="flex items-center justify-between text-slate-500 text-[10px] font-extrabold uppercase tracking-wider">
-                            <span>Distância Estimada</span>
-                            <Navigation size={14} className="text-emerald-500" />
-                        </div>
-                        <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-                            {metrics.totalKm} km
-                        </div>
-                        <div className="text-[10px] text-slate-500">deslocamento viário</div>
-                    </div>
-
-                    <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
-                        <div className="flex items-center justify-between text-slate-500 text-[10px] font-extrabold uppercase tracking-wider">
-                            <span>Tempo Atendimento</span>
-                            <Clock size={14} className="text-amber-500" />
-                        </div>
-                        <div className="text-xl font-black text-amber-600 dark:text-amber-400 mt-0.5">
-                            {formatMinutesToHours(metrics.tempoAtendimentoMin)}
-                        </div>
-                        <div className="text-[10px] text-slate-500">~20 min por visita</div>
-                    </div>
-
-                    <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
-                        <div className="flex items-center justify-between text-slate-500 text-[10px] font-extrabold uppercase tracking-wider">
-                            <span>Tempo Percurso</span>
-                            <Navigation size={14} className="text-indigo-500" />
-                        </div>
-                        <div className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
-                            {formatMinutesToHours(metrics.tempoPercursoMin)}
-                        </div>
-                        <div className="text-[10px] text-slate-500">deslocamento entre pontos</div>
-                    </div>
-
-                    <div className="bg-blue-50 dark:bg-blue-950/40 p-3 rounded-2xl border border-blue-200 dark:border-blue-800">
-                        <div className="flex items-center justify-between text-blue-700 dark:text-blue-300 text-[10px] font-extrabold uppercase tracking-wider">
-                            <span>Tempo Total Jornada</span>
-                            <Clock size={14} className="text-blue-600" />
-                        </div>
-                        <div className="text-xl font-black text-blue-700 dark:text-blue-300 mt-0.5">
-                            {formatMinutesToHours(metrics.tempoTotalMin)}
-                        </div>
-                        <div className="text-[10px] text-blue-600 font-bold">Atendimento + Percurso</div>
-                    </div>
-                </div>
-            </div>
 
             {/* ÁREA PRINCIPAL: MAPA INTERATIVO + TABELA DO ITINERÁRIO */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
