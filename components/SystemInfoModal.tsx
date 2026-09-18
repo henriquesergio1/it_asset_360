@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.190.5',
+    date: 'Hoje',
+    title: 'Infraestrutura: Restauração da Configuração Original de Build (v3.189.1)',
+    changes: [
+      'Restauração Fiel do Dockerfile: Retorno à instrução original estável com node:20-alpine, cópia de package*.json, npm install e CI=false npm run build que operava com 100% de sucesso na versão 3.189.1.',
+      'Restauração do Lockfile e .dockerignore: Reversão de package-lock.json e .dockerignore ao estado original verificado em produção.',
+      'Preservação da Trava de Quinzena: Manutenção integral das regras corporativas de quinzena permitida nos Parâmetros de Janela e blindagem no balanceador de rotas.'
+    ]
+  },
+  {
     version: '3.190.4',
     date: 'Hoje',
     title: 'Infraestrutura: Binários musl para Vite/Rollup e Limite Seguro de Memória',
