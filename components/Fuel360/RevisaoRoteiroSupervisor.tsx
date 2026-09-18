@@ -25,7 +25,8 @@ import {
     XCircle,
     UserCheck,
     Sparkles,
-    Briefcase
+    Briefcase,
+    Home
 } from 'lucide-react';
 import {
     UI_CARD_CONTAINER,
@@ -78,29 +79,118 @@ const formatMinutesToHours = (totalMinutes: number): string => {
     return `${hours}h ${mins}min`;
 };
 
-// --- FUNÇÃO PARA CRIAR ÍCONE DE PARADA NUMERADA NO MAPA COM COR DINÂMICA ---
-const createNumberedPinIcon = (seq: number, isSelected: boolean = false, bgColor?: string) => {
-    const bg = isSelected ? '#ef4444' : (bgColor || '#2563eb');
+// --- HELPER PARA INFORMAÇÃO E BADGE DE FREQUÊNCIA ---
+const getClientFrequencyInfo = (periodicidade: any) => {
+    const p = String(periodicidade || '').toUpperCase().trim();
+    if (p.includes('2_4') || p.includes('2 E 4') || p.includes('24') || p.includes('2/4') || p === '2' || p === '4') {
+        return {
+            label: 'Semana 2 e 4 (Par)',
+            shortLabel: '2 4',
+            code: '2 4',
+            badgeClass: 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-300 dark:border-purple-800'
+        };
+    }
+    if (p.includes('1_3') || p.includes('1 E 3') || p.includes('13') || p.includes('1/3') || p === '1' || p === '3') {
+        return {
+            label: 'Semana 1 e 3 (Ímpar)',
+            shortLabel: '1 3',
+            code: '1 3',
+            badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+        };
+    }
+    return {
+        label: 'Semanal (1, 2, 3 e 4)',
+        shortLabel: '1 2 3 4',
+        code: '1 2 3 4',
+        badgeClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+    };
+};
+
+// --- ÍCONE PARA A BASE (STOP 0 E RETORNO) ---
+const createBasePinIcon = (isHeadquarters: boolean = false) => {
     return L.divIcon({
-        className: 'custom-numbered-pin',
-        iconSize: [32, 42],
-        iconAnchor: [16, 40],
-        popupAnchor: [0, -38],
+        className: 'custom-base-pin',
+        iconSize: [38, 48],
+        iconAnchor: [19, 44],
+        popupAnchor: [0, -42],
         html: `
-            <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35));">
+            <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
                 <div style="
-                    background: ${bg};
-                    color: #ffffff;
-                    width: 30px;
-                    height: 30px;
+                    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                    color: #fbbf24;
+                    width: 36px;
+                    height: 36px;
                     border-radius: 50% 50% 50% 0;
                     transform: rotate(-45deg);
-                    border: 2px solid #ffffff;
+                    border: 2.5px solid #fbbf24;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     font-weight: 900;
-                    font-size: 11px;
+                    font-size: 16px;
+                    box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+                ">
+                    <span style="transform: rotate(45deg);">${isHeadquarters ? '🏢' : '🏠'}</span>
+                </div>
+                <div style="
+                    background: #0f172a;
+                    color: #fbbf24;
+                    font-size: 8.5px;
+                    font-weight: 900;
+                    padding: 1px 4px;
+                    border-radius: 4px;
+                    border: 1px solid #fbbf24;
+                    margin-top: -3px;
+                    letter-spacing: 0.5px;
+                    white-space: nowrap;
+                ">
+                    STOP 0
+                </div>
+            </div>
+        `
+    });
+};
+
+// --- FUNÇÃO PARA CRIAR ÍCONE DE PARADA NUMERADA NO MAPA COM COR DINÂMICA E DESTAQUE ---
+const createNumberedPinIcon = (seq: number, isSelected: boolean = false, bgColor?: string) => {
+    const bg = isSelected ? '#f43f5e' : (bgColor || '#2563eb');
+    const size = isSelected ? 36 : 30;
+    const pulseHtml = isSelected ? `
+        <div style="
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            width: ${size + 12}px;
+            height: ${size + 12}px;
+            border-radius: 50%;
+            background: rgba(244, 63, 94, 0.45);
+            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+            pointer-events: none;
+        "></div>
+    ` : '';
+
+    return L.divIcon({
+        className: 'custom-numbered-pin',
+        iconSize: [size + 4, size + 14],
+        iconAnchor: [(size + 4) / 2, size + 10],
+        popupAnchor: [0, -(size + 8)],
+        html: `
+            <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35));">
+                ${pulseHtml}
+                <div style="
+                    background: ${bg};
+                    color: #ffffff;
+                    width: ${size}px;
+                    height: ${size}px;
+                    border-radius: 50% 50% 50% 0;
+                    transform: rotate(-45deg);
+                    border: ${isSelected ? '3px solid #ffffff' : '2px solid #ffffff'};
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 900;
+                    font-size: ${isSelected ? '13px' : '11px'};
+                    box-shadow: ${isSelected ? '0 0 14px rgba(244, 63, 94, 0.9)' : 'none'};
                 ">
                     <span style="transform: rotate(45deg);">${seq}</span>
                 </div>
@@ -125,6 +215,17 @@ const MapFitBounds: React.FC<{ bounds: L.LatLngBoundsExpression | null }> = ({ b
     return null;
 };
 
+// --- AJUSTADOR PARA PAN DO MAPA AO SELECIONAR CLIENTE ---
+const MapPanToSelected: React.FC<{ targetCoords: [number, number] | null }> = ({ targetCoords }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (targetCoords && !isNaN(targetCoords[0]) && !isNaN(targetCoords[1])) {
+            map.flyTo(targetCoords, 16, { animate: true, duration: 0.8 });
+        }
+    }, [targetCoords, map]);
+    return null;
+};
+
 export const RevisaoRoteiroSupervisor: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const simId = Number(id);
@@ -139,6 +240,9 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     const [selectedSeller, setSelectedSeller] = useState<string>('ALL');
     const [selectedWeek, setSelectedWeek] = useState<string>('ALL'); // 'ALL', '13', '24'
     const [selectedDay, setSelectedDay] = useState<string>('SEGUNDA-FEIRA');
+
+    // Cliente Selecionado / Destacado no Mapa e Lista
+    const [highlightedClient, setHighlightedClient] = useState<any | null>(null);
 
     // Modais
     const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState<boolean>(false);
@@ -237,6 +341,48 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         return s ? s.clients : [];
     }, [sellersList, selectedSeller]);
 
+    // Informações da Base do Vendedor Selecionado (Partida Stop 0 e Retorno)
+    const activeBaseInfo = useMemo(() => {
+        if (!simulacaoData) return null;
+
+        const currentSellerObj = sellersList.find(s => s.id === selectedSeller);
+        const sellerName = currentSellerObj?.name || '';
+
+        // 1. Tentar encontrar nos colaboradores da simulação
+        const colabList: any[] = simulacaoData.collaborators || [];
+        const colab = colabList.find(c => 
+            (c.CodigoSetor && String(c.CodigoSetor) === selectedSeller) ||
+            (c.ID_Pulsus && String(c.ID_Pulsus) === selectedSeller) ||
+            (c.Nome && sellerName && c.Nome.trim().toLowerCase() === sellerName.trim().toLowerCase())
+        );
+
+        if (colab && colab.LatitudeBase && colab.LongitudeBase && Math.abs(Number(colab.LatitudeBase)) > 0.001) {
+            return {
+                type: 'COLABORADOR' as const,
+                label: 'Base do Vendedor',
+                name: colab.Nome || sellerName,
+                address: colab.EnderecoBase || 'Residência do Vendedor',
+                lat: Number(colab.LatitudeBase),
+                lng: Number(colab.LongitudeBase)
+            };
+        }
+
+        // 2. Fallback: Sede da Empresa
+        const hq = simulacaoData.headquarters;
+        if (hq && hq.headquartersLat && hq.headquartersLong && Math.abs(Number(hq.headquartersLat)) > 0.001) {
+            return {
+                type: 'SEDE' as const,
+                label: 'Sede da Empresa',
+                name: 'Sede Rainha',
+                address: hq.headquartersAddress || 'Sede da Empresa',
+                lat: Number(hq.headquartersLat),
+                lng: Number(hq.headquartersLong)
+            };
+        }
+
+        return null;
+    }, [simulacaoData, sellersList, selectedSeller]);
+
     // Filtragem por Semana e Dia
     const filteredVisits = useMemo(() => {
         return currentSellerClients.filter((c: any) => {
@@ -273,6 +419,47 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             return seqA - seqB;
         });
     }, [currentSellerClients, selectedDay, selectedWeek]);
+
+    // Ação ao Clicar / Destacar um Cliente (Sincroniza Semana, Dia e Rota)
+    const handleSelectClient = (client: any) => {
+        setHighlightedClient(client);
+
+        // Sincronizar o dia se estiver filtrado em outro dia
+        const clientDay = normalizeDiaSemana(client.Dia_Semana || client.dia);
+        if (selectedDay !== 'ALL' && selectedDay !== clientDay) {
+            setSelectedDay(clientDay);
+        }
+
+        // Sincronizar ciclo/semana se o filtro atual estiver escondendo este cliente
+        const freq = getClientFrequencyInfo(client.Periodicidade || client.periodicidade);
+        if (selectedWeek === '13' && freq.code === '2 4') {
+            setSelectedWeek('24');
+        } else if (selectedWeek === '24' && freq.code === '1 3') {
+            setSelectedWeek('13');
+        }
+    };
+
+    // Auto-scroll da lista lateral ao selecionar cliente
+    useEffect(() => {
+        if (highlightedClient) {
+            const id = highlightedClient.Cod_Cliente || highlightedClient.id;
+            const el = document.getElementById(`client-card-${id}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+    }, [highlightedClient]);
+
+    // Coordenadas do Cliente Destacado para Pan no Mapa
+    const highlightedCoords = useMemo<[number, number] | null>(() => {
+        if (!highlightedClient) return null;
+        const lat = Number(highlightedClient.Lat || highlightedClient.Latitude);
+        const lon = Number(highlightedClient.Long || highlightedClient.Longitude);
+        if (!isNaN(lat) && !isNaN(lon) && Math.abs(lat) > 0.001) {
+            return [lat, lon];
+        }
+        return null;
+    }, [highlightedClient]);
 
     // Contagens de Clientes por Ciclo (Todas, Sem 1/3, Sem 2/4) para o vendedor selecionado
     const cycleCounts = useMemo(() => {
@@ -355,7 +542,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     const osrmCacheRef = useRef<Map<string, { geometry: [number, number][]; distance: number }>>(new Map());
     const [roadTracks, setRoadTracks] = useState<Array<{ day: string; color: string; points: [number, number][]; distance: number }>>([]);
 
-    // Efeito para carregar trajetos viários reais OSRM
+    // Efeito para carregar trajetos viários reais OSRM incluindo Ponto de Partida e Retorno na Base
     useEffect(() => {
         let isMounted = true;
 
@@ -382,13 +569,19 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                     .filter(Boolean) as [number, number][];
 
                 const color = DAY_COLORS[day]?.hex || '#2563eb';
-                const cacheKey = `${selectedSeller}-${selectedWeek}-${day}-${dayVisits.map(v => v.Cod_Cliente || v.id).join(',')}`;
+                const baseKey = activeBaseInfo ? `${activeBaseInfo.lat.toFixed(4)},${activeBaseInfo.lng.toFixed(4)}` : 'nobase';
+                const cacheKey = `${selectedSeller}-${selectedWeek}-${day}-${baseKey}-${dayVisits.map(v => v.Cod_Cliente || v.id).join(',')}`;
                 const cached = osrmCacheRef.current.get(cacheKey);
 
                 if (cached) {
                     initialTracks.push({ day, color, points: cached.geometry, distance: cached.distance });
                 } else {
-                    initialTracks.push({ day, color, points: dayPts, distance: 0 });
+                    const fallbackPoints: [number, number][] = [
+                        ...(activeBaseInfo ? [[activeBaseInfo.lat, activeBaseInfo.lng] as [number, number]] : []),
+                        ...dayPts,
+                        ...(activeBaseInfo ? [[activeBaseInfo.lat, activeBaseInfo.lng] as [number, number]] : [])
+                    ];
+                    initialTracks.push({ day, color, points: fallbackPoints, distance: 0 });
                 }
             });
 
@@ -402,13 +595,26 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                     return !isNaN(lat) && !isNaN(lon) && Math.abs(lat) > 0.001;
                 });
 
-                if (validDayVisits.length < 2) continue;
+                if (validDayVisits.length === 0) continue;
 
-                const cacheKey = `${selectedSeller}-${selectedWeek}-${day}-${dayVisits.map(v => v.Cod_Cliente || v.id).join(',')}`;
+                const baseKey = activeBaseInfo ? `${activeBaseInfo.lat.toFixed(4)},${activeBaseInfo.lng.toFixed(4)}` : 'nobase';
+                const cacheKey = `${selectedSeller}-${selectedWeek}-${day}-${baseKey}-${dayVisits.map(v => v.Cod_Cliente || v.id).join(',')}`;
                 if (osrmCacheRef.current.has(cacheKey)) continue;
 
                 try {
-                    const osrm = await getOSRMData(validDayVisits, false);
+                    // Ponto de Partida e Retorno na Base (Stop 0 e Chegada)
+                    const basePoint = activeBaseInfo ? {
+                        Lat: activeBaseInfo.lat,
+                        Long: activeBaseInfo.lng,
+                        LatitudeBase: activeBaseInfo.lat,
+                        LongitudeBase: activeBaseInfo.lng,
+                        Razao_Social: activeBaseInfo.label
+                    } : null;
+
+                    const pointsForOsrm = basePoint ? [basePoint, ...validDayVisits] : validDayVisits;
+                    const isRoundTrip = Boolean(basePoint);
+
+                    const osrm = await getOSRMData(pointsForOsrm, isRoundTrip);
                     if (!isMounted) return;
 
                     if (osrm && osrm.geometry && osrm.geometry.length > 0) {
@@ -433,7 +639,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         return () => {
             isMounted = false;
         };
-    }, [filteredVisits, selectedDay, selectedSeller, selectedWeek]);
+    }, [filteredVisits, selectedDay, selectedSeller, selectedWeek, activeBaseInfo]);
 
     // Métricas de Tempo da Rota Selecionada
     const metrics = useMemo(() => {
@@ -469,9 +675,12 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         };
     }, [filteredVisits, roadTracks]);
 
-    // Limites do Mapa
+    // Limites do Mapa (Enquadra a Base e todas as Paradas)
     const mapBounds = useMemo<L.LatLngBoundsExpression | null>(() => {
         const pts: [number, number][] = [];
+        if (activeBaseInfo) {
+            pts.push([activeBaseInfo.lat, activeBaseInfo.lng]);
+        }
         filteredVisits.forEach((v: any) => {
             const lat = Number(v.Lat || v.Latitude);
             const lon = Number(v.Long || v.Longitude);
@@ -487,7 +696,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             ];
         }
         return pts as L.LatLngBoundsExpression;
-    }, [filteredVisits]);
+    }, [filteredVisits, activeBaseInfo]);
 
     // Abrir Modal de Sugestão
     const handleOpenSuggestionModal = (client?: any) => {
@@ -859,6 +1068,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                 center={[-23.5505, -46.6333]}
                             >
                                 <MapFitBounds bounds={mapBounds} />
+                                <MapPanToSelected targetCoords={highlightedCoords} />
                                 <TileLayer
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     attribution='&copy; OpenStreetMap contributors'
@@ -880,6 +1090,38 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     );
                                 })}
 
+                                {/* Marcador Especial da Base (Stop 0 e Retorno da Rota Diária) */}
+                                {activeBaseInfo && filteredVisits.length > 0 && (
+                                    <Marker
+                                        position={[activeBaseInfo.lat, activeBaseInfo.lng]}
+                                        icon={createBasePinIcon(activeBaseInfo.type === 'SEDE')}
+                                        zIndexOffset={800}
+                                    >
+                                        <Popup>
+                                            <div className="text-xs p-1 space-y-1.5 font-sans min-w-[220px]">
+                                                <div className="flex items-center justify-between gap-2 border-b pb-1">
+                                                    <span className="font-black text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                                        {activeBaseInfo.type === 'SEDE' ? '🏢' : '🏠'} Stop 0 • Partida & Retorno
+                                                    </span>
+                                                    <span className="text-[10px] bg-slate-900 text-amber-400 font-black px-1.5 py-0.5 rounded">
+                                                        BASE
+                                                    </span>
+                                                </div>
+                                                <p className="font-bold text-slate-900 leading-tight">
+                                                    {activeBaseInfo.name}
+                                                </p>
+                                                <p className="text-[10px] text-slate-500 leading-snug">
+                                                    {activeBaseInfo.address}
+                                                </p>
+                                                <div className="bg-amber-50 dark:bg-amber-950/40 p-2 rounded-lg border border-amber-200 dark:border-amber-800 text-[10px] text-amber-900 dark:text-amber-200 space-y-0.5">
+                                                    <p className="font-bold">Início e Encerramento da Jornada</p>
+                                                    <p className="text-slate-500">Traçado OSRM calculado em circuito a partir desta base.</p>
+                                                </div>
+                                            </div>
+                                        </Popup>
+                                    </Marker>
+                                )}
+
                                 {/* Marcadores Numerados dos Clientes */}
                                 {filteredVisits.map((v: any, index: number) => {
                                     const lat = Number(v.Lat || v.Latitude);
@@ -894,15 +1136,24 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     ) + 1;
                                     const pinSeq = selectedDay === 'ALL' ? (daySeq > 0 ? daySeq : index + 1) : (index + 1);
                                     const pinColor = DAY_COLORS[dayKey]?.hex || '#2563eb';
+                                    const isSelected = Boolean(highlightedClient && (
+                                        (v.Cod_Cliente && highlightedClient.Cod_Cliente === v.Cod_Cliente) ||
+                                        (v.id && highlightedClient.id === v.id)
+                                    ));
+                                    const freqInfo = getClientFrequencyInfo(v.Periodicidade || v.periodicidade);
 
                                     return (
                                         <Marker
                                             key={`visit-${v.Cod_Cliente || index}-${index}`}
                                             position={[lat, lon]}
-                                            icon={createNumberedPinIcon(pinSeq, false, pinColor)}
+                                            icon={createNumberedPinIcon(pinSeq, isSelected, pinColor)}
+                                            zIndexOffset={isSelected ? 1000 : 0}
+                                            eventHandlers={{
+                                                click: () => handleSelectClient(v)
+                                            }}
                                         >
                                             <Popup>
-                                                <div className="text-xs p-1 space-y-1.5 font-sans min-w-[200px]">
+                                                <div className="text-xs p-1 space-y-1.5 font-sans min-w-[210px]">
                                                     <div className="flex items-center justify-between gap-2 border-b pb-1">
                                                         <span className="font-extrabold" style={{ color: pinColor }}>
                                                             Parada #{pinSeq} ({DAY_COLORS[dayKey]?.label || dayKey})
@@ -915,9 +1166,11 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                                     <p className="text-[10px] text-slate-500">
                                                         {v.Endereco || 'Endereço não cadastrado'} - {v.Bairro}
                                                     </p>
-                                                    <div className="flex items-center justify-between text-[10px] text-slate-600 bg-slate-100 p-1 rounded">
+                                                    <div className="flex items-center justify-between text-[10px] text-slate-600 bg-slate-100 dark:bg-slate-800 p-1.5 rounded gap-2">
                                                         <span>Dia: <b style={{ color: pinColor }}>{v.Dia_Semana || selectedDay}</b></span>
-                                                        <span>Sem: <b>{v.Periodicidade || selectedWeek}</b></span>
+                                                        <span className={`px-1.5 py-0.5 rounded font-black border text-[9px] ${freqInfo.badgeClass}`}>
+                                                            {freqInfo.label}
+                                                        </span>
                                                     </div>
                                                     <button
                                                         onClick={() => handleOpenSuggestionModal(v)}
@@ -956,6 +1209,33 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                     </div>
 
                     <div className="flex-1 overflow-y-auto max-h-[520px] pr-1 space-y-2">
+                        {/* CARD DA BASE (STOP 0 - PARTIDA E RETORNO) */}
+                        {activeBaseInfo && filteredVisits.length > 0 && (
+                            <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2.5">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-6 h-6 rounded-full bg-slate-900 text-amber-400 font-black text-xs flex items-center justify-center shrink-0 border border-amber-400">
+                                        0
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1">
+                                                {activeBaseInfo.type === 'SEDE' ? '🏢' : '🏠'} {activeBaseInfo.label}
+                                            </span>
+                                            <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-500 text-white">
+                                                STOP 0 • PARTIDA & RETORNO
+                                            </span>
+                                        </div>
+                                        <div className="text-[10px] text-slate-500 truncate max-w-[280px]">
+                                            {activeBaseInfo.address}
+                                        </div>
+                                    </div>
+                                </div>
+                                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 shrink-0">
+                                    Base
+                                </span>
+                            </div>
+                        )}
+
                         {filteredVisits.length === 0 ? (
                             <div className="text-center py-16 text-slate-400 text-xs">
                                 Nenhuma visita agendada para este dia/semana.
@@ -970,16 +1250,27 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                 ) + 1;
                                 const pinSeq = selectedDay === 'ALL' ? (daySeq > 0 ? daySeq : idx + 1) : (idx + 1);
                                 const pinColor = DAY_COLORS[dayKey]?.hex || '#2563eb';
+                                const isSelected = Boolean(highlightedClient && (
+                                    (v.Cod_Cliente && highlightedClient.Cod_Cliente === v.Cod_Cliente) ||
+                                    (v.id && highlightedClient.id === v.id)
+                                ));
+                                const freqInfo = getClientFrequencyInfo(v.Periodicidade || v.periodicidade);
 
                                 return (
                                     <div
                                         key={`item-${v.Cod_Cliente || idx}-${idx}`}
-                                        className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 flex items-start justify-between gap-3 hover:border-blue-400 transition-all"
+                                        id={`client-card-${v.Cod_Cliente || v.id}`}
+                                        onClick={() => handleSelectClient(v)}
+                                        className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start justify-between gap-3 ${
+                                            isSelected
+                                                ? 'ring-2 ring-rose-500 bg-rose-50/80 dark:bg-rose-950/60 border-rose-300 dark:border-rose-700 shadow-md'
+                                                : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-700/60 hover:border-blue-400 hover:bg-slate-100/80 dark:hover:bg-slate-800'
+                                        }`}
                                     >
                                         <div className="flex items-start gap-2.5">
                                             <div
-                                                className="w-6 h-6 rounded-full text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-2xs"
-                                                style={{ backgroundColor: pinColor }}
+                                                className={`w-6 h-6 rounded-full text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-2xs ${isSelected ? 'ring-2 ring-white scale-110' : ''}`}
+                                                style={{ backgroundColor: isSelected ? '#f43f5e' : pinColor }}
                                             >
                                                 {pinSeq}
                                             </div>
@@ -987,6 +1278,13 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                                 <div className="flex items-center gap-1.5 flex-wrap">
                                                     <span className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
                                                         {v.Razao_Social || v.nome}
+                                                    </span>
+                                                    {/* BADGE DE FREQUÊNCIA (1 3 / 2 4 / 1 2 3 4) */}
+                                                    <span
+                                                        className={`text-[9px] font-black px-1.5 py-0.2 rounded border ${freqInfo.badgeClass}`}
+                                                        title={`Frequência: ${freqInfo.label}`}
+                                                    >
+                                                        {freqInfo.shortLabel}
                                                     </span>
                                                     {selectedDay === 'ALL' && (
                                                         <span
@@ -1009,7 +1307,10 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                         </div>
 
                                         <button
-                                            onClick={() => handleOpenSuggestionModal(v)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleOpenSuggestionModal(v);
+                                            }}
                                             className="p-1.5 rounded-xl bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-600 transition-all border border-slate-200 dark:border-slate-600 shrink-0 cursor-pointer"
                                             title="Sugerir alteração neste cliente"
                                         >

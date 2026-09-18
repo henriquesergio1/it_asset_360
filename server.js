@@ -4079,6 +4079,25 @@ app.get('/api/fuel360/roteiro/simulacao/:id/public', async (req, res) => {
                 snapshot = null;
             }
         }
+        // Buscar dados da sede e colaboradores para identificação do ponto de partida/base
+        let headquarters = null;
+        let collaborators = [];
+        try {
+            const hqRes = await pool.request().query('SELECT TOP 1 HeadquartersAddress as headquartersAddress, HeadquartersLat as headquartersLat, HeadquartersLong as headquartersLong FROM SystemSettings');
+            if (hqRes.recordset && hqRes.recordset.length > 0) {
+                headquarters = hqRes.recordset[0];
+            }
+        } catch (e) {
+            console.warn('Aviso: Não foi possível obter SystemSettings para sede:', e.message);
+        }
+
+        try {
+            const colabRes = await pool.request().query('SELECT ID_Colaborador, ID_Pulsus, CodigoSetor, Nome, Grupo, EnderecoBase, LatitudeBase, LongitudeBase FROM FuelColaboradores WHERE Ativo = 1');
+            collaborators = colabRes.recordset || [];
+        } catch (e) {
+            console.warn('Aviso: Não foi possível obter FuelColaboradores para base:', e.message);
+        }
+
         res.json({
             id: sim.ID_RotaHist,
             periodo: sim.Periodo,
@@ -4086,7 +4105,9 @@ app.get('/api/fuel360/roteiro/simulacao/:id/public', async (req, res) => {
             dataSimulacao: sim.DataSimulacao,
             totalKm: sim.TotalKM,
             usuarioSimulacao: sim.UsuarioSimulacao,
-            snapshot
+            snapshot,
+            headquarters,
+            collaborators
         });
     } catch (err) {
         console.error('Erro em GET /api/fuel360/roteiro/simulacao/:id/public:', err);
