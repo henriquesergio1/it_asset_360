@@ -39,7 +39,8 @@ import {
     UI_TABLE_CONTAINER,
     UI_TABLE_TH,
     UI_TABLE_TD,
-    UI_BADGE_SUCCESS
+    UI_BADGE_SUCCESS,
+    SYSTEM_VERSION
 } from '../../constants';
 
 // --- PALETA CROMÁTICA OFICIAL POR DIA DA SEMANA ---
@@ -138,49 +139,64 @@ const getClientFrequencyInfo = (periodicidade: any) => {
     };
 };
 
-// --- ÍCONE PARA A BASE (STOP 0 E RETORNO) ---
-const createBasePinIcon = (isHeadquarters: boolean = false) => {
+// --- ÍCONE PARA A BASE (PADRONIZADO COM AJUSTE DE ROTA) ---
+function createHomeIcon(promoterColor?: string) {
     return L.divIcon({
-        className: 'custom-base-pin',
-        iconSize: [38, 48],
-        iconAnchor: [19, 44],
-        popupAnchor: [0, -42],
+        className: 'custom-home-icon',
         html: `
-            <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
+            <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));">
                 <div style="
-                    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-                    color: #fbbf24;
+                    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
                     width: 36px;
                     height: 36px;
-                    border-radius: 50% 50% 50% 0;
-                    transform: rotate(-45deg);
-                    border: 2.5px solid #fbbf24;
+                    border-radius: 10px;
+                    border: 2.5px solid #ffffff;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-weight: 900;
-                    font-size: 16px;
-                    box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+                    box-shadow: 0 0 0 2px ${promoterColor || '#ef4444'};
                 ">
-                    <span style="transform: rotate(45deg);">${isHeadquarters ? '🏢' : '🏠'}</span>
+                    <svg style="width: 20px; height: 20px; fill: white;" viewBox="0 0 24 24">
+                        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                    </svg>
                 </div>
                 <div style="
                     background: #0f172a;
-                    color: #fbbf24;
+                    color: #ffffff;
                     font-size: 8.5px;
                     font-weight: 900;
-                    padding: 1px 4px;
-                    border-radius: 4px;
-                    border: 1px solid #fbbf24;
-                    margin-top: -3px;
-                    letter-spacing: 0.5px;
+                    padding: 1.5px 6px;
+                    border-radius: 6px;
+                    margin-top: 3px;
                     white-space: nowrap;
+                    border: 1px solid rgba(255,255,255,0.4);
+                    letter-spacing: 0.5px;
+                    text-transform: uppercase;
                 ">
-                    STOP 0
+                    🏠 BASE
                 </div>
             </div>
-        `
+        `,
+        iconSize: [38, 54],
+        iconAnchor: [19, 22],
+        popupAnchor: [0, -24]
     });
+}
+
+// --- HELPER PARA FORMATAÇÃO DO NOME DO VENDEDOR (PADRONIZADO COM AJUSTE DE ROTA) ---
+const formatSellerDisplayName = (sellerId?: number | string, sellerName?: string): string => {
+    const sId = sellerId !== undefined && sellerId !== null ? String(sellerId).trim() : '';
+    let name = (sellerName || '').trim();
+    if (!name && sId) return `Colaborador ${sId}`;
+    if (!name) return 'Colaborador';
+    // Se já possui o prefixo "101 - ...", retorna direto
+    if (/^\d+\s*-\s*/.test(name)) {
+        return name;
+    }
+    if (sId && !isNaN(Number(sId)) && Number(sId) > 0) {
+        return `${sId} - ${name}`;
+    }
+    return name;
 };
 
 // --- FUNÇÃO PARA CRIAR ÍCONE DE PARADA NUMERADA NO MAPA COM COR DINÂMICA E DESTAQUE ---
@@ -378,22 +394,30 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         if (!simulacaoData) return null;
 
         const currentSellerObj = sellersList.find(s => s.id === selectedSeller);
-        const sellerName = currentSellerObj?.name || '';
+        const firstClient = currentSellerClients[0];
+        const rawSellerName = currentSellerObj?.name || firstClient?.Nome_Vendedor || '';
+        const rawSellerCode = currentSellerObj?.id || firstClient?.Cod_Vend || selectedSeller;
 
         // 1. Tentar encontrar nos colaboradores da simulação
         const colabList: any[] = simulacaoData.collaborators || [];
+        const sCodeNum = Number(rawSellerCode);
+        const normName = rawSellerName.trim().toLowerCase();
+
         const colab = colabList.find(c => 
-            (c.CodigoSetor && String(c.CodigoSetor) === selectedSeller) ||
-            (c.ID_Pulsus && String(c.ID_Pulsus) === selectedSeller) ||
-            (c.Nome && sellerName && c.Nome.trim().toLowerCase() === sellerName.trim().toLowerCase())
+            (sCodeNum > 0 && Number(c.CodigoSetor) === sCodeNum) ||
+            (c.ID_Pulsus && String(c.ID_Pulsus) === String(rawSellerCode)) ||
+            (c.Nome && normName && (c.Nome.trim().toLowerCase() === normName || normName.includes(c.Nome.trim().toLowerCase()) || c.Nome.trim().toLowerCase().includes(normName)))
         );
 
         if (colab && colab.LatitudeBase && colab.LongitudeBase && Math.abs(Number(colab.LatitudeBase)) > 0.001) {
+            const finalCode = colab.CodigoSetor || rawSellerCode;
+            const finalName = colab.Nome || rawSellerName;
             return {
                 type: 'COLABORADOR' as const,
                 label: 'Base do Vendedor',
-                name: colab.Nome || sellerName,
-                address: colab.EnderecoBase || 'Residência do Vendedor',
+                codigoSetor: finalCode,
+                name: finalName,
+                address: colab.EnderecoBase || 'Residência do Colaborador',
                 lat: Number(colab.LatitudeBase),
                 lng: Number(colab.LongitudeBase)
             };
@@ -405,6 +429,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             return {
                 type: 'SEDE' as const,
                 label: 'Sede da Empresa',
+                codigoSetor: rawSellerCode,
                 name: 'Sede Rainha',
                 address: hq.headquartersAddress || 'Sede da Empresa',
                 lat: Number(hq.headquartersLat),
@@ -413,7 +438,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         }
 
         return null;
-    }, [simulacaoData, sellersList, selectedSeller]);
+    }, [simulacaoData, sellersList, selectedSeller, currentSellerClients]);
 
     // Filtragem por Semana e Dia
     const filteredVisits = useMemo(() => {
@@ -829,7 +854,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     Validação de Rota • Supervisor
                                 </span>
                                 <span className="text-[10px] font-bold text-slate-400">
-                                    ID #{simulacaoData.id}
+                                    ID #{simulacaoData.id} • v{SYSTEM_VERSION}
                                 </span>
                             </div>
                             <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
@@ -1127,33 +1152,30 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     );
                                 })}
 
-                                {/* Marcador Especial da Base (Stop 0 e Retorno da Rota Diária) */}
+                                {/* Marcador Especial da Base (Padronizado com Ajuste de Rota) */}
                                 {activeBaseInfo && filteredVisits.length > 0 && (
                                     <Marker
                                         position={[activeBaseInfo.lat, activeBaseInfo.lng]}
-                                        icon={createBasePinIcon(activeBaseInfo.type === 'SEDE')}
-                                        zIndexOffset={800}
+                                        icon={createHomeIcon('#ef4444')}
+                                        zIndexOffset={1000}
                                     >
                                         <Popup>
-                                            <div className="text-xs p-1 space-y-1.5 font-sans min-w-[220px]">
-                                                <div className="flex items-center justify-between gap-2 border-b pb-1">
-                                                    <span className="font-black text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                                                        {activeBaseInfo.type === 'SEDE' ? '🏢' : '🏠'} Stop 0 • Partida & Retorno
-                                                    </span>
-                                                    <span className="text-[10px] bg-slate-900 text-amber-400 font-black px-1.5 py-0.5 rounded">
-                                                        BASE
-                                                    </span>
+                                            <div className="text-xs p-1 space-y-1 font-sans min-w-[200px]">
+                                                <div className="flex items-center space-x-1.5 text-red-600 dark:text-red-400 font-black">
+                                                    <span>🏠</span>
+                                                    <span className="uppercase tracking-wider text-[10px]">BASE / RESIDÊNCIA</span>
                                                 </div>
-                                                <p className="font-bold text-slate-900 leading-tight">
-                                                    {activeBaseInfo.name}
+                                                <p className="text-slate-900 dark:text-slate-100 font-bold text-sm">
+                                                    {formatSellerDisplayName(activeBaseInfo.codigoSetor || selectedSeller, activeBaseInfo.name)}
                                                 </p>
-                                                <p className="text-[10px] text-slate-500 leading-snug">
-                                                    {activeBaseInfo.address}
+                                                {activeBaseInfo.address && (
+                                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                                                        {activeBaseInfo.address}
+                                                    </p>
+                                                )}
+                                                <p className="text-[9px] text-slate-400 dark:text-slate-500 italic">
+                                                    Ponto de partida e retorno diário do colaborador
                                                 </p>
-                                                <div className="bg-amber-50 dark:bg-amber-950/40 p-2 rounded-lg border border-amber-200 dark:border-amber-800 text-[10px] text-amber-900 dark:text-amber-200 space-y-0.5">
-                                                    <p className="font-bold">Início e Encerramento da Jornada</p>
-                                                    <p className="text-slate-500">Traçado OSRM calculado em circuito a partir desta base.</p>
-                                                </div>
                                             </div>
                                         </Popup>
                                     </Marker>
@@ -1248,27 +1270,27 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                     <div className="flex-1 overflow-y-auto max-h-[520px] pr-1 space-y-2">
                         {/* CARD DA BASE (STOP 0 - PARTIDA E RETORNO) */}
                         {activeBaseInfo && filteredVisits.length > 0 && (
-                            <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2.5">
+                            <div className="p-2.5 rounded-2xl bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/30 dark:border-rose-800/50 flex items-center justify-between gap-2.5">
                                 <div className="flex items-center gap-2.5">
-                                    <div className="w-6 h-6 rounded-full bg-slate-900 text-amber-400 font-black text-xs flex items-center justify-center shrink-0 border border-amber-400">
-                                        0
+                                    <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-red-500 to-red-700 text-white font-black text-xs flex items-center justify-center shrink-0 border-2 border-white shadow-xs">
+                                        🏠
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                            <span className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1">
-                                                {activeBaseInfo.type === 'SEDE' ? '🏢' : '🏠'} {activeBaseInfo.label}
+                                            <span className="text-xs font-black text-slate-900 dark:text-white">
+                                                {formatSellerDisplayName(activeBaseInfo.codigoSetor || selectedSeller, activeBaseInfo.name)}
                                             </span>
-                                            <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-500 text-white">
-                                                STOP 0 • PARTIDA & RETORNO
+                                            <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-rose-600 text-white uppercase tracking-wider">
+                                                BASE / RESIDÊNCIA
                                             </span>
                                         </div>
-                                        <div className="text-[10px] text-slate-500 truncate max-w-[280px]">
+                                        <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[280px]">
                                             {activeBaseInfo.address}
                                         </div>
                                     </div>
                                 </div>
-                                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 shrink-0">
-                                    Base
+                                <span className="text-[10px] font-bold text-rose-700 dark:text-rose-300 shrink-0">
+                                    Stop 0
                                 </span>
                             </div>
                         )}
