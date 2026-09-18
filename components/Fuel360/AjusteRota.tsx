@@ -2162,6 +2162,16 @@ export const AjusteRota: React.FC = () => {
             const seller = map.get(vId);
             if (seller) seller.clientCount = clients.size;
         });
+        if (map.size === 0 && teamColaboradores.length > 0) {
+            teamColaboradores.forEach(c => {
+                map.set(c.CodigoSetor, {
+                    id: c.CodigoSetor,
+                    name: formatSellerDisplayName(c.CodigoSetor, c.Nome),
+                    supId: 'SEM_SUPERVISOR',
+                    clientCount: 0
+                });
+            });
+        }
         return Array.from(map.values()).sort((a, b) => {
             const numA = Number(a.id);
             const numB = Number(b.id);
@@ -2170,7 +2180,7 @@ export const AjusteRota: React.FC = () => {
             }
             return String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
         });
-    }, [adjustedRoutes, scopeMode, selectedSupervisor]);
+    }, [adjustedRoutes, scopeMode, selectedSupervisor, teamColaboradores]);
 
     // Todos os vendedores/setores presentes na rota ajustada (para extinção e redistribuição)
     const allAdjustedSellers = useMemo(() => {
@@ -6348,85 +6358,98 @@ export const AjusteRota: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* SELEÇÃO DE ESCOPO (quando há rotas carregadas) */}
-                    {adjustedRoutes.length > 0 && (
-                        <>
-                            <div className="h-6 w-px bg-slate-200 dark:border-slate-800 hidden md:block" />
-                            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-                                <button
-                                    onClick={() => {
-                                        setScopeMode('geral');
-                                        setSelectedPromoter('ALL');
-                                        setSelectedTeamSellers(new Set());
-                                    }}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${scopeMode === 'geral' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                                >
-                                    🌐 Visão Geral ({Array.from(new Set(adjustedRoutes.map(r => r.Cod_Vend))).length})
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setScopeMode('equipe');
-                                        setSelectedPromoter('ALL');
-                                        setSelectedTeamSellers(new Set());
-                                        if (!selectedSupervisor && supervisors.length > 0) {
-                                            setSelectedSupervisor(supervisors[0].id);
-                                        }
-                                    }}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${scopeMode === 'equipe' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                                >
-                                    👥 Por Equipe
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setScopeMode('vendedor');
-                                        setSelectedPromoter('ALL');
-                                        setSelectedTeamSellers(new Set());
-                                    }}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${scopeMode === 'vendedor' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                                >
-                                    👤 Por Vendedor
-                                </button>
-                            </div>
+                    {/* BOTÃO MODAL DE PARÂMETROS DO OTIMIZADOR (SEMPRE VISÍVEL JUNTO AO SELETOR) */}
+                    <button
+                        type="button"
+                        onClick={() => setShowParamsModal(true)}
+                        className="bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer h-[34px]"
+                        title="Abrir configurações e parâmetros do otimizador de rotas"
+                    >
+                        <CogIcon className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400" />
+                        <span>Parâmetros</span>
+                        <span className="ml-1.5 px-1.5 py-0.2 rounded-md bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-black border border-indigo-200/60 dark:border-indigo-800">
+                            {optLimitClients ? `Máx ${optMaxClients}` : 'Livre'}
+                            {optLimitKm ? ` • ${optMaxKm}km` : ''}
+                            {optLimitHours ? ` • ${optMaxHours}h` : ''}
+                        </span>
+                    </button>
 
-                            {/* Seletores Dinâmicos de Supervisor ou Vendedor */}
-                            {scopeMode === 'equipe' && (
-                                <div className="flex items-center space-x-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Supervisor:</label>
-                                    <select
-                                        value={selectedSupervisor}
-                                        onChange={(e) => {
-                                            setSelectedSupervisor(e.target.value);
-                                            setSelectedPromoter('ALL');
-                                            setSelectedTeamSellers(new Set());
-                                        }}
-                                        className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
-                                    >
-                                        <option value="">Selecione uma Supervisão...</option>
-                                        {supervisors.map(sup => (
-                                            <option key={sup.id} value={sup.id}>{sup.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
+                    <div className="h-6 w-px bg-slate-200 dark:border-slate-800 hidden md:block" />
 
-                            {scopeMode === 'vendedor' && (
-                                <div className="flex items-center space-x-1.5">
-                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Vendedor:</label>
-                                    <SearchableSellerSelect
-                                        sellers={availableSellers}
-                                        value={selectedSeller}
-                                        onChange={(val) => {
-                                            setSelectedSeller(val);
-                                            setSelectedPromoter('ALL');
-                                        }}
-                                    />
-                                </div>
-                            )}
-                        </>
+                    {/* SELEÇÃO DE ESCOPO (SEMPRE VISÍVEL) */}
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <button
+                            onClick={() => {
+                                setScopeMode('geral');
+                                setSelectedPromoter('ALL');
+                                setSelectedTeamSellers(new Set());
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${scopeMode === 'geral' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                        >
+                            🌐 Visão Geral ({adjustedRoutes.length > 0 ? Array.from(new Set(adjustedRoutes.map(r => r.Cod_Vend))).length : teamColaboradores.length})
+                        </button>
+                        <button
+                            onClick={() => {
+                                setScopeMode('equipe');
+                                setSelectedPromoter('ALL');
+                                setSelectedTeamSellers(new Set());
+                                if (!selectedSupervisor && supervisors.length > 0) {
+                                    setSelectedSupervisor(supervisors[0].id);
+                                }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${scopeMode === 'equipe' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                        >
+                            👥 Por Equipe
+                        </button>
+                        <button
+                            onClick={() => {
+                                setScopeMode('vendedor');
+                                setSelectedPromoter('ALL');
+                                setSelectedTeamSellers(new Set());
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${scopeMode === 'vendedor' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                        >
+                            👤 Por Vendedor
+                        </button>
+                    </div>
+
+                    {/* Seletores Dinâmicos de Supervisor ou Vendedor */}
+                    {scopeMode === 'equipe' && (
+                        <div className="flex items-center space-x-1.5">
+                            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Supervisor:</label>
+                            <select
+                                value={selectedSupervisor}
+                                onChange={(e) => {
+                                    setSelectedSupervisor(e.target.value);
+                                    setSelectedPromoter('ALL');
+                                    setSelectedTeamSellers(new Set());
+                                }}
+                                className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                            >
+                                <option value="">{supervisors.length > 0 ? "Selecione uma Supervisão..." : "Supervisões disponíveis após carregar rota"}</option>
+                                {supervisors.map(sup => (
+                                    <option key={sup.id} value={sup.id}>{sup.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {scopeMode === 'vendedor' && (
+                        <div className="flex items-center space-x-1.5">
+                            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Vendedor:</label>
+                            <SearchableSellerSelect
+                                sellers={availableSellers}
+                                value={selectedSeller}
+                                onChange={(val) => {
+                                    setSelectedSeller(val);
+                                    setSelectedPromoter('ALL');
+                                }}
+                            />
+                        </div>
                     )}
                 </div>
 
-                {/* LADO DIREITO: STATUS DO FOCO, PARÂMETROS, VENDEDORES, OTIMIZAR E CARGA */}
+                {/* LADO DIREITO: STATUS DO FOCO, REDISTRIBUIR E CARGA */}
                 <div className="flex flex-wrap items-center gap-2">
                     {adjustedRoutes.length > 0 && (
                         <>
@@ -6434,22 +6457,6 @@ export const AjusteRota: React.FC = () => {
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
                                 {Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).length} Colab • {scopedAdjustedRoutes.length} PDVs em foco
                             </div>
-
-                            {/* BOTÃO MODAL DE PARÂMETROS DO OTIMIZADOR */}
-                            <button
-                                type="button"
-                                onClick={() => setShowParamsModal(true)}
-                                className="bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer h-[34px]"
-                                title="Abrir configurações e parâmetros do otimizador de rotas"
-                            >
-                                <CogIcon className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400" />
-                                <span>Parâmetros</span>
-                                <span className="ml-1.5 px-1.5 py-0.2 rounded-md bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-black border border-indigo-200/60 dark:border-indigo-800">
-                                    {optLimitClients ? `Máx ${optMaxClients}` : 'Livre'}
-                                    {optLimitKm ? ` • ${optMaxKm}km` : ''}
-                                    {optLimitHours ? ` • ${optMaxHours}h` : ''}
-                                </span>
-                            </button>
 
                             <button
                                 type="button"
