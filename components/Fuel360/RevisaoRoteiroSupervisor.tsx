@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, getOSRMData } from './services/apiService';
+import { ThemeToggle } from '../ThemeToggle';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -79,29 +80,60 @@ const formatMinutesToHours = (totalMinutes: number): string => {
     return `${hours}h ${mins}min`;
 };
 
+// --- PARSER DE PERIODICIDADE PADRONIZADO COM O ROTEIRIZADOR ---
+export type PeriodicidadeTipo = 'SEMANAL' | 'QUINZENAL_1_3' | 'QUINZENAL_2_4';
+
+export const parsePeriodicidade = (raw: string | undefined): { tipo: PeriodicidadeTipo; original: string } => {
+    const p = String(raw || '').trim().toUpperCase();
+    if (!p) return { tipo: 'SEMANAL', original: 'SEMANAL' };
+
+    // Quinzenal 1 3 (Semanas 1 e 3)
+    if (
+        p.includes('1 3') || p.includes('1, 3') || p.includes('1,3') || p.includes('1-3') || p.includes('1_3') || p.includes('1/3') ||
+        p === '13' || (p.includes('QUINZENAL') && (p.includes('1') || p.includes('IMPAR') || p.includes('ÍMPAR')))
+    ) {
+        return { tipo: 'QUINZENAL_1_3', original: raw || '1 3' };
+    }
+    // Quinzenal 2 4 (Semanas 2 e 4)
+    if (
+        p.includes('2 4') || p.includes('2, 4') || p.includes('2,4') || p.includes('2-4') || p.includes('2_4') || p.includes('2/4') ||
+        p === '24' || (p.includes('QUINZENAL') && (p.includes('2') || p.includes('PAR')))
+    ) {
+        return { tipo: 'QUINZENAL_2_4', original: raw || '2 4' };
+    }
+    // Quinzenal genérico
+    if (p.includes('QUINZENAL') || p.includes('QUINZENA')) {
+        return { tipo: 'QUINZENAL_1_3', original: raw || '1 3' };
+    }
+    return { tipo: 'SEMANAL', original: raw || 'SEMANAL' };
+};
+
 // --- HELPER PARA INFORMAÇÃO E BADGE DE FREQUÊNCIA ---
 const getClientFrequencyInfo = (periodicidade: any) => {
-    const p = String(periodicidade || '').toUpperCase().trim();
-    if (p.includes('2_4') || p.includes('2 E 4') || p.includes('24') || p.includes('2/4') || p === '2' || p === '4') {
-        return {
-            label: 'Semana 2 e 4 (Par)',
-            shortLabel: '2 4',
-            code: '2 4',
-            badgeClass: 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-300 dark:border-purple-800'
-        };
-    }
-    if (p.includes('1_3') || p.includes('1 E 3') || p.includes('13') || p.includes('1/3') || p === '1' || p === '3') {
+    const parsed = parsePeriodicidade(periodicidade);
+    if (parsed.tipo === 'QUINZENAL_1_3') {
         return {
             label: 'Semana 1 e 3 (Ímpar)',
             shortLabel: '1 3',
             code: '1 3',
+            tipo: 'QUINZENAL_1_3',
             badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+        };
+    }
+    if (parsed.tipo === 'QUINZENAL_2_4') {
+        return {
+            label: 'Semana 2 e 4 (Par)',
+            shortLabel: '2 4',
+            code: '2 4',
+            tipo: 'QUINZENAL_2_4',
+            badgeClass: 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-300 dark:border-purple-800'
         };
     }
     return {
         label: 'Semanal (1, 2, 3 e 4)',
         shortLabel: '1 2 3 4',
         code: '1 2 3 4',
+        tipo: 'SEMANAL',
         badgeClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
     };
 };
@@ -395,11 +427,11 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
 
             // Normalizar Semana (1 e 3 vs 2 e 4)
             if (selectedWeek !== 'ALL') {
-                const per = String(c.Periodicidade || c.periodicidade || '').toUpperCase();
-                if (selectedWeek === '13' && (per.includes('2_4') || per.includes('2 E 4') || per.includes('24'))) {
+                const p = parsePeriodicidade(c.Periodicidade || c.periodicidade).tipo;
+                if (selectedWeek === '13' && p === 'QUINZENAL_2_4') {
                     return false;
                 }
-                if (selectedWeek === '24' && (per.includes('1_3') || per.includes('1 E 3') || per.includes('13'))) {
+                if (selectedWeek === '24' && p === 'QUINZENAL_1_3') {
                     return false;
                 }
             }
@@ -431,10 +463,10 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         }
 
         // Sincronizar ciclo/semana se o filtro atual estiver escondendo este cliente
-        const freq = getClientFrequencyInfo(client.Periodicidade || client.periodicidade);
-        if (selectedWeek === '13' && freq.code === '2 4') {
+        const p = parsePeriodicidade(client.Periodicidade || client.periodicidade).tipo;
+        if (selectedWeek === '13' && p === 'QUINZENAL_2_4') {
             setSelectedWeek('24');
-        } else if (selectedWeek === '24' && freq.code === '1 3') {
+        } else if (selectedWeek === '24' && p === 'QUINZENAL_1_3') {
             setSelectedWeek('13');
         }
     };
@@ -467,12 +499,13 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         let c13 = 0;
         let c24 = 0;
         currentSellerClients.forEach((c: any) => {
-            const per = String(c.Periodicidade || c.periodicidade || '').toUpperCase();
-            const is24 = per.includes('2_4') || per.includes('2 E 4') || per.includes('24');
-            const is13 = per.includes('1_3') || per.includes('1 E 3') || per.includes('13');
-            if (is13) c13++;
-            else if (is24) c24++;
-            else {
+            const p = parsePeriodicidade(c.Periodicidade || c.periodicidade).tipo;
+            if (p === 'QUINZENAL_1_3') {
+                c13++;
+            } else if (p === 'QUINZENAL_2_4') {
+                c24++;
+            } else {
+                // SEMANAL: atende em ambas as quinzenas
                 c13++;
                 c24++;
             }
@@ -484,9 +517,9 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     const clientsInCurrentCycle = useMemo(() => {
         return currentSellerClients.filter((c: any) => {
             if (selectedWeek === 'ALL') return true;
-            const per = String(c.Periodicidade || c.periodicidade || '').toUpperCase();
-            if (selectedWeek === '13' && (per.includes('2_4') || per.includes('2 E 4') || per.includes('24'))) return false;
-            if (selectedWeek === '24' && (per.includes('1_3') || per.includes('1 E 3') || per.includes('13'))) return false;
+            const p = parsePeriodicidade(c.Periodicidade || c.periodicidade).tipo;
+            if (selectedWeek === '13' && p === 'QUINZENAL_2_4') return false;
+            if (selectedWeek === '24' && p === 'QUINZENAL_1_3') return false;
             return true;
         });
     }, [currentSellerClients, selectedWeek]);
@@ -782,44 +815,48 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     }
 
     return (
-        <div className="space-y-6 max-w-[1800px] mx-auto pb-12">
-            {/* CABEÇALHO DA TELA DE REVISÃO */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <div className="p-3.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl border border-emerald-500/20">
-                        <UserCheck size={28} />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
-                                Validação de Rota • Supervisor
-                            </span>
-                            <span className="text-[10px] font-bold text-slate-400">
-                                ID #{simulacaoData.id}
-                            </span>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-3 sm:p-6 transition-colors duration-200">
+            <div className="space-y-6 max-w-[1800px] mx-auto pb-12">
+                {/* CABEÇALHO DA TELA DE REVISÃO */}
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl border border-emerald-500/20">
+                            <UserCheck size={28} />
                         </div>
-                        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
-                            {simulacaoData.periodo}
-                        </h2>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Criado por <strong>{simulacaoData.usuarioSimulacao}</strong> • KM Total: <strong>{Math.round(simulacaoData.totalKm)} km</strong>
-                        </p>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+                                    Validação de Rota • Supervisor
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-400">
+                                    ID #{simulacaoData.id}
+                                </span>
+                            </div>
+                            <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+                                {simulacaoData.periodo}
+                            </h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                Criado por <strong>{simulacaoData.usuarioSimulacao}</strong> • KM Total: <strong>{Math.round(simulacaoData.totalKm)} km</strong>
+                            </p>
+                        </div>
                     </div>
-                </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                    <button
-                        onClick={() => setIsHistoryModalOpen(true)}
-                        className={`${UI_BUTTON_SECONDARY} text-xs py-2 px-3 flex items-center gap-2 relative`}
-                    >
-                        <Briefcase size={14} className="text-blue-500" />
-                        Sugestões Enviadas
-                        {sugestoes.length > 0 && (
-                            <span className="ml-1 bg-blue-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
-                                {sugestoes.length}
-                            </span>
-                        )}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {/* ALTERNADOR DE TEMA VISUAL CLARO / ESCURO */}
+                        <ThemeToggle />
+
+                        <button
+                            onClick={() => setIsHistoryModalOpen(true)}
+                            className={`${UI_BUTTON_SECONDARY} text-xs py-2 px-3 flex items-center gap-2 relative`}
+                        >
+                            <Briefcase size={14} className="text-blue-500" />
+                            Sugestões Enviadas
+                            {sugestoes.length > 0 && (
+                                <span className="ml-1 bg-blue-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                                    {sugestoes.length}
+                                </span>
+                            )}
+                        </button>
 
                     <button
                         onClick={() => handleOpenSuggestionModal()}
@@ -1549,6 +1586,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 };
