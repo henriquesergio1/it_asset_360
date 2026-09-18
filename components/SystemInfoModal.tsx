@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.193.0',
+    date: 'Hoje',
+    title: 'Fuel360: Ordenamento Espacial por Eixo de Dispersão Territorial (PCA 1D)',
+    changes: [
+      'Projeção no Eixo Principal de Dispersão (PCA 1D): Elimina distorções de coordenadas em regiões lineares/litorâneas (ex: Ilhabela ao longo da SP-131), particionando os dias em blocos perfeitamente contíguos de Norte a Sul.',
+      'Fim de Rotas com Saltos de Extremo a Extremo: Cada dia da semana atende exclusivamente a sua faixa territorial (Sul, Centro-Sul, Centro, Centro-Norte e Norte), eliminando rotas com clientes soltos no extremo oposto.',
+      'Refinamento de Diâmetro de Cluster: Impede a permanência de qualquer cliente isolado a mais de 5 km da mancha diária, efetuando permutas compatíveis de menor custo viário.',
+      'Eliminação Radical de Sobrecarga: Redução massiva de percurso e tempo de trânsito em dias antes inflados, estabilizando as jornadas dentro do limite de 8h.'
+    ]
+  },
+  {
     version: '3.192.0',
     date: 'Hoje',
     title: 'Fuel360: Otimização Geográfica Multidias e Rebalanceamento Espacial de Centróides',

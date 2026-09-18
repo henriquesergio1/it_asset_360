@@ -3931,6 +3931,7 @@ export const AjusteRota: React.FC = () => {
                 centerLng: number;
                 polarAngle: number;
                 distFromBase: number;
+                linearProj?: number;
             }
 
             const maxDailyTarget = Math.max(...dayQuotas, 8);
@@ -3955,11 +3956,34 @@ export const AjusteRota: React.FC = () => {
                         distFromBase: dBase
                     });
                 } else {
-                    // Cidades maiores: divide em sub-setores contíguos ordenados pelo ângulo polar
+                    // Cidades maiores: ordenação adaptativa por Projeção no Eixo Principal de Dispersão (PCA 1D)
+                    // Elimina anomalias de relevos lineares/litorâneos (ex.: Ilhabela ao longo da rodovia SP-131)
+                    const validCityCoords = cList.filter(c => c.lat && c.lng);
+                    const avgCityLat = validCityCoords.length > 0 
+                        ? validCityCoords.reduce((s, c) => s + c.lat, 0) / validCityCoords.length 
+                        : centerPortfolioLat;
+                    const avgCityLng = validCityCoords.length > 0 
+                        ? validCityCoords.reduce((s, c) => s + c.lng, 0) / validCityCoords.length 
+                        : centerPortfolioLng;
+
+                    let varLat = 0, varLng = 0, covLatLng = 0;
+                    validCityCoords.forEach(c => {
+                        const dLat = (c.lat - avgCityLat) * 111.32; // km
+                        const dLng = (c.lng - avgCityLng) * 111.32 * Math.cos((avgCityLat * Math.PI) / 180); // km
+                        varLat += dLat * dLat;
+                        varLng += dLng * dLng;
+                        covLatLng += dLat * dLng;
+                    });
+
+                    // Autovetor do eixo de maior dispersão territorial (direção natural da rodovia/orla)
+                    const pcaTheta = 0.5 * Math.atan2(2 * covLatLng, varLng - varLat);
+                    const axisX = Math.cos(pcaTheta);
+                    const axisY = Math.sin(pcaTheta);
+
                     const sortedCity = [...cList].sort((a, b) => {
-                        const aAngle = calcPolarAngle(centerPortfolioLat, centerPortfolioLng, a.lat, a.lng);
-                        const bAngle = calcPolarAngle(centerPortfolioLat, centerPortfolioLng, b.lat, b.lng);
-                        return aAngle - bAngle;
+                        const projA = (a.lng - avgCityLng) * axisX + (a.lat - avgCityLat) * axisY;
+                        const projB = (b.lng - avgCityLng) * axisX + (b.lat - avgCityLat) * axisY;
+                        return projA - projB;
                     });
 
                     const sliceSize = Math.max(4, Math.round(uniqueClients.length / activeDays.length));
@@ -3970,6 +3994,7 @@ export const AjusteRota: React.FC = () => {
                         const cLng = chunk.reduce((s, c) => s + c.lng, 0) / chunk.length;
                         const pAngle = calcPolarAngle(centerPortfolioLat, centerPortfolioLng, cLat, cLng);
                         const dBase = calcDist(baseLat, baseLng, cLat, cLng);
+                        const proj = (cLng - avgCityLng) * axisX + (cLat - avgCityLat) * axisY;
 
                         clusters.push({
                             id: `${cityName}_SUB_${subIdx++}`,
@@ -3979,7 +4004,8 @@ export const AjusteRota: React.FC = () => {
                             centerLat: cLat,
                             centerLng: cLng,
                             polarAngle: pAngle,
-                            distFromBase: dBase
+                            distFromBase: dBase,
+                            linearProj: proj
                         });
                     }
                 }
@@ -4017,7 +4043,8 @@ export const AjusteRota: React.FC = () => {
                         centerLat: cLat1,
                         centerLng: cLng1,
                         polarAngle: calcPolarAngle(centerPortfolioLat, centerPortfolioLng, cLat1, cLng1),
-                        distFromBase: calcDist(baseLat, baseLng, cLat1, cLng1)
+                        distFromBase: calcDist(baseLat, baseLng, cLat1, cLng1),
+                        linearProj: toSplit.linearProj !== undefined ? toSplit.linearProj - 0.001 : undefined
                     },
                     {
                         id: `${toSplit.id}_B`,
@@ -4027,29 +4054,40 @@ export const AjusteRota: React.FC = () => {
                         centerLat: cLat2,
                         centerLng: cLng2,
                         polarAngle: calcPolarAngle(centerPortfolioLat, centerPortfolioLng, cLat2, cLng2),
-                        distFromBase: calcDist(baseLat, baseLng, cLat2, cLng2)
+                        distFromBase: calcDist(baseLat, baseLng, cLat2, cLng2),
+                        linearProj: toSplit.linearProj !== undefined ? toSplit.linearProj + 0.001 : undefined
                     }
                 );
             }
 
-            // 2.3. Varredura Angular Contígua
-            clusters.sort((a, b) => a.polarAngle - b.polarAngle);
+            // 2.3. Varredura Contígua dos Clusters
+            let sweepClusters: GeoCluster[] = [];
 
-            let maxGap = -1;
-            let bestCutIdx = 0;
-            for (let i = 0; i < clusters.length; i++) {
-                const nextIdx = (i + 1) % clusters.length;
-                let angleGap = clusters[nextIdx].polarAngle - clusters[i].polarAngle;
-                if (angleGap < 0) angleGap += 2 * Math.PI;
-                if (angleGap > maxGap) {
-                    maxGap = angleGap;
-                    bestCutIdx = nextIdx;
+            // Se uma cidade representa a carteira dominante (ex: Ilhabela com todos os clientes):
+            const isSingleDominantCity = cityGroups.size === 1;
+            if (isSingleDominantCity && clusters.every(cl => cl.linearProj !== undefined)) {
+                // Preserva o ordenamento 100% contíguo no eixo linear (do Extremo Sul ao Extremo Norte)
+                sweepClusters = [...clusters].sort((a, b) => (a.linearProj ?? 0) - (b.linearProj ?? 0));
+            } else {
+                // Varredura Angular Contígua para carteiras multimodais com várias cidades
+                clusters.sort((a, b) => a.polarAngle - b.polarAngle);
+
+                let maxGap = -1;
+                let bestCutIdx = 0;
+                for (let i = 0; i < clusters.length; i++) {
+                    const nextIdx = (i + 1) % clusters.length;
+                    let angleGap = clusters[nextIdx].polarAngle - clusters[i].polarAngle;
+                    if (angleGap < 0) angleGap += 2 * Math.PI;
+                    if (angleGap > maxGap) {
+                        maxGap = angleGap;
+                        bestCutIdx = nextIdx;
+                    }
                 }
+                sweepClusters = [
+                    ...clusters.slice(bestCutIdx),
+                    ...clusters.slice(0, bestCutIdx)
+                ];
             }
-            const sweepClusters = [
-                ...clusters.slice(bestCutIdx),
-                ...clusters.slice(0, bestCutIdx)
-            ];
 
             // 2.4. Particionamento 1D Ótimo dos Clusters para os Dias Ativos (DP Min-Cost)
             const M = sweepClusters.length;
@@ -4105,23 +4143,49 @@ export const AjusteRota: React.FC = () => {
                     const diff2 = dayAssignedClients[d2].length - dayQuotas[d2];
 
                     if (diff1 > 0 && diff2 < 0) {
-                        const candidateIdx = dayAssignedClients[d1].findIndex(c => {
+                        // Encontra o cliente em d1 que está MAIS PRÓXIMO da média de d2 (borda contígua real)
+                        let bestCandidateIdx = -1;
+                        let minDistToD2 = Infinity;
+                        const d2Lat = dayAssignedClients[d2].reduce((s, x) => s + (x.lat || 0), 0) / (dayAssignedClients[d2].length || 1);
+                        const d2Lng = dayAssignedClients[d2].reduce((s, x) => s + (x.lng || 0), 0) / (dayAssignedClients[d2].length || 1);
+
+                        for (let cIdx = 0; cIdx < dayAssignedClients[d1].length; cIdx++) {
+                            const c = dayAssignedClients[d1][cIdx];
                             const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
                             const isSat = clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
-                            return !isSat;
-                        });
-                        if (candidateIdx >= 0) {
-                            const [moved] = dayAssignedClients[d1].splice(candidateIdx, 1);
+                            if (isSat) continue;
+
+                            const dist = calcDist(c.lat, c.lng, d2Lat, d2Lng);
+                            if (dist < minDistToD2) {
+                                minDistToD2 = dist;
+                                bestCandidateIdx = cIdx;
+                            }
+                        }
+                        if (bestCandidateIdx >= 0) {
+                            const [moved] = dayAssignedClients[d1].splice(bestCandidateIdx, 1);
                             dayAssignedClients[d2].unshift(moved);
                         }
                     } else if (diff2 > 0 && diff1 < 0) {
-                        const candidateIdx = dayAssignedClients[d2].findIndex(c => {
+                        // Encontra o cliente em d2 que está MAIS PRÓXIMO da média de d1 (borda contígua real)
+                        let bestCandidateIdx = -1;
+                        let minDistToD1 = Infinity;
+                        const d1Lat = dayAssignedClients[d1].reduce((s, x) => s + (x.lat || 0), 0) / (dayAssignedClients[d1].length || 1);
+                        const d1Lng = dayAssignedClients[d1].reduce((s, x) => s + (x.lng || 0), 0) / (dayAssignedClients[d1].length || 1);
+
+                        for (let cIdx = 0; cIdx < dayAssignedClients[d2].length; cIdx++) {
+                            const c = dayAssignedClients[d2][cIdx];
                             const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
                             const isSat = clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
-                            return !isSat;
-                        });
-                        if (candidateIdx >= 0) {
-                            const [moved] = dayAssignedClients[d2].splice(candidateIdx, 1);
+                            if (isSat) continue;
+
+                            const dist = calcDist(c.lat, c.lng, d1Lat, d1Lng);
+                            if (dist < minDistToD1) {
+                                minDistToD1 = dist;
+                                bestCandidateIdx = cIdx;
+                            }
+                        }
+                        if (bestCandidateIdx >= 0) {
+                            const [moved] = dayAssignedClients[d2].splice(bestCandidateIdx, 1);
                             dayAssignedClients[d1].push(moved);
                         }
                     }
@@ -4170,8 +4234,7 @@ export const AjusteRota: React.FC = () => {
                 }
             }
 
-            // 2.5.3. Otimização Geográfica Multidias (Rebalanceamento de Centróides e Eliminação de Outliers Interdias)
-            // Identifica clientes anômalos que ficaram em um dia distante mas possuem rotas contíguas em outro dia da semana
+            // 2.5.3. Otimizador de Diâmetro e Eliminação de Outliers de Rota
             if (K > 1 && uniqueClients.length > K) {
                 const isDayAllowedForClient = (client: typeof uniqueClients[0], dayName: string) => {
                     const restr = clienteRestricoesMap.get(client.sampleVisit.Cod_Cliente);
@@ -4185,117 +4248,95 @@ export const AjusteRota: React.FC = () => {
                     return clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
                 };
 
-                // Iterações de convergência espacial (até 4 passadas para estabilização de centróides)
                 for (let iter = 0; iter < 4; iter++) {
-                    // 1. Calcular os centróides geográficos médios de cada dia
-                    const dayCentroids: { lat: number; lng: number; validCount: number }[] = [];
-                    for (let d = 0; d < K; d++) {
-                        const validCoordsInDay = dayAssignedClients[d].filter(c => c.lat && c.lng);
-                        if (validCoordsInDay.length > 0) {
-                            const avgLat = validCoordsInDay.reduce((acc, c) => acc + c.lat, 0) / validCoordsInDay.length;
-                            const avgLng = validCoordsInDay.reduce((acc, c) => acc + c.lng, 0) / validCoordsInDay.length;
-                            dayCentroids.push({ lat: avgLat, lng: avgLng, validCount: validCoordsInDay.length });
-                        } else {
-                            dayCentroids.push({ lat: baseLat, lng: baseLng, validCount: 0 });
-                        }
-                    }
-
                     let anySwapMade = false;
 
-                    // 2. Buscar outliers espaciais e potenciais permutas benéficas
+                    // Centróides médios de cada dia
+                    const dayCenters = dayAssignedClients.map(cList => {
+                        const valid = cList.filter(c => c.lat && c.lng);
+                        if (valid.length === 0) return { lat: baseLat, lng: baseLng };
+                        return {
+                            lat: valid.reduce((s, c) => s + c.lat, 0) / valid.length,
+                            lng: valid.reduce((s, c) => s + c.lng, 0) / valid.length
+                        };
+                    });
+
                     for (let dA = 0; dA < K; dA++) {
-                        const dayNameA = activeDays[dA];
                         const clientsA = dayAssignedClients[dA];
-                        const centroidA = dayCentroids[dA];
-                        if (centroidA.validCount === 0) continue;
+                        const centerA = dayCenters[dA];
+                        const dayNameA = activeDays[dA];
 
                         for (let iA = clientsA.length - 1; iA >= 0; iA--) {
                             const cA = clientsA[iA];
-                            if (!cA.lat || !cA.lng) continue;
-                            if (isCitySatellite(cA)) continue; // Preserva integridade de cidades satélites
+                            if (!cA.lat || !cA.lng || isCitySatellite(cA)) continue;
 
-                            const distA_toCurrent = calcDist(centroidA.lat, centroidA.lng, cA.lat, cA.lng);
+                            const distA_centerA = calcDist(cA.lat, cA.lng, centerA.lat, centerA.lng);
 
-                            // Encontrar o dia alternativo onde cA fica mais próximo
+                            // Encontra o dia dB onde cA fica mais perto
                             let bestTargetDay = -1;
-                            let maxDistanceDiff = 0;
+                            let bestImprovement = 0;
 
                             for (let dB = 0; dB < K; dB++) {
                                 if (dA === dB) continue;
                                 const dayNameB = activeDays[dB];
                                 if (!isDayAllowedForClient(cA, dayNameB)) continue;
 
-                                const centroidB = dayCentroids[dB];
-                                if (centroidB.validCount === 0) continue;
+                                const centerB = dayCenters[dB];
+                                const distA_centerB = calcDist(cA.lat, cA.lng, centerB.lat, centerB.lng);
 
-                                const distA_toB = calcDist(centroidB.lat, centroidB.lng, cA.lat, cA.lng);
-
-                                // Se estiver consideravelmente mais perto de B do que de A (economia mínima de 2.0 km)
-                                if (distA_toCurrent > distA_toB + 2.0) {
-                                    const improvement = distA_toCurrent - distA_toB;
-                                    if (improvement > maxDistanceDiff) {
-                                        maxDistanceDiff = improvement;
+                                // Se cA estiver mais perto do centro de B do que do seu próprio centro
+                                if (distA_centerA > distA_centerB + 2.0) {
+                                    const diff = distA_centerA - distA_centerB;
+                                    if (diff > bestImprovement) {
+                                        bestImprovement = diff;
                                         bestTargetDay = dB;
                                     }
                                 }
                             }
 
-                            if (bestTargetDay !== -1 && maxDistanceDiff > 0) {
+                            if (bestTargetDay !== -1) {
                                 const dB = bestTargetDay;
-                                const dayNameB = activeDays[dB];
                                 const clientsB = dayAssignedClients[dB];
-                                const centroidB = dayCentroids[dB];
+                                const centerB = dayCenters[dB];
+                                const dayNameB = activeDays[dB];
 
-                                // Tentativa 1: Permuta 1-para-1 com cliente de mesma periodicidade em dB (Semanal x Semanal, Quinzenal x Quinzenal)
-                                let bestSwapCandidateIdx = -1;
-                                let bestCombinedGain = 0;
+                                // Procura o melhor cB em dB para permuta
+                                let bestCandidateIdx = -1;
+                                let bestCandidateScore = -Infinity;
 
                                 for (let iB = 0; iB < clientsB.length; iB++) {
                                     const cB = clientsB[iB];
-                                    if (cB.tipo !== cA.tipo) continue; // Preserva periodicidade original sem alterar regra
+                                    if (cB.tipo !== cA.tipo) continue; // Preservação estrita de tipo
                                     if (!isDayAllowedForClient(cB, dayNameA)) continue;
                                     if (isCitySatellite(cB)) continue;
 
-                                    const distB_current = calcDist(centroidB.lat, centroidB.lng, cB.lat, cB.lng);
-                                    const distB_toA = calcDist(centroidA.lat, centroidA.lng, cB.lat, cB.lng);
+                                    const distB_centerB = calcDist(cB.lat, cB.lng, centerB.lat, centerB.lng);
+                                    const distB_centerA = calcDist(cB.lat, cB.lng, centerA.lat, centerA.lng);
 
-                                    const distA_toB = calcDist(centroidB.lat, centroidB.lng, cA.lat, cA.lng);
-                                    const gainA = distA_toCurrent - distA_toB;
-                                    const gainB = distB_current - distB_toA;
-                                    const totalGain = gainA + gainB;
+                                    // Custo original vs Novo custo da soma dos dois clientes
+                                    const currentCost = distA_centerA + distB_centerB;
+                                    const swappedCost = calcDist(cA.lat, cA.lng, centerB.lat, centerB.lng) + distB_centerA;
+                                    const netSavings = currentCost - swappedCost;
 
-                                    if (totalGain > 0.8 || (gainA > 6.0 && gainB > -4.0)) {
-                                        if (totalGain > bestCombinedGain) {
-                                            bestCombinedGain = totalGain;
-                                            bestSwapCandidateIdx = iB;
-                                        }
+                                    if (netSavings > bestCandidateScore) {
+                                        bestCandidateScore = netSavings;
+                                        bestCandidateIdx = iB;
                                     }
                                 }
 
-                                if (bestSwapCandidateIdx !== -1) {
-                                    // Executa permuta 1-para-1
+                                if (bestCandidateIdx !== -1 && bestCandidateScore > 0) {
                                     const [movedA] = clientsA.splice(iA, 1);
-                                    const [movedB] = clientsB.splice(bestSwapCandidateIdx, 1);
+                                    const [movedB] = clientsB.splice(bestCandidateIdx, 1);
                                     clientsA.push(movedB);
                                     clientsB.push(movedA);
                                     anySwapMade = true;
                                     break;
-                                } else {
-                                    // Tentativa 2: Transferência direta se houver folga ou desbalanceamento de cotas
-                                    const targetQuotaB = dayBuckets[dB].targetQuota;
-                                    const targetQuotaA = dayBuckets[dA].targetQuota;
-                                    if (clientsA.length > targetQuotaA && clientsB.length < targetQuotaB + 2) {
-                                        const [movedA] = clientsA.splice(iA, 1);
-                                        clientsB.push(movedA);
-                                        anySwapMade = true;
-                                        break;
-                                    }
                                 }
                             }
                         }
                     }
 
-                    if (!anySwapMade) break; // Convergência atingida
+                    if (!anySwapMade) break;
                 }
             }
 
