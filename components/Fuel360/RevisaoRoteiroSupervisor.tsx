@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, getOSRMData } from './services/apiService';
 import { ThemeToggle } from '../ThemeToggle';
@@ -77,6 +77,29 @@ const formatMinutesToHours = (totalMinutes: number): string => {
     if (hours === 0) return `${mins} min`;
     if (mins === 0) return `${hours}h`;
     return `${hours}h ${mins}min`;
+};
+
+// --- CÁLCULO DE DISTÂNCIA HAVERSINE EM KM ---
+const calcDist = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+    const R = 6371; // km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+};
+
+// --- CÁLCULO ESTIMADO DE TEMPO DE TRÂNSITO POR TRECHO VIÁRIO ---
+const calcLegMinutes = (roadKm: number): number => {
+    if (roadKm <= 0) return 0;
+    let speed = 30; // km/h
+    if (roadKm < 2.5) speed = 22;
+    else if (roadKm >= 15) speed = 55;
+    return Math.max(1, Math.round((roadKm / speed) * 60));
 };
 
 // --- PARSER DE PERIODICIDADE PADRONIZADO COM O ROTEIRIZADOR ---
@@ -304,8 +327,9 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     const [semanaSugerida, setSemanaSugerida] = useState<string>('1_3');
     const [observacao, setObservacao] = useState<string>('');
     const [savingSuggestion, setSavingSuggestion] = useState<boolean>(false);
+    const [channelServiceTimes, setChannelServiceTimes] = useState<Record<string, number>>({});
 
-    // Carregar Dados da Simulação
+    // Carregar Dados da Simulação e Canais de Atendimento
     const loadSimulation = async () => {
         if (!simId || isNaN(simId)) {
             setErrorMsg('Identificador de simulação inválido.');
@@ -327,6 +351,23 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             // Carregar sugestões já cadastradas
             const sugs = await getSimulacaoSugestoes(simId);
             setSugestoes(sugs || []);
+
+            // Carregar tempos corporativos por canal de remuneração
+            try {
+                const resCanais = await fetch('/api/fuel360/canais-atendimento');
+                const dataCanais = await resCanais.json();
+                if (dataCanais.success && Array.isArray(dataCanais.canais)) {
+                    const timeMap: Record<string, number> = {};
+                    dataCanais.canais.forEach((item: any) => {
+                        if (item.Canal && item.TempoMinutos && item.Ativo !== false && item.Ativo !== 0) {
+                            timeMap[String(item.Canal).trim().toUpperCase()] = Number(item.TempoMinutos);
+                        }
+                    });
+                    setChannelServiceTimes(timeMap);
+                }
+            } catch (errCanais) {
+                console.warn('[Fuel360] Aviso ao buscar canais de atendimento:', errCanais);
+            }
         } catch (err: any) {
             console.error('Erro ao carregar simulação pública:', err);
             setErrorMsg(err.message || 'Falha ao consultar simulação.');
@@ -338,6 +379,30 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     useEffect(() => {
         loadSimulation();
     }, [simId]);
+
+    // Resolução do tempo em minutos de atendimento por cliente com base no canal
+    const getClientServiceTime = useCallback((client?: { Canal_Remuneracao?: string; canal_remuneracao?: string }): number => {
+        const defaultMins = channelServiceTimes['PADRAO'] || 15;
+        const rawCanal = client?.Canal_Remuneracao || client?.canal_remuneracao || '';
+        if (!rawCanal || !rawCanal.trim()) {
+            return defaultMins;
+        }
+        const canalNorm = rawCanal.trim().toUpperCase();
+
+        // 1. Coincidência Exata
+        if (channelServiceTimes[canalNorm] !== undefined) {
+            return Number(channelServiceTimes[canalNorm]) || defaultMins;
+        }
+
+        // 2. Coincidência por Palavra-Chave (com chave >= 4 letras)
+        for (const [key, val] of Object.entries(channelServiceTimes)) {
+            if (key === 'PADRAO') continue;
+            if (key.length >= 4 && canalNorm.includes(key)) {
+                return Number(val) || defaultMins;
+            }
+        }
+        return defaultMins;
+    }, [channelServiceTimes]);
 
     // Extrair Lista de Vendedores / Setores da Simulação
     const sellersList = useMemo(() => {
@@ -474,8 +539,19 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         });
     }, [currentSellerClients, selectedDay, selectedWeek]);
 
-    // Ação ao Clicar / Destacar um Cliente (Sincroniza Semana, Dia e Rota)
+    // Ação ao Clicar / Destacar um Cliente (Sincroniza Semana, Dia e Rota ou Desmarca no clique repetido)
     const handleSelectClient = (client: any) => {
+        const isCurrentSelected = Boolean(highlightedClient && (
+            (client.Cod_Cliente && String(highlightedClient.Cod_Cliente) === String(client.Cod_Cliente)) ||
+            (client.id && String(highlightedClient.id) === String(client.id))
+        ));
+
+        // Se já está selecionado, desmarca (toggle)
+        if (isCurrentSelected) {
+            setHighlightedClient(null);
+            return;
+        }
+
         setHighlightedClient(client);
 
         // Sincronizar o dia se estiver filtrado em outro dia
@@ -492,6 +568,37 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             setSelectedWeek('13');
         }
     };
+
+    // Paradas com cálculos precisos de deslocamento viário e tempo de atendimento individual
+    const itineraryStops = useMemo(() => {
+        let prevLat = activeBaseInfo?.lat || 0;
+        let prevLng = activeBaseInfo?.lng || 0;
+
+        return filteredVisits.map((v: any, index: number) => {
+            const curLat = Number(v.Lat || v.Latitude || 0);
+            const curLng = Number(v.Long || v.Longitude || 0);
+
+            const hasValidCoords = Boolean(prevLat && prevLng && curLat && curLng);
+            const legKm = hasValidCoords
+                ? Math.round(calcDist(prevLat, prevLng, curLat, curLng) * 1.18 * 10) / 10
+                : 0;
+            const legTravelTime = calcLegMinutes(legKm);
+            const serviceTime = getClientServiceTime(v);
+
+            if (curLat && curLng) {
+                prevLat = curLat;
+                prevLng = curLng;
+            }
+
+            return {
+                ...v,
+                stopIndex: index + 1,
+                legKm,
+                legTravelTime,
+                serviceTime
+            };
+        });
+    }, [filteredVisits, activeBaseInfo, getClientServiceTime]);
 
     // Auto-scroll da lista lateral ao selecionar cliente
     useEffect(() => {
@@ -699,36 +806,45 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     // Métricas de Tempo da Rota Selecionada
     const metrics = useMemo(() => {
         const totalVisitas = filteredVisits.length;
-        const tempoAtendimentoMin = totalVisitas * 20;
+        const tempoAtendimentoMin = filteredVisits.reduce((acc: number, v: any) => acc + getClientServiceTime(v), 0);
+        const mediaAtendimentoMin = totalVisitas > 0 ? Math.round(tempoAtendimentoMin / totalVisitas) : 15;
 
         let totalKm = 0;
         const hasOsrmDistances = roadTracks.some(t => t.distance > 0);
         if (hasOsrmDistances) {
             totalKm = roadTracks.reduce((acc, t) => acc + (t.distance || 0), 0);
         } else {
-            // Fallback enquanto OSRM responde
-            for (let i = 0; i < filteredVisits.length - 1; i++) {
-                const p1 = filteredVisits[i];
-                const p2 = filteredVisits[i + 1];
-                if (p1.Lat && p1.Long && p2.Lat && p2.Long) {
-                    const dLat = (p2.Lat - p1.Lat) * 111;
-                    const dLon = (p2.Long - p1.Long) * 111;
-                    totalKm += Math.sqrt(dLat * dLat + dLon * dLon) * 1.25;
+            // Fallback calculando circuito viário entre base e paradas
+            let prevLat = activeBaseInfo?.lat || 0;
+            let prevLng = activeBaseInfo?.lng || 0;
+            filteredVisits.forEach((v: any) => {
+                const curLat = Number(v.Lat || v.Latitude || 0);
+                const curLng = Number(v.Long || v.Longitude || 0);
+                if (prevLat && prevLng && curLat && curLng) {
+                    totalKm += calcDist(prevLat, prevLng, curLat, curLng) * 1.18;
                 }
+                if (curLat && curLng) {
+                    prevLat = curLat;
+                    prevLng = curLng;
+                }
+            });
+            if (prevLat && prevLng && activeBaseInfo?.lat && activeBaseInfo?.lng && filteredVisits.length > 0) {
+                totalKm += calcDist(prevLat, prevLng, activeBaseInfo.lat, activeBaseInfo.lng) * 1.18;
             }
         }
 
-        const tempoPercursoMin = Math.round((totalKm / 25) * 60);
+        const tempoPercursoMin = Math.round((totalKm / 26) * 60);
         const tempoTotalMin = tempoAtendimentoMin + tempoPercursoMin;
 
         return {
             totalVisitas,
             totalKm: Math.round(totalKm),
             tempoAtendimentoMin,
+            mediaAtendimentoMin,
             tempoPercursoMin,
             tempoTotalMin
         };
-    }, [filteredVisits, roadTracks]);
+    }, [filteredVisits, roadTracks, activeBaseInfo, getClientServiceTime]);
 
     // Limites do Mapa (Enquadra a Base e todas as Paradas)
     const mapBounds = useMemo<L.LatLngBoundsExpression | null>(() => {
@@ -1055,7 +1171,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                             <div className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 leading-tight">
                                 {formatMinutesToHours(metrics.tempoAtendimentoMin)}
                             </div>
-                            <div className="text-[9px] text-slate-400 leading-tight">~20 min por visita</div>
+                            <div className="text-[9px] text-slate-400 leading-tight">média de {metrics.mediaAtendimentoMin} min/visita</div>
                         </div>
 
                         <div className="bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
@@ -1207,6 +1323,19 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                                             {freqInfo.label}
                                                         </span>
                                                     </div>
+                                                    {(() => {
+                                                        const stopData = itineraryStops.find((s: any) => (v.Cod_Cliente && s.Cod_Cliente === v.Cod_Cliente) || (v.id && s.id === v.id));
+                                                        return stopData ? (
+                                                            <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-1 text-[9px]">
+                                                                <span className="text-blue-700 dark:text-blue-300 font-bold">
+                                                                    🚗 Deslocamento: ~{stopData.legTravelTime} min ({stopData.legKm} km)
+                                                                </span>
+                                                                <span className="text-amber-700 dark:text-amber-300 font-bold">
+                                                                    🏢 Atendimento: {stopData.serviceTime} min
+                                                                </span>
+                                                            </div>
+                                                        ) : null;
+                                                    })()}
                                                     <button
                                                         onClick={() => handleOpenSuggestionModal(v)}
                                                         className="w-full mt-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold py-1 px-2 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-sm"
@@ -1271,12 +1400,12 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                             </div>
                         )}
 
-                        {filteredVisits.length === 0 ? (
+                        {itineraryStops.length === 0 ? (
                             <div className="text-center py-16 text-slate-400 text-xs">
                                 Nenhuma visita agendada para este dia/semana.
                             </div>
                         ) : (
-                            filteredVisits.map((v: any, idx: number) => {
+                            itineraryStops.map((v: any, idx: number) => {
                                 const dayKey = normalizeDiaSemana(v.Dia_Semana || v.dia);
                                 const dayVisitsList = dayVisitsMap.get(dayKey) || [];
                                 const daySeq = dayVisitsList.findIndex((item: any) => 
@@ -1302,14 +1431,14 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                                 : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-700/60 hover:border-blue-400 hover:bg-slate-100/80 dark:hover:bg-slate-800'
                                         }`}
                                     >
-                                        <div className="flex items-start gap-2.5">
+                                        <div className="flex items-start gap-2.5 flex-1 min-w-0">
                                             <div
                                                 className={`w-6 h-6 rounded-full text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-2xs ${isSelected ? 'ring-2 ring-white scale-110' : ''}`}
                                                 style={{ backgroundColor: isSelected ? '#f43f5e' : pinColor }}
                                             >
                                                 {pinSeq}
                                             </div>
-                                            <div>
+                                            <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-1.5 flex-wrap">
                                                     <span className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
                                                         {v.Razao_Social || v.nome}
@@ -1330,13 +1459,23 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="text-[10px] text-slate-500 mt-0.5">
+                                                <div className="text-[10px] text-slate-500 mt-0.5 truncate">
                                                     PDV {v.Cod_Cliente} • {v.Endereco || v.Bairro || 'Endereço não informado'}
                                                 </div>
-                                                <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
-                                                    <span>{v.Bairro} - {v.Cidade}</span>
-                                                    <span>•</span>
-                                                    <span className="font-bold text-amber-600 dark:text-amber-400">~20 min</span>
+                                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                                    {v.Bairro} - {v.Cidade}
+                                                </div>
+                                                {/* DETALHAMENTO REAL DE DESLOCAMENTO E ATENDIMENTO */}
+                                                <div className="mt-2 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60 flex flex-wrap items-center gap-1.5 text-[10px]">
+                                                    <span className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-sky-300 font-bold px-2 py-0.5 rounded border border-blue-200/80 dark:border-blue-800" title="Tempo e distância estimada de deslocamento desde o ponto anterior">
+                                                        <span>🚗</span>
+                                                        <span>Deslocamento: <b>~{v.legTravelTime} min</b> ({v.legKm} km)</span>
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold px-2 py-0.5 rounded border border-amber-200/80 dark:border-amber-800" title={`Permanência estimada no PDV conforme canal (${v.Canal_Remuneracao || 'PADRÃO'})`}>
+                                                        <span>🏢</span>
+                                                        <span>Atendimento: <b>{v.serviceTime} min</b></span>
+                                                        {v.Canal_Remuneracao && <span className="opacity-75 font-normal">({v.Canal_Remuneracao})</span>}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1346,7 +1485,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                                 e.stopPropagation();
                                                 handleOpenSuggestionModal(v);
                                             }}
-                                            className="p-1.5 rounded-xl bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-600 transition-all border border-slate-200 dark:border-slate-600 shrink-0 cursor-pointer"
+                                            className="p-1.5 rounded-xl bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-600 transition-all border border-slate-200 dark:border-slate-600 shrink-0 cursor-pointer mt-0.5"
                                             title="Sugerir alteração neste cliente"
                                         >
                                             <MessageSquarePlus size={14} />
