@@ -1782,6 +1782,7 @@ export const AjusteRota: React.FC = () => {
     const [savingRestricao, setSavingRestricao] = useState<boolean>(false);
     const [restricaoSearch, setRestricaoSearch] = useState<string>('');
     const [restricaoFilterTurno, setRestricaoFilterTurno] = useState<'TODOS' | 'MANHA' | 'TARDE' | 'QUALQUER'>('TODOS');
+    const [restricaoFilterOrigem, setRestricaoFilterOrigem] = useState<'TODOS' | 'SUPERVISOR' | 'MANUAL'>('TODOS');
     const [restricaoSaveFeedback, setRestricaoSaveFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [lastRestricaoAudit, setLastRestricaoAudit] = useState<{ usuario?: string; dataHora?: string } | null>(null);
 
@@ -10474,6 +10475,15 @@ export const AjusteRota: React.FC = () => {
                                             <option value="TARDE">🌇 Tarde</option>
                                             <option value="QUALQUER">⏰ Qualquer</option>
                                         </select>
+                                        <select
+                                            value={restricaoFilterOrigem}
+                                            onChange={(e) => setRestricaoFilterOrigem(e.target.value as any)}
+                                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none"
+                                        >
+                                            <option value="TODOS">Todas as Origens</option>
+                                            <option value="SUPERVISOR">⚡ Críticas de Supervisores</option>
+                                            <option value="MANUAL">✏️ Inserções Manuais</option>
+                                        </select>
                                     </div>
                                 </div>
 
@@ -10485,7 +10495,7 @@ export const AjusteRota: React.FC = () => {
                                                 <th className="p-3">Cliente / Razão Social</th>
                                                 <th className="p-3 text-center">Dias Permitidos</th>
                                                 <th className="p-3 text-center">Turno</th>
-                                                <th className="p-3">Observação</th>
+                                                <th className="p-3">Observação & Auditoria</th>
                                                 <th className="p-3 text-center">Ações</th>
                                             </tr>
                                         </thead>
@@ -10493,56 +10503,86 @@ export const AjusteRota: React.FC = () => {
                                             {clienteRestricoes
                                                 .filter(r => {
                                                     if (restricaoFilterTurno !== 'TODOS' && r.TurnoPermitido !== restricaoFilterTurno) return false;
+                                                    const isSupervisorOrigem = (r.Observacao || '').includes('[Exceção via Crítica Supervisor]');
+                                                    if (restricaoFilterOrigem === 'SUPERVISOR' && !isSupervisorOrigem) return false;
+                                                    if (restricaoFilterOrigem === 'MANUAL' && isSupervisorOrigem) return false;
                                                     if (restricaoSearch) {
                                                         const term = restricaoSearch.toLowerCase();
                                                         const mCod = String(r.Cod_Cliente).includes(term);
                                                         const mRazao = (r.Razao_Social || '').toLowerCase().includes(term);
                                                         const mObs = (r.Observacao || '').toLowerCase().includes(term);
-                                                        if (!mCod && !mRazao && !mObs) return false;
+                                                        const mUser = (r.UsuarioAtualizacao || '').toLowerCase().includes(term);
+                                                        if (!mCod && !mRazao && !mObs && !mUser) return false;
                                                     }
                                                     return true;
                                                 })
-                                                .map(r => (
-                                                    <tr key={r.ID_Restricao || r.Cod_Cliente} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
-                                                        <td className="p-3 font-mono font-bold text-slate-900 dark:text-white">
-                                                            #{r.Cod_Cliente}
-                                                        </td>
-                                                        <td className="p-3 truncate max-w-[200px]" title={r.Razao_Social}>
-                                                            {r.Razao_Social || '-'}
-                                                        </td>
-                                                        <td className="p-3 text-center">
-                                                            {r.DiasPermitidos ? (
-                                                                <div className="flex flex-wrap items-center justify-center gap-1">
-                                                                    {r.DiasPermitidos.split(',').map(d => (
-                                                                        <span key={d} className="px-1.5 py-0.2 text-[9px] font-black rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200">
-                                                                            {d.trim().slice(0, 3).toUpperCase()}
+                                                .map(r => {
+                                                    const isSupervisorOrigem = (r.Observacao || '').includes('[Exceção via Crítica Supervisor]');
+                                                    const cleanObs = (r.Observacao || '').replace('[Exceção via Crítica Supervisor]', '').trim();
+
+                                                    return (
+                                                        <tr key={r.ID_Restricao || r.Cod_Cliente} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                                                            <td className="p-3 font-mono font-bold text-slate-900 dark:text-white">
+                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                    <span>#{r.Cod_Cliente}</span>
+                                                                    {isSupervisorOrigem && (
+                                                                        <span
+                                                                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8.5px] font-black bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-300 dark:border-purple-800 uppercase tracking-tight shadow-xs cursor-help"
+                                                                            title={`Origem: Crítica do Supervisor\nAprovada por: ${r.UsuarioAtualizacao || 'Analista'}${r.DataAtualizacao ? ` em ${new Date(r.DataAtualizacao).toLocaleString('pt-BR')}` : ''}`}
+                                                                        >
+                                                                            <span className="text-[10px]">⚡</span> Supervisor
                                                                         </span>
-                                                                    ))}
+                                                                    )}
                                                                 </div>
-                                                            ) : (
-                                                                <span className="text-[10px] text-slate-400 font-normal italic">Livre (todos os dias)</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-3 text-center">
-                                                            {r.TurnoPermitido === 'MANHA' && (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
-                                                                    <Sun className="w-3 h-3" /> Manhã
-                                                                </span>
-                                                            )}
-                                                            {r.TurnoPermitido === 'TARDE' && (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-black bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border border-orange-300">
-                                                                    <Sunset className="w-3 h-3" /> Tarde
-                                                                </span>
-                                                            )}
-                                                            {(!r.TurnoPermitido || r.TurnoPermitido === 'QUALQUER') && (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                                                                    Qualquer
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-3 text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[200px]" title={r.Observacao}>
-                                                            {r.Observacao || '-'}
-                                                        </td>
+                                                            </td>
+                                                            <td className="p-3 truncate max-w-[200px]" title={r.Razao_Social}>
+                                                                {r.Razao_Social || '-'}
+                                                            </td>
+                                                            <td className="p-3 text-center">
+                                                                {r.DiasPermitidos ? (
+                                                                    <div className="flex flex-wrap items-center justify-center gap-1">
+                                                                        {r.DiasPermitidos.split(',').map(d => (
+                                                                            <span key={d} className="px-1.5 py-0.2 text-[9px] font-black rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200">
+                                                                                {d.trim().slice(0, 3).toUpperCase()}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-slate-400 font-normal italic">Livre (todos os dias)</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="p-3 text-center">
+                                                                {r.TurnoPermitido === 'MANHA' && (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
+                                                                        <Sun className="w-3 h-3" /> Manhã
+                                                                    </span>
+                                                                )}
+                                                                {r.TurnoPermitido === 'TARDE' && (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-black bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border border-orange-300">
+                                                                        <Sunset className="w-3 h-3" /> Tarde
+                                                                    </span>
+                                                                )}
+                                                                {(!r.TurnoPermitido || r.TurnoPermitido === 'QUALQUER') && (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                                                                        Qualquer
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="p-3 text-[10px] text-slate-500 dark:text-slate-400">
+                                                                <div className="truncate max-w-[220px]" title={cleanObs || r.Observacao || '-'}>
+                                                                    {cleanObs || r.Observacao || '-'}
+                                                                </div>
+                                                                {isSupervisorOrigem && (
+                                                                    <div className="text-[9px] text-purple-700 dark:text-purple-400 font-semibold mt-0.5 flex items-center gap-1">
+                                                                        <span>Aprovado por: <strong>{r.UsuarioAtualizacao || 'Analista'}</strong></span>
+                                                                        {r.DataAtualizacao && (
+                                                                            <span className="text-slate-400 font-normal">
+                                                                                ({new Date(r.DataAtualizacao).toLocaleDateString('pt-BR')})
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </td>
                                                         <td className="p-3 text-center">
                                                             <div className="flex items-center justify-center space-x-1.5">
                                                                 <button
@@ -10572,7 +10612,8 @@ export const AjusteRota: React.FC = () => {
                                                             </div>
                                                         </td>
                                                     </tr>
-                                                ))}
+                                                );
+                                            })}
                                             {clienteRestricoes.length === 0 && (
                                                 <tr>
                                                     <td colSpan={6} className="p-8 text-center text-slate-400 dark:text-slate-500">

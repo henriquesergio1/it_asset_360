@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.189.1',
+    date: 'Hoje',
+    title: 'Fuel360: Rastreabilidade e Histórico de Críticas nos Parâmetros de Janela',
+    changes: [
+      'Tag Visual nos Parâmetros de Janela: Identificação clara com badge visual de particularidades originadas de críticas de supervisores na listagem corporativa.',
+      'Auditoria de Aprovação: Exibição de quem aprovou a exceção e a data/hora exata do aceite na tela de parâmetros de janela.',
+      'Filtro Rápido por Origem: Facilidade para filtrar particularidades criadas por supervisores versus inserções manuais.'
+    ]
+  },
+  {
     version: '3.189.0',
     date: 'Hoje',
     title: 'Fuel360: Aplicação Automática com 1 Clique de Críticas e Criação de Exceções de Janela',
