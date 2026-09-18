@@ -335,6 +335,11 @@ export const GestaoSimulacoes: React.FC = () => {
     const groupedSimDetails = React.useMemo(() => groupItems(simDetails, 'ID_RotaDet'), [simDetails]);
     const groupedCalcDetails = React.useMemo(() => groupItems(calcDetails, 'ID_Detalhe'), [calcDetails]);
 
+    // Contagem de sugestões pendentes na aba Ajuste de Rota
+    const totalPendentesAjuste = React.useMemo(() => {
+        return simHistory.reduce((acc, s: any) => acc + (Number(s.SugestoesPendentes) || 0), 0);
+    }, [simHistory]);
+
     return (
         <div className="space-y-6">
             <EditKmModal 
@@ -376,6 +381,11 @@ export const GestaoSimulacoes: React.FC = () => {
                         className={`px-3.5 py-2 text-xs font-bold rounded-md flex items-center transition-all cursor-pointer ${activeTab === 'SIMULACAO_AJUSTE' ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                         <LocationMarkerIcon className="w-4 h-4 mr-1.5"/> Ajuste de Rota
+                        {totalPendentesAjuste > 0 && (
+                            <span className="ml-1.5 bg-amber-500 text-white font-black text-[10px] px-1.5 py-0.2 rounded-full animate-pulse shadow-sm">
+                                {totalPendentesAjuste}
+                            </span>
+                        )}
                     </button>
                 </div>
             </div>
@@ -530,10 +540,19 @@ export const GestaoSimulacoes: React.FC = () => {
                                                                 e.stopPropagation(); 
                                                                 handleOpenSuggestionsModal(sim.ID_RotaHist, sim.Periodo); 
                                                             }} 
-                                                            className="text-slate-400 hover:text-amber-600 p-2 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition"
-                                                            title="Ver Sugestões do Supervisor"
+                                                            className={`p-2 rounded-lg transition relative cursor-pointer ${
+                                                                Number(sim.SugestoesPendentes) > 0 
+                                                                    ? 'text-amber-600 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/60 ring-1 ring-amber-400/40' 
+                                                                    : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+                                                            }`}
+                                                            title={Number(sim.SugestoesPendentes) > 0 ? `${sim.SugestoesPendentes} crítica(s) pendente(s) de análise do supervisor` : "Ver Sugestões do Supervisor"}
                                                         >
                                                             <MessageSquare className="w-4 h-4"/>
+                                                            {Number(sim.SugestoesPendentes) > 0 && (
+                                                                <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center animate-pulse shadow-sm">
+                                                                    {sim.SugestoesPendentes}
+                                                                </span>
+                                                            )}
                                                         </button>
 
                                                         {!sim.JaCalculado ? (
@@ -650,15 +669,15 @@ export const GestaoSimulacoes: React.FC = () => {
                                         return (
                                             <div 
                                                 key={sug.ID_Sugestao} 
-                                                className={`p-4 rounded-xl border transition-all ${
-                                                    isAplicado ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/50' :
-                                                    isRejeitado ? 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 opacity-60' :
-                                                    'bg-white dark:bg-slate-850 border-amber-200 dark:border-amber-900/60 shadow-sm'
+                                                className={`p-4 rounded-2xl border transition-all ${
+                                                    isAplicado ? 'bg-emerald-50/60 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800/80 shadow-xs' :
+                                                    isRejeitado ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/80 opacity-60' :
+                                                    'bg-slate-50/70 dark:bg-slate-800/90 border-amber-300 dark:border-amber-700/80 shadow-sm ring-1 ring-amber-400/20'
                                                 }`}
                                             >
-                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-200/80 dark:border-slate-700/80">
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-bold text-slate-800 dark:text-white text-sm">
+                                                        <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">
                                                             {sug.SupervisorNome || 'Supervisor'}
                                                         </span>
                                                         <span className="text-xs text-slate-400">
@@ -727,14 +746,14 @@ export const GestaoSimulacoes: React.FC = () => {
                                                 {/* Detalhes do Cliente e Vendedor */}
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs mb-2">
                                                     <div>
-                                                        <span className="text-slate-400">Cliente: </span>
-                                                        <span className="font-bold text-slate-700 dark:text-slate-200">
+                                                        <span className="text-slate-500 dark:text-slate-400 font-medium">Cliente: </span>
+                                                        <span className="font-bold text-slate-900 dark:text-slate-100">
                                                             {sug.Cod_Cliente ? `#${sug.Cod_Cliente} - ` : ''}{sug.ClienteNome || 'Geral do Setor'}
                                                         </span>
                                                     </div>
                                                     <div>
-                                                        <span className="text-slate-400">Vendedor: </span>
-                                                        <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                                        <span className="text-slate-500 dark:text-slate-400 font-medium">Vendedor: </span>
+                                                        <span className="font-semibold text-slate-900 dark:text-slate-100">
                                                             {sug.VendedorNome || '-'}
                                                         </span>
                                                     </div>
@@ -742,17 +761,17 @@ export const GestaoSimulacoes: React.FC = () => {
 
                                                 {/* De -> Para de Dias / Semanas */}
                                                 {(sug.DiaAtual || sug.DiaSugerido || sug.SemanaAtual || sug.SemanaSugerida) && (
-                                                    <div className="flex items-center gap-3 text-xs bg-slate-50 dark:bg-slate-800/70 p-2 rounded-lg mb-2">
+                                                    <div className="flex items-center gap-3 text-xs bg-white dark:bg-slate-900/80 p-2.5 rounded-xl mb-2 border border-slate-200 dark:border-slate-700/70 text-slate-800 dark:text-slate-200">
                                                         {sug.DiaSugerido && (
                                                             <div>
-                                                                <span className="text-slate-400">Dia: </span>
+                                                                <span className="text-slate-500 dark:text-slate-400">Dia: </span>
                                                                 <span className="line-through text-slate-400 mr-1">{sug.DiaAtual || 'Não inf.'}</span>
                                                                 <span className="font-bold text-blue-600 dark:text-blue-400">&rarr; {sug.DiaSugerido}</span>
                                                             </div>
                                                         )}
                                                         {sug.SemanaSugerida && (
                                                             <div>
-                                                                <span className="text-slate-400">Semana: </span>
+                                                                <span className="text-slate-500 dark:text-slate-400">Semana: </span>
                                                                 <span className="line-through text-slate-400 mr-1">{sug.SemanaAtual || 'Não inf.'}</span>
                                                                 <span className="font-bold text-purple-600 dark:text-purple-400">&rarr; {sug.SemanaSugerida}</span>
                                                             </div>
@@ -761,8 +780,8 @@ export const GestaoSimulacoes: React.FC = () => {
                                                 )}
 
                                                 {/* Observação */}
-                                                <div className="text-xs text-slate-600 dark:text-slate-300 bg-amber-50/50 dark:bg-amber-950/20 p-2.5 rounded-lg border border-amber-100 dark:border-amber-900/30">
-                                                    <p className="font-medium">{sug.Observacao}</p>
+                                                <div className="text-xs text-slate-800 dark:text-slate-100 bg-amber-50/80 dark:bg-amber-950/40 p-3 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
+                                                    <p className="font-medium leading-relaxed">{sug.Observacao}</p>
                                                 </div>
                                             </div>
                                         );

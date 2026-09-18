@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.188.6',
+    date: 'Hoje',
+    title: 'Fuel360: Botão de Simulações Salvas, Alertas de Críticas no Menu e Correção de Tema Escuro',
+    changes: [
+      'Acesso Rápido a Simulações Salvas: Adicionado botão "Simulações Salvas" na barra de ações superior de Ajuste de Rota com badge pulsante com a contagem de críticas de supervisores pendentes.',
+      'Alertas Globais de Críticas: Alerta em banner no topo da tela e badges indicativos no menu lateral (Ajuste de Rota e Simulações e Cálculos) e na listagem de simulações salvas quando houver apontamentos de supervisores.',
+      'Gestão Integrada de Críticas no Ajuste de Rota: Modal ergonômico para visualização e atualização de status (Marcar Aplicado / Rejeitar) dos apontamentos de supervisores diretamente na tela de ajuste.',
+      'Correção do Tema Escuro: Ajuste de classes de contraste no modal de apontamentos do supervisor, garantindo legibilidade perfeita e eliminação de texto ilegível no modo escuro.'
+    ]
+  },
+  {
     version: '3.169.0',
     date: 'Hoje',
     title: 'Fuel360: Reorganização e Centralização do Layout no Ajuste e Otimização de Rotas',

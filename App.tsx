@@ -35,6 +35,7 @@ import { RhAssetManager } from './components/RhAssetManager';
 import SystemInfoModal from './components/SystemInfoModal';
 const FuelManager = lazy(() => import('./components/FuelManager'));
 const RevisaoRoteiroSupervisor = lazy(() => import('./components/Fuel360/RevisaoRoteiroSupervisor').then(m => ({ default: m.RevisaoRoteiroSupervisor })));
+import { getSimulacoesPendentesCount } from './components/Fuel360/services/apiService';
 
 const getDefaultTiPath = (user: any, isAdmin?: boolean): string => {
   if (isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'dashboard_leitura') || hasPermission(user, 'dispositivos_leitura')) {
@@ -50,9 +51,10 @@ const getDefaultTiPath = (user: any, isAdmin?: boolean): string => {
   return '/reports';
 };
 
-const SidebarLink = ({ to, icon: Icon, label, collapsed, module = 'TI' }: { to: string; icon: any; label: string; collapsed: boolean; module?: 'TI' | 'RH' | 'FUEL' }) => {
+const SidebarLink = ({ to, icon: Icon, label, collapsed, module = 'TI', badge }: { to: string; icon: any; label: string; collapsed: boolean; module?: 'TI' | 'RH' | 'FUEL'; badge?: number | string }) => {
   const location = useLocation();
   const isActive = location.pathname === to;
+  const numBadge = typeof badge === 'number' ? badge : Number(badge) || 0;
   
   const themeClasses = {
     TI: {
@@ -72,11 +74,25 @@ const SidebarLink = ({ to, icon: Icon, label, collapsed, module = 'TI' }: { to: 
   return (
     <NavLink 
       to={to} 
-      className={`flex items-center space-x-3 px-6 py-3 transition-all duration-200 ${isActive ? themeClasses.active : themeClasses.hover} ${collapsed ? 'justify-center px-0 space-x-0' : ''}`}
+      className={`flex items-center space-x-3 px-6 py-3 transition-all duration-200 relative ${isActive ? themeClasses.active : themeClasses.hover} ${collapsed ? 'justify-center px-0 space-x-0' : ''}`}
       title={label}
     >
-      <Icon size={20} className="shrink-0" />
-      {!collapsed && <span className="text-[13.5px] font-bold truncate tracking-tight" title={label}>{label}</span>}
+      <div className="relative shrink-0 flex items-center justify-center">
+        <Icon size={20} />
+        {collapsed && numBadge > 0 && (
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse ring-2 ring-white dark:ring-slate-800" />
+        )}
+      </div>
+      {!collapsed && (
+        <div className="flex items-center justify-between flex-1 min-w-0">
+          <span className="text-[13.5px] font-bold truncate tracking-tight" title={label}>{label}</span>
+          {numBadge > 0 && (
+            <span className="ml-2 bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-xs">
+              {numBadge}
+            </span>
+          )}
+        </div>
+      )}
     </NavLink>
   );
 };
@@ -348,6 +364,21 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
     }
   };
 
+  // Notificações e Alertas de Críticas de Supervisores no Fuel360
+  const [fuelCriticasCount, setFuelCriticasCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (hasFuelAccess) {
+      getSimulacoesPendentesCount()
+        .then(res => {
+          if (res && typeof res.count === 'number') {
+            setFuelCriticasCount(res.count);
+          }
+        })
+        .catch(err => console.error("Erro ao carregar contagem de críticas no menu:", err));
+    }
+  }, [hasFuelAccess, location.pathname]);
+
   // Sincronização por Navegação (On-Demand Sync & Auto Module Detection)
   useEffect(() => {
     fetchData(true); // Sincroniza silenciosamente ao mudar de tela
@@ -526,10 +557,10 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             <>
               <SidebarLink to="/fuel360/calculo" icon={Calculator} label="Cálculo Reembolso" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/roteirizador" icon={MapPin} label="Rota Combustível" collapsed={isEffectiveCollapsed} module="FUEL" />
-              <SidebarLink to="/fuel360/ajuste-rota" icon={Navigation} label="Ajuste de Rota" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/ajuste-rota" icon={Navigation} label="Ajuste de Rota" collapsed={isEffectiveCollapsed} module="FUEL" badge={fuelCriticasCount} />
               <SidebarLink to="/fuel360/geolocalizador" icon={Crosshair} label="Geolocalizador ERP" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/comparativo" icon={TrendingUp} label="Previsto x Realizado" collapsed={isEffectiveCollapsed} module="FUEL" />
-              <SidebarLink to="/fuel360/simulacoes" icon={ClipboardList} label="Simulações e Cálculos" collapsed={isEffectiveCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/simulacoes" icon={ClipboardList} label="Simulações e Cálculos" collapsed={isEffectiveCollapsed} module="FUEL" badge={fuelCriticasCount} />
               <SidebarLink to="/fuel360/equipe" icon={Users} label="Equipe & Setores" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/ausencias" icon={Calendar} label="Ausências" collapsed={isEffectiveCollapsed} module="FUEL" />
               <SidebarLink to="/fuel360/relatorios" icon={BarChart3} label="Relatórios BI" collapsed={isEffectiveCollapsed} module="FUEL" />

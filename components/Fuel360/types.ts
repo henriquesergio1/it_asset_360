@@ -302,6 +302,8 @@ export interface RotaPrevistaSaved {
     Descricao?: string;
     JaCalculado?: boolean;
     TipoProcesso?: string;
+    SugestoesPendentes?: number;
+    TotalSugestoes?: number;
 }
 
 export interface RotaPrevistaItem {

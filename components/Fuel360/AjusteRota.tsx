@@ -1,13 +1,13 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
-import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista } from './services/apiService';
+import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, getSimulacoesPendentesCount } from './services/apiService';
 import { VisitaPrevista, Colaborador, SequenceStrategy, ClienteRestricao } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import * as XLSX from 'xlsx';
 import { ShareSimulationModal } from './ShareSimulationModal';
-import { Calendar, Sun, Sunset, AlertCircle, Info, Edit3, Trash2, Plus, Check, FolderOpen, Share2 } from 'lucide-react';
+import { Calendar, Sun, Sunset, AlertCircle, Info, Edit3, Trash2, Plus, Check, FolderOpen, Share2, MessageSquare } from 'lucide-react';
 import {
     CogIcon,
     SpinnerIcon,
@@ -5526,10 +5526,73 @@ export const AjusteRota: React.FC = () => {
         }
     };
 
+    // Gestão de Críticas e Sugestões do Supervisor no Ajuste de Rota
+    const [totalPendingCriticas, setTotalPendingCriticas] = useState<number>(0);
+    const [viewingCriticasSim, setViewingCriticasSim] = useState<{ id: number; nome: string } | null>(null);
+    const [criticasSimList, setCriticasSimList] = useState<any[]>([]);
+    const [loadingCriticas, setLoadingCriticas] = useState(false);
+    const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+
+    const loadPendingCriticasCount = useCallback(async () => {
+        try {
+            const res = await getSimulacoesPendentesCount();
+            if (res && typeof res.count === 'number') {
+                setTotalPendingCriticas(res.count);
+            }
+        } catch (e) {
+            console.error("Erro ao obter contagem de críticas:", e);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadPendingCriticasCount();
+    }, [loadPendingCriticasCount]);
+
+    const handleOpenSimCriticas = async (simId: number, nome: string) => {
+        setViewingCriticasSim({ id: simId, nome });
+        setLoadingCriticas(true);
+        try {
+            const list = await getSimulacaoSugestoes(simId);
+            setCriticasSimList(Array.isArray(list) ? list : []);
+        } catch (e: any) {
+            console.error("Erro ao carregar críticas da simulação:", e);
+            alert("Erro ao carregar críticas: " + (e.message || e));
+        } finally {
+            setLoadingCriticas(false);
+        }
+    };
+
+    const handleUpdateCriticaStatus = async (sugId: number, newStatus: string) => {
+        setActionLoadingId(sugId);
+        try {
+            const res = await updateSugestaoStatus(sugId, newStatus);
+            if (res.success) {
+                setCriticasSimList(prev => prev.map(s => s.ID_Sugestao === sugId ? { ...s, Status: newStatus } : s));
+                setSavedSimulationsList(prev => prev.map(s => {
+                    if (s.ID_RotaHist === viewingCriticasSim?.id) {
+                        const currentPending = Number(s.SugestoesPendentes) || 0;
+                        return {
+                            ...s,
+                            SugestoesPendentes: Math.max(0, currentPending - 1)
+                        };
+                    }
+                    return s;
+                }));
+                loadPendingCriticasCount();
+            }
+        } catch (e: any) {
+            console.error("Erro ao atualizar status da crítica:", e);
+            alert("Erro ao atualizar status: " + (e.message || e));
+        } finally {
+            setActionLoadingId(null);
+        }
+    };
+
     // Gestão de Simulações Salvas (Listar, Carregar, Excluir) - Estritamente do Ajuste de Rota
     const handleOpenSavedSimulationsModal = async () => {
         setShowSavedSimulationsModal(true);
         setLoadingSavedSimulations(true);
+        loadPendingCriticasCount();
         try {
             const list = await getRotaPrevistaHistory('AJUSTE_ROTA');
             setSavedSimulationsList(Array.isArray(list) ? list : []);
@@ -5649,6 +5712,7 @@ export const AjusteRota: React.FC = () => {
             if (loadedSimInfo?.id === simId) {
                 setLoadedSimInfo(null);
             }
+            loadPendingCriticasCount();
         } catch (e: any) {
             alert("Erro ao excluir simulação: " + (e.message || e));
         } finally {
@@ -6485,6 +6549,22 @@ export const AjusteRota: React.FC = () => {
                         </>
                     )}
 
+                    {/* Botão de Abertura de Simulações Salvas (com Badge de Críticas) */}
+                    <button
+                        type="button"
+                        onClick={handleOpenSavedSimulationsModal}
+                        className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center shadow-xs h-[34px] cursor-pointer relative transition"
+                        title="Abrir simulações salvas e histórico de ajustes de rota"
+                    >
+                        <FolderOpen className="w-4 h-4 mr-1.5 text-amber-500" />
+                        Simulações Salvas
+                        {totalPendingCriticas > 0 && (
+                            <span className="ml-1.5 bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-xs flex items-center">
+                                {totalPendingCriticas}
+                            </span>
+                        )}
+                    </button>
+
                     {teamType === 'vendedores' ? (
                         <button
                             onClick={handleLoadCurrentRoutes}
@@ -6503,6 +6583,36 @@ export const AjusteRota: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* BANNER DE ALERTA DE CRÍTICAS PENDENTES DE SUPERVISORES */}
+            {totalPendingCriticas > 0 && (
+                <div className="bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800/80 rounded-2xl p-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+                    <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                            <AlertCircle className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h4 className="text-xs font-black text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                                Críticas de Supervisores Aguardando Análise!
+                                <span className="bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
+                                    {totalPendingCriticas} pendência{totalPendingCriticas > 1 ? 's' : ''}
+                                </span>
+                            </h4>
+                            <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5">
+                                Supervisores registraram sugestões e apontamentos de alterações em simulações salvas.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleOpenSavedSimulationsModal}
+                        className="bg-amber-500 hover:bg-amber-600 text-white font-black px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition shrink-0 cursor-pointer self-start sm:self-auto"
+                    >
+                        <FolderOpen className="w-4 h-4" />
+                        Ver Simulações com Críticas
+                    </button>
+                </div>
+            )}
 
             {/* BANNER DE FEEDBACK DE REDISTRIBUIÇÃO DE SETOR */}
             {extinguishFeedback && (
@@ -11363,6 +11473,11 @@ export const AjusteRota: React.FC = () => {
                                                             Ativa no Mapa
                                                         </span>
                                                     )}
+                                                    {Number(sim.SugestoesPendentes) > 0 && (
+                                                        <span className="bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-700 uppercase tracking-wider flex items-center gap-1 animate-pulse">
+                                                            ⚠️ {sim.SugestoesPendentes} crítica{Number(sim.SugestoesPendentes) > 1 ? 's' : ''} pendente{Number(sim.SugestoesPendentes) > 1 ? 's' : ''}
+                                                        </span>
+                                                    )}
                                                     <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">
                                                         {cleanName}
                                                     </h4>
@@ -11384,6 +11499,27 @@ export const AjusteRota: React.FC = () => {
                                             </div>
 
                                             <div className="flex items-center gap-2 shrink-0">
+                                                {Number(sim.TotalSugestoes) > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenSimCriticas(sim.ID_RotaHist, cleanName)}
+                                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center transition cursor-pointer ${
+                                                            Number(sim.SugestoesPendentes) > 0
+                                                                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs animate-pulse'
+                                                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200'
+                                                        }`}
+                                                        title="Visualizar críticas e sugestões enviadas pelo supervisor para esta rota"
+                                                    >
+                                                        <MessageSquare className="w-3.5 h-3.5 mr-1" />
+                                                        Críticas
+                                                        {Number(sim.SugestoesPendentes) > 0 && (
+                                                            <span className="ml-1.5 bg-white text-amber-700 text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                                                                {sim.SugestoesPendentes}
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                )}
+
                                                 <button
                                                     type="button"
                                                     onClick={() => handleLoadSimulation(sim.ID_RotaHist)}
@@ -11441,6 +11577,157 @@ export const AjusteRota: React.FC = () => {
                                 type="button"
                                 onClick={() => setShowSavedSimulationsModal(false)}
                                 className="px-4 py-2 font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Críticas e Sugestões do Supervisor no Ajuste de Rota */}
+            {viewingCriticasSim && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9995] flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 rounded-t-2xl">
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <MessageSquare className="w-5 h-5 text-indigo-500" />
+                                    Críticas e Sugestões do Supervisor
+                                </h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Simulação #{viewingCriticasSim.id} &bull; {viewingCriticasSim.nome}
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => setViewingCriticasSim(null)} 
+                                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                            >
+                                <XCircleIcon className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 overflow-y-auto space-y-4 flex-1">
+                            {loadingCriticas ? (
+                                <div className="py-12 text-center text-slate-400 dark:text-slate-500">
+                                    <SpinnerIcon className="w-8 h-8 mx-auto mb-2 text-indigo-500 animate-spin" />
+                                    Carregando críticas dos supervisores...
+                                </div>
+                            ) : criticasSimList.length === 0 ? (
+                                <div className="py-12 text-center text-slate-400 dark:text-slate-500">
+                                    <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                                    <p className="font-medium text-sm">Nenhum apontamento ou sugestão registrada para esta simulação.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {criticasSimList.map((sug: any) => {
+                                        const isPendente = (sug.Status || 'PENDENTE') === 'PENDENTE';
+                                        const isAplicado = sug.Status === 'APLICADO';
+                                        const isRejeitado = sug.Status === 'REJEITADO';
+
+                                        return (
+                                            <div 
+                                                key={sug.ID_Sugestao} 
+                                                className={`p-4 rounded-2xl border transition-all ${
+                                                    isAplicado ? 'bg-emerald-50/60 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800/80 shadow-xs' :
+                                                    isRejeitado ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/80 opacity-60' :
+                                                    'bg-slate-50/70 dark:bg-slate-800/90 border-amber-300 dark:border-amber-700/80 shadow-sm ring-1 ring-amber-400/20'
+                                                }`}
+                                            >
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-200/80 dark:border-slate-700/80">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">
+                                                            {sug.SupervisorNome || 'Supervisor'}
+                                                        </span>
+                                                        <span className="text-xs text-slate-400">
+                                                            ({sug.DataSugestao ? new Date(sug.DataSugestao).toLocaleString('pt-BR') : '-'})
+                                                        </span>
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                                            isAplicado ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300' :
+                                                            isRejeitado ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400' :
+                                                            'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 animate-pulse'
+                                                        }`}>
+                                                            {sug.Status || 'PENDENTE'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            disabled={actionLoadingId === sug.ID_Sugestao}
+                                                            onClick={() => handleUpdateCriticaStatus(sug.ID_Sugestao, 'APLICADO')}
+                                                            className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                                                                isAplicado 
+                                                                    ? 'bg-emerald-600 text-white shadow-xs' 
+                                                                    : 'bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300'
+                                                            }`}
+                                                        >
+                                                            <Check className="w-3.5 h-3.5" />
+                                                            {isAplicado ? 'Aplicado' : 'Marcar Aplicado'}
+                                                        </button>
+                                                        <button
+                                                            disabled={actionLoadingId === sug.ID_Sugestao}
+                                                            onClick={() => handleUpdateCriticaStatus(sug.ID_Sugestao, 'REJEITADO')}
+                                                            className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                                                                isRejeitado 
+                                                                    ? 'bg-slate-600 text-white shadow-xs' 
+                                                                    : 'bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300'
+                                                            }`}
+                                                        >
+                                                            ✕ {isRejeitado ? 'Rejeitado' : 'Rejeitar'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs mb-2">
+                                                    <div>
+                                                        <span className="text-slate-500 dark:text-slate-400 font-medium">Cliente: </span>
+                                                        <span className="font-bold text-slate-900 dark:text-slate-100">
+                                                            {sug.Cod_Cliente ? `#${sug.Cod_Cliente} - ` : ''}{sug.ClienteNome || 'Geral do Setor'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 dark:text-slate-400 font-medium">Vendedor: </span>
+                                                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                                                            {sug.VendedorNome || '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {(sug.DiaAtual || sug.DiaSugerido || sug.SemanaAtual || sug.SemanaSugerida) && (
+                                                    <div className="flex items-center gap-3 text-xs bg-white dark:bg-slate-900/80 p-2.5 rounded-xl mb-2 border border-slate-200 dark:border-slate-700/70 text-slate-800 dark:text-slate-200">
+                                                        {sug.DiaSugerido && (
+                                                            <div>
+                                                                <span className="text-slate-500 dark:text-slate-400">Dia: </span>
+                                                                <span className="line-through text-slate-400 mr-1">{sug.DiaAtual || 'Não inf.'}</span>
+                                                                <span className="font-bold text-blue-600 dark:text-blue-400">&rarr; {sug.DiaSugerido}</span>
+                                                            </div>
+                                                        )}
+                                                        {sug.SemanaSugerida && (
+                                                            <div>
+                                                                <span className="text-slate-500 dark:text-slate-400">Semana: </span>
+                                                                <span className="line-through text-slate-400 mr-1">{sug.SemanaAtual || 'Não inf.'}</span>
+                                                                <span className="font-bold text-purple-600 dark:text-purple-400">&rarr; {sug.SemanaSugerida}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                <div className="text-xs text-slate-800 dark:text-slate-100 bg-amber-50/80 dark:bg-amber-950/40 p-3 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
+                                                    <p className="font-medium leading-relaxed">{sug.Observacao}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-end">
+                            <button
+                                onClick={() => setViewingCriticasSim(null)}
+                                className="px-5 py-2 font-bold bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition cursor-pointer text-xs"
                             >
                                 Fechar
                             </button>

@@ -187,6 +187,7 @@ const RealService = {
     getSimulacaoSugestoes: (id: number): Promise<any[]> => apiRequest(`/roteiro/simulacao/${id}/sugestoes`),
     saveSimulacaoSugestao: (id: number, payload: any): Promise<{ success: boolean; id: number }> => apiRequest(`/roteiro/simulacao/${id}/sugestoes`, 'POST', payload),
     updateSugestaoStatus: (id: number, status: string): Promise<{ success: boolean }> => apiRequest(`/roteiro/sugestoes/${id}/status`, 'PUT', { status }),
+    getSimulacoesPendentesCount: (): Promise<{ count: number }> => apiRequest('/roteiro/sugestoes/pendentes-count'),
 
     // Gestão de Cálculos Fechados
     getCalculoHistory: (): Promise<CalculoSaved[]> => apiRequest('/calculo/historico'),
@@ -627,6 +628,7 @@ const MockService = {
     getSimulacaoSugestoes: async (id: number) => [],
     saveSimulacaoSugestao: async () => ({ success: true, id: 1 }),
     updateSugestaoStatus: async () => ({ success: true }),
+    getSimulacoesPendentesCount: async () => ({ count: 0 }),
     getCalculoHistory: async () => [],
     getCalculoDetails: async () => [],
     updateCalculoDiario: async () => {},
@@ -670,7 +672,7 @@ export const {
     getRelatorioReembolso, getRelatorioAnalitico, logAction, getSystemLogs, getVisitasPrevistas, getPromoterClients,
     saveRotaPrevista, checkRotaPrevistaExists, getRotaPrevistaHistory, getRotaPrevistaDetails,
     deleteRotaPrevista, updateRotaPrevistaDiario, getCalculoHistory, getCalculoDetails, updateCalculoDiario,
-    getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, updateSugestaoStatus,
+    getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, updateSugestaoStatus, getSimulacoesPendentesCount,
     moveColaboradoresToGroup, bulkUpdateColaboradores, corrigirAusenciasHistorico, getSugestoesVinculo, batchUpdateColaboradoresAddress,
     getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao,
     geocodeAddress, getOSRMData, getOSRMTable, calcDistance

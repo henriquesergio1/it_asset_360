@@ -3967,13 +3967,18 @@ app.get('/api/fuel360/roteiro/historico', async (req, res) => {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
         const { tipo } = req.query;
-        let query = 'SELECT * FROM FuelSimulacoesHistorico';
+        let query = `
+            SELECT h.*,
+                   (SELECT COUNT(*) FROM FuelSimulacaoSugestoes s WHERE s.ID_RotaHist = h.ID_RotaHist AND (s.Status = 'PENDENTE' OR s.Status IS NULL)) as SugestoesPendentes,
+                   (SELECT COUNT(*) FROM FuelSimulacaoSugestoes s WHERE s.ID_RotaHist = h.ID_RotaHist) as TotalSugestoes
+            FROM FuelSimulacoesHistorico h
+        `;
         if (tipo === 'AJUSTE_ROTA') {
-            query += " WHERE TipoProcesso = 'AJUSTE_ROTA'";
+            query += " WHERE h.TipoProcesso = 'AJUSTE_ROTA'";
         } else if (tipo === 'COMBUSTIVEL') {
-            query += " WHERE TipoProcesso = 'COMBUSTIVEL' OR TipoProcesso IS NULL";
+            query += " WHERE h.TipoProcesso = 'COMBUSTIVEL' OR h.TipoProcesso IS NULL";
         }
-        query += ' ORDER BY ID_RotaHist DESC';
+        query += ' ORDER BY h.ID_RotaHist DESC';
         const result = await pool.request().query(query);
         res.json(result.recordset || []);
     } catch (err) {
@@ -4196,6 +4201,23 @@ app.put('/api/fuel360/roteiro/sugestoes/:id/status', async (req, res) => {
     } catch (err) {
         console.error('Erro ao atualizar status da sugestao:', err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// Contagem global de sugestões pendentes do supervisor para rotas/simulações
+app.get('/api/fuel360/roteiro/sugestoes/pendentes-count', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request().query(`
+            SELECT COUNT(*) as count 
+            FROM FuelSimulacaoSugestoes 
+            WHERE Status = 'PENDENTE' OR Status IS NULL
+        `);
+        res.json({ count: result.recordset[0]?.count || 0 });
+    } catch (err) {
+        console.error('Erro ao contar sugestões pendentes:', err);
+        res.json({ count: 0 });
     }
 });
 
