@@ -4170,6 +4170,135 @@ export const AjusteRota: React.FC = () => {
                 }
             }
 
+            // 2.5.3. Otimização Geográfica Multidias (Rebalanceamento de Centróides e Eliminação de Outliers Interdias)
+            // Identifica clientes anômalos que ficaram em um dia distante mas possuem rotas contíguas em outro dia da semana
+            if (K > 1 && uniqueClients.length > K) {
+                const isDayAllowedForClient = (client: typeof uniqueClients[0], dayName: string) => {
+                    const restr = clienteRestricoesMap.get(client.sampleVisit.Cod_Cliente);
+                    if (!restr || !restr.DiasPermitidos || !restr.DiasPermitidos.trim()) return true;
+                    const allowed = restr.DiasPermitidos.split(',').map(item => normalizeDiaSemana(item.trim()));
+                    return allowed.includes(dayName);
+                };
+
+                const isCitySatellite = (client: typeof uniqueClients[0]) => {
+                    const cCity = (client.sampleVisit.Cidade || '').trim().toUpperCase();
+                    return clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
+                };
+
+                // Iterações de convergência espacial (até 4 passadas para estabilização de centróides)
+                for (let iter = 0; iter < 4; iter++) {
+                    // 1. Calcular os centróides geográficos médios de cada dia
+                    const dayCentroids: { lat: number; lng: number; validCount: number }[] = [];
+                    for (let d = 0; d < K; d++) {
+                        const validCoordsInDay = dayAssignedClients[d].filter(c => c.lat && c.lng);
+                        if (validCoordsInDay.length > 0) {
+                            const avgLat = validCoordsInDay.reduce((acc, c) => acc + c.lat, 0) / validCoordsInDay.length;
+                            const avgLng = validCoordsInDay.reduce((acc, c) => acc + c.lng, 0) / validCoordsInDay.length;
+                            dayCentroids.push({ lat: avgLat, lng: avgLng, validCount: validCoordsInDay.length });
+                        } else {
+                            dayCentroids.push({ lat: baseLat, lng: baseLng, validCount: 0 });
+                        }
+                    }
+
+                    let anySwapMade = false;
+
+                    // 2. Buscar outliers espaciais e potenciais permutas benéficas
+                    for (let dA = 0; dA < K; dA++) {
+                        const dayNameA = activeDays[dA];
+                        const clientsA = dayAssignedClients[dA];
+                        const centroidA = dayCentroids[dA];
+                        if (centroidA.validCount === 0) continue;
+
+                        for (let iA = clientsA.length - 1; iA >= 0; iA--) {
+                            const cA = clientsA[iA];
+                            if (!cA.lat || !cA.lng) continue;
+                            if (isCitySatellite(cA)) continue; // Preserva integridade de cidades satélites
+
+                            const distA_toCurrent = calcDist(centroidA.lat, centroidA.lng, cA.lat, cA.lng);
+
+                            // Encontrar o dia alternativo onde cA fica mais próximo
+                            let bestTargetDay = -1;
+                            let maxDistanceDiff = 0;
+
+                            for (let dB = 0; dB < K; dB++) {
+                                if (dA === dB) continue;
+                                const dayNameB = activeDays[dB];
+                                if (!isDayAllowedForClient(cA, dayNameB)) continue;
+
+                                const centroidB = dayCentroids[dB];
+                                if (centroidB.validCount === 0) continue;
+
+                                const distA_toB = calcDist(centroidB.lat, centroidB.lng, cA.lat, cA.lng);
+
+                                // Se estiver consideravelmente mais perto de B do que de A (economia mínima de 2.0 km)
+                                if (distA_toCurrent > distA_toB + 2.0) {
+                                    const improvement = distA_toCurrent - distA_toB;
+                                    if (improvement > maxDistanceDiff) {
+                                        maxDistanceDiff = improvement;
+                                        bestTargetDay = dB;
+                                    }
+                                }
+                            }
+
+                            if (bestTargetDay !== -1 && maxDistanceDiff > 0) {
+                                const dB = bestTargetDay;
+                                const dayNameB = activeDays[dB];
+                                const clientsB = dayAssignedClients[dB];
+                                const centroidB = dayCentroids[dB];
+
+                                // Tentativa 1: Permuta 1-para-1 com cliente de mesma periodicidade em dB (Semanal x Semanal, Quinzenal x Quinzenal)
+                                let bestSwapCandidateIdx = -1;
+                                let bestCombinedGain = 0;
+
+                                for (let iB = 0; iB < clientsB.length; iB++) {
+                                    const cB = clientsB[iB];
+                                    if (cB.tipo !== cA.tipo) continue; // Preserva periodicidade original sem alterar regra
+                                    if (!isDayAllowedForClient(cB, dayNameA)) continue;
+                                    if (isCitySatellite(cB)) continue;
+
+                                    const distB_current = calcDist(centroidB.lat, centroidB.lng, cB.lat, cB.lng);
+                                    const distB_toA = calcDist(centroidA.lat, centroidA.lng, cB.lat, cB.lng);
+
+                                    const distA_toB = calcDist(centroidB.lat, centroidB.lng, cA.lat, cA.lng);
+                                    const gainA = distA_toCurrent - distA_toB;
+                                    const gainB = distB_current - distB_toA;
+                                    const totalGain = gainA + gainB;
+
+                                    if (totalGain > 0.8 || (gainA > 6.0 && gainB > -4.0)) {
+                                        if (totalGain > bestCombinedGain) {
+                                            bestCombinedGain = totalGain;
+                                            bestSwapCandidateIdx = iB;
+                                        }
+                                    }
+                                }
+
+                                if (bestSwapCandidateIdx !== -1) {
+                                    // Executa permuta 1-para-1
+                                    const [movedA] = clientsA.splice(iA, 1);
+                                    const [movedB] = clientsB.splice(bestSwapCandidateIdx, 1);
+                                    clientsA.push(movedB);
+                                    clientsB.push(movedA);
+                                    anySwapMade = true;
+                                    break;
+                                } else {
+                                    // Tentativa 2: Transferência direta se houver folga ou desbalanceamento de cotas
+                                    const targetQuotaB = dayBuckets[dB].targetQuota;
+                                    const targetQuotaA = dayBuckets[dA].targetQuota;
+                                    if (clientsA.length > targetQuotaA && clientsB.length < targetQuotaB + 2) {
+                                        const [movedA] = clientsA.splice(iA, 1);
+                                        clientsB.push(movedA);
+                                        anySwapMade = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (!anySwapMade) break; // Convergência atingida
+                }
+            }
+
             // 2.5.2. Garantia de Cumprimento dos Dias Permitidos por Cliente (Hard Constraints)
             if (clienteRestricoesMap.size > 0) {
                 for (let d = 0; d < K; d++) {

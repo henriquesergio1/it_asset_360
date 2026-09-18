@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.192.0',
+    date: 'Hoje',
+    title: 'Fuel360: Otimização Geográfica Multidias e Rebalanceamento Espacial de Centróides',
+    changes: [
+      'Reagrupamento Geográfico Multidias (K-Means/Centróides): Elimina clientes anômalos ou geograficamente deslocados (outliers de rota) transferindo-os para dias com rotas contíguas na mesma microrregião.',
+      'Permuta Inteligente com Respeito a Periodicidades: Efetua swaps entre dias respeitando rigorosamente o tipo de cliente (Semanal x Semanal, Quinzenal x Quinzenal).',
+      'Cumprimento de Restrições e Janelas: Mantém estritamente os Dias Permitidos (DiasPermitidos) e Turnos configurados no banco de dados.',
+      'Eliminação de Sobrecarga Diária: Reduz a quilometragem global e o tempo de deslocamento viário, prevenindo jornadas infladas desnecessárias.'
+    ]
+  },
+  {
     version: '3.191.0',
     date: 'Hoje',
     title: 'Fuel360: Diferenciação Visual de Clientes com Particularidades no Mapa',
