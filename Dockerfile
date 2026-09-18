@@ -18,6 +18,7 @@ COPY . .
 
 # Garante o modo de produção e gera o build dos arquivos estáticos React (SPA)
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 RUN CI=false npm run build
 
 # Expõe a porta interna da aplicação e API

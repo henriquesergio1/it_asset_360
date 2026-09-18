@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.190.4',
+    date: 'Hoje',
+    title: 'Infraestrutura: Binários musl para Vite/Rollup e Limite Seguro de Memória',
+    changes: [
+      'Binários Nativos Alpine em optionalDependencies: Declaração explícita de @rollup/rollup-linux-x64-musl e @tailwindcss/oxide-linux-x64-musl para viabilizar a compilação de assets com o Vite em containers Alpine.',
+      'Prevenção de Out-Of-Memory (OOM): Configuração de NODE_OPTIONS="--max-old-space-size=2048" na etapa de build do React no Dockerfile.',
+      'Estabilidade de Deploy: Liberação de recursos e eliminação de falhas no comando npm run build dentro do container.'
+    ]
+  },
+  {
     version: '3.190.3',
     date: 'Hoje',
     title: 'Infraestrutura: Compatibilidade glibc no Alpine e Resolução Nativa Linux no Dockerfile',
