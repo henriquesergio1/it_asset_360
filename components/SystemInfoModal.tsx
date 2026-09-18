@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.191.0',
+    date: 'Hoje',
+    title: 'Fuel360: Diferenciação Visual de Clientes com Particularidades no Mapa',
+    changes: [
+      'Halo Orbital no Mapa: Clientes com particularidades ativas recebem anel orbital tracejado colorido (roxo para críticas de supervisor e âmbar para manuais), destacando-os imediatamente na rota.',
+      'Tooltip Flutuante e Tag: Ao passar o cursor pelo cliente no mapa, uma tag informativa exibe o tipo de restrição (Turno, Dias ou Quinzena).',
+      'Banner Detalhado no Popup: Card completo dentro do popup com detalhes da particularidade, observação e atalho direto para edição rápida.',
+      'Legenda Cartográfica Atualizada: Novo indicador explicativo de particularidade na legenda do roteiro.'
+    ]
+  },
+  {
     version: '3.190.5',
     date: 'Hoje',
     title: 'Infraestrutura: Restauração da Configuração Original de Build (v3.189.1)',

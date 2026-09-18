@@ -3,7 +3,7 @@ import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
 import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount } from './services/apiService';
 import { VisitaPrevista, Colaborador, SequenceStrategy, ClienteRestricao } from './types';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import * as XLSX from 'xlsx';
 import { ShareSimulationModal } from './ShareSimulationModal';
@@ -7191,164 +7191,255 @@ export const AjusteRota: React.FC = () => {
                                     const isPdvHighlighted = v.Cod_Cliente === highlightedClientCode;
                                     const isAnomalousPdv = anomaly.isAnomalous && anomaly.distKm > 80;
 
+                                    const restricaoCliente = clienteRestricoesMap.get(Number(v.Cod_Cliente));
+                                    const hasParticularidade = Boolean(restricaoCliente && restricaoCliente.Ativo !== false);
+                                    const isSupervisorRestricao = Boolean(
+                                        hasParticularidade && (
+                                            restricaoCliente?.Observacao?.includes('[Exceção via Crítica Supervisor]') ||
+                                            (restricaoCliente?.UsuarioAtualizacao && restricaoCliente.UsuarioAtualizacao.toLowerCase().includes('supervisor'))
+                                        )
+                                    );
+                                    const particularidadeColor = isSupervisorRestricao ? '#9333ea' : '#f59e0b';
+
                                     const markerFillColor = isPdvHighlighted ? '#4f46e5' : (isAnomalousPdv ? '#ef4444' : mainColor);
-                                    const markerBorderColor = isPdvHighlighted ? '#ffffff' : (isAnomalousPdv ? '#991b1b' : borderColor);
-                                    const markerWeight = isPdvHighlighted ? 4 : (isAnomalousPdv ? 3.5 : (showHeatmap ? 1.5 : borderWidth));
+                                    const markerBorderColor = isPdvHighlighted ? '#ffffff' : (isAnomalousPdv ? '#991b1b' : (hasParticularidade ? particularidadeColor : borderColor));
+                                    const markerWeight = isPdvHighlighted ? 4 : (isAnomalousPdv ? 3.5 : (hasParticularidade ? 3 : (showHeatmap ? 1.5 : borderWidth)));
                                     const markerRadius = showHeatmap ? Math.max(4, radius - 2) : (isPdvHighlighted ? radius + 3.5 : (isAnomalousPdv ? radius + 2 : radius));
 
                                     return (
-                                        <CircleMarker
-                                            key={`marker-${v.Cod_Cliente}-${idx}`}
-                                            ref={(el) => {
-                                                if (el) {
-                                                    markerRefs.current[v.Cod_Cliente] = el;
-                                                }
-                                            }}
-                                            center={[v.Lat, v.Long]}
-                                            radius={markerRadius}
-                                            pathOptions={{ 
-                                                fillColor: markerFillColor, 
-                                                color: markerBorderColor, 
-                                                fillOpacity: showHeatmap ? 0.45 : (isPdvHighlighted ? 1 : (isAnomalousPdv ? 1 : 0.92)), 
-                                                weight: markerWeight,
-                                                dashArray: isPdvHighlighted ? undefined : dashArray,
-                                                className: 'transition-all duration-300 ease-in-out cursor-pointer'
-                                            }}
-                                            eventHandlers={{
-                                                click: () => {
-                                                    handleSelectPdvFromMap(v.Cod_Cliente);
-                                                }
-                                            }}
-                                        >
-                                            <Popup>
-                                                <div className="text-xs space-y-2 p-1 font-sans">
-                                                    {/* Banner de Alerta de Anomalia de Coordenadas */}
-                                                    {isAnomalousPdv && (
-                                                        <div className="bg-red-50 dark:bg-red-950/70 border border-red-300 dark:border-red-800 rounded-xl p-2 text-red-700 dark:text-red-300 shadow-xs">
-                                                            <div className="flex items-center gap-1.5 font-black text-[11px]">
-                                                                <span className="text-sm">⚠️</span>
-                                                                <span>GPS Distante (~{anomaly.distKm} km {anomaly.referenceType === 'base' ? 'da base' : 'do grupo'})</span>
+                                        <React.Fragment key={`marker-fragment-${v.Cod_Cliente}-${idx}`}>
+                                            {/* Halo Orbital Concêntrico para clientes com Particularidades / Restrições */}
+                                            {hasParticularidade && (
+                                                <CircleMarker
+                                                    key={`halo-${v.Cod_Cliente}-${idx}`}
+                                                    center={[v.Lat, v.Long]}
+                                                    radius={markerRadius + 4.5}
+                                                    pathOptions={{
+                                                        color: particularidadeColor,
+                                                        fillColor: particularidadeColor,
+                                                        fillOpacity: 0.15,
+                                                        weight: 2,
+                                                        dashArray: '3, 3',
+                                                        interactive: false
+                                                    }}
+                                                />
+                                            )}
+                                            <CircleMarker
+                                                key={`marker-${v.Cod_Cliente}-${idx}`}
+                                                ref={(el) => {
+                                                    if (el) {
+                                                        markerRefs.current[v.Cod_Cliente] = el;
+                                                    }
+                                                }}
+                                                center={[v.Lat, v.Long]}
+                                                radius={markerRadius}
+                                                pathOptions={{ 
+                                                    fillColor: markerFillColor, 
+                                                    color: markerBorderColor, 
+                                                    fillOpacity: showHeatmap ? 0.45 : (isPdvHighlighted ? 1 : (isAnomalousPdv ? 1 : 0.92)), 
+                                                    weight: markerWeight,
+                                                    dashArray: isPdvHighlighted ? undefined : dashArray,
+                                                    className: 'transition-all duration-300 ease-in-out cursor-pointer'
+                                                }}
+                                                eventHandlers={{
+                                                    click: () => {
+                                                        handleSelectPdvFromMap(v.Cod_Cliente);
+                                                    }
+                                                }}
+                                            >
+                                                {/* Tooltip flutuante com indicador de particularidade */}
+                                                {hasParticularidade && (
+                                                    <Tooltip direction="top" offset={[0, -markerRadius - 2]} opacity={0.95}>
+                                                        <div className="text-[10px] font-bold flex items-center gap-1">
+                                                            <span>{isSupervisorRestricao ? '🛡️ [Supervisor]' : '⚡ [Particularidade]'}</span>
+                                                            <span>{v.Cod_Cliente} - {v.Razao_Social}</span>
+                                                        </div>
+                                                        <div className="text-[9px] text-slate-500 font-medium">
+                                                            {[
+                                                                restricaoCliente?.TurnoPermitido && restricaoCliente.TurnoPermitido !== 'QUALQUER' ? `Turno: ${restricaoCliente.TurnoPermitido}` : null,
+                                                                restricaoCliente?.QuinzenaPermitida && restricaoCliente.QuinzenaPermitida !== 'QUALQUER' ? `Quinzena: ${restricaoCliente.QuinzenaPermitida.replace('_', ' ')}` : null,
+                                                                restricaoCliente?.DiasPermitidos ? `Dias: ${restricaoCliente.DiasPermitidos}` : null
+                                                            ].filter(Boolean).join(' • ') || 'Particularidade ativa'}
+                                                        </div>
+                                                    </Tooltip>
+                                                )}
+                                                <Popup>
+                                                    <div className="text-xs space-y-2 p-1 font-sans">
+                                                        {/* Banner de Alerta de Particularidade Cadastrada */}
+                                                        {hasParticularidade && (
+                                                            <div className={`border rounded-xl p-2 shadow-2xs space-y-1.5 ${
+                                                                isSupervisorRestricao
+                                                                    ? 'bg-purple-50/90 dark:bg-purple-950/70 border-purple-300 dark:border-purple-800 text-purple-900 dark:text-purple-200'
+                                                                    : 'bg-amber-50/90 dark:bg-amber-950/70 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200'
+                                                            }`}>
+                                                                <div className="flex items-center justify-between gap-1">
+                                                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-black text-white flex items-center gap-1 ${
+                                                                        isSupervisorRestricao ? 'bg-purple-600' : 'bg-amber-600'
+                                                                    }`}>
+                                                                        <span>{isSupervisorRestricao ? '🛡️ Exceção Supervisor' : '⚡ Particularidade'}</span>
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenNewRestricaoModal(v)}
+                                                                        className="text-[9px] font-bold underline hover:opacity-80 cursor-pointer"
+                                                                        title="Editar particularidades deste cliente"
+                                                                    >
+                                                                        Editar Particularidade
+                                                                    </button>
+                                                                </div>
+                                                                <div className="flex flex-wrap gap-1 text-[9px] font-bold">
+                                                                    {restricaoCliente?.TurnoPermitido && restricaoCliente.TurnoPermitido !== 'QUALQUER' && (
+                                                                        <span className="bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800">
+                                                                            Turno: {restricaoCliente.TurnoPermitido}
+                                                                        </span>
+                                                                    )}
+                                                                    {restricaoCliente?.QuinzenaPermitida && restricaoCliente.QuinzenaPermitida !== 'QUALQUER' && (
+                                                                        <span className="bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800">
+                                                                            Quinzena: {restricaoCliente.QuinzenaPermitida.replace('_', ' ')}
+                                                                        </span>
+                                                                    )}
+                                                                    {restricaoCliente?.DiasPermitidos && (
+                                                                        <span className="bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800">
+                                                                            Dias: {restricaoCliente.DiasPermitidos}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {restricaoCliente?.Observacao && (
+                                                                    <p className="text-[9.5px] italic text-slate-600 dark:text-slate-300 leading-tight">
+                                                                        "{restricaoCliente.Observacao}"
+                                                                    </p>
+                                                                )}
                                                             </div>
-                                                            <p className="text-[10px] mt-0.5 text-red-600 dark:text-red-400 font-medium">
-                                                                Localização pode estar incorreta no ERP. Ajuste as coordenadas para recalcular a rota viária correta.
+                                                        )}
+
+                                                        {/* Banner de Alerta de Anomalia de Coordenadas */}
+                                                        {isAnomalousPdv && (
+                                                            <div className="bg-red-50 dark:bg-red-950/70 border border-red-300 dark:border-red-800 rounded-xl p-2 text-red-700 dark:text-red-300 shadow-xs">
+                                                                <div className="flex items-center gap-1.5 font-black text-[11px]">
+                                                                    <span className="text-sm">⚠️</span>
+                                                                    <span>GPS Distante (~{anomaly.distKm} km {anomaly.referenceType === 'base' ? 'da base' : 'do grupo'})</span>
+                                                                </div>
+                                                                <p className="text-[10px] mt-0.5 text-red-600 dark:text-red-400 font-medium">
+                                                                    Localização pode estar incorreta no ERP. Ajuste as coordenadas para recalcular a rota viária correta.
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <div className="flex items-center justify-between gap-1 mb-1">
+                                                                <span 
+                                                                    className="px-1.5 py-0.5 rounded text-[9px] font-black text-white"
+                                                                    style={{ backgroundColor: dayColor }}
+                                                                >
+                                                                    {v.Dia_Semana}
+                                                                </span>
+                                                                {pType === 'SEMANAL' ? (
+                                                                    <span className="bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                                                                        Semanal
+                                                                    </span>
+                                                                ) : pType === 'QUINZENAL_1_3' ? (
+                                                                    <span className="bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-300">
+                                                                        Quinzena 1 e 3
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="bg-fuchsia-100 dark:bg-fuchsia-900/60 text-fuchsia-800 dark:text-fuchsia-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-fuchsia-300">
+                                                                        Quinzena 2 e 4
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <h4 className="font-black text-slate-800 dark:text-slate-100">{v.Cod_Cliente} - {v.Razao_Social}</h4>
+                                                            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                                                {v.Endereco}{v.Cidade ? ` • ${v.Cidade}` : ''}
                                                             </p>
                                                         </div>
-                                                    )}
-                                                    <div>
-                                                        <div className="flex items-center justify-between gap-1 mb-1">
-                                                            <span 
-                                                                className="px-1.5 py-0.5 rounded text-[9px] font-black text-white"
-                                                                style={{ backgroundColor: dayColor }}
-                                                            >
-                                                                {v.Dia_Semana}
-                                                            </span>
-                                                            {pType === 'SEMANAL' ? (
-                                                                <span className="bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[9px] font-bold px-1.5 py-0.5 rounded">
-                                                                    Semanal
-                                                                </span>
-                                                            ) : pType === 'QUINZENAL_1_3' ? (
-                                                                <span className="bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-300">
-                                                                    Quinzena 1 e 3
-                                                                </span>
-                                                            ) : (
-                                                                <span className="bg-fuchsia-100 dark:bg-fuchsia-900/60 text-fuchsia-800 dark:text-fuchsia-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-fuchsia-300">
-                                                                    Quinzena 2 e 4
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <h4 className="font-black text-slate-800 dark:text-slate-100">{v.Cod_Cliente} - {v.Razao_Social}</h4>
-                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                                                            {v.Endereco}{v.Cidade ? ` • ${v.Cidade}` : ''}
-                                                        </p>
-                                                    </div>
-                                                    <div className="border-t border-slate-100 dark:border-slate-800 pt-1.5 space-y-2">
-                                                        <div>
-                                                            <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Colaborador Atribuído</label>
-                                                            {teamType === 'vendedores' ? (
-                                                                <div className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                                                                    <span className="truncate">{formatSellerDisplayName(v.Cod_Vend, v.Nome_Vendedor)}</span>
-                                                                    <span className="text-[8px] bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold px-1 rounded ml-1 shrink-0">Carteira Fixa</span>
-                                                                </div>
-                                                            ) : (
-                                                                <select
-                                                                    value={v.Cod_Vend}
-                                                                    onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana, v.Periodicidade)}
-                                                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-200"
-                                                                >
-                                                                    {teamColaboradores.map(col => (
-                                                                        <option key={col.ID_Colaborador} value={col.CodigoSetor}>{formatSellerDisplayName(col.CodigoSetor, col.Nome)}</option>
-                                                                    ))}
-                                                                </select>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex gap-1.5">
-                                                            <div className="flex-1">
-                                                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Dia de Visita</label>
-                                                                <select
-                                                                    value={v.Dia_Semana}
-                                                                    onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value, v.Periodicidade)}
-                                                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-200"
-                                                                >
-                                                                    {WEEKDAYS.map(day => (
-                                                                        <option key={day} value={day}>{day}</option>
-                                                                    ))}
-                                                                </select>
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Frequência</label>
-                                                                {parsePeriodicidade(v.Periodicidade).tipo === 'SEMANAL' ? (
-                                                                    <div className="w-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 rounded p-1 text-[10px] font-bold text-center">
-                                                                        Semanal
+                                                        <div className="border-t border-slate-100 dark:border-slate-800 pt-1.5 space-y-2">
+                                                            <div>
+                                                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Colaborador Atribuído</label>
+                                                                {teamType === 'vendedores' ? (
+                                                                    <div className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                                                                        <span className="truncate">{formatSellerDisplayName(v.Cod_Vend, v.Nome_Vendedor)}</span>
+                                                                        <span className="text-[8px] bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold px-1 rounded ml-1 shrink-0">Carteira Fixa</span>
                                                                     </div>
                                                                 ) : (
                                                                     <select
-                                                                        value={(v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? '2 4' : '1 3'}
-                                                                        onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, v.Dia_Semana, e.target.value === '2 4' ? '2 4' : '1 3')}
-                                                                        className="w-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 rounded p-1 text-[10px] font-bold outline-none"
+                                                                        value={v.Cod_Vend}
+                                                                        onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana, v.Periodicidade)}
+                                                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-200"
                                                                     >
-                                                                        <option value="1 3">Quinzena 1 3</option>
-                                                                        <option value="2 4">Quinzena 2 4</option>
+                                                                        {teamColaboradores.map(col => (
+                                                                            <option key={col.ID_Colaborador} value={col.CodigoSetor}>{formatSellerDisplayName(col.CodigoSetor, col.Nome)}</option>
+                                                                        ))}
                                                                     </select>
                                                                 )}
                                                             </div>
+                                                            <div className="flex gap-1.5">
+                                                                <div className="flex-1">
+                                                                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Dia de Visita</label>
+                                                                    <select
+                                                                        value={v.Dia_Semana}
+                                                                        onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value, v.Periodicidade)}
+                                                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-200"
+                                                                    >
+                                                                        {WEEKDAYS.map(day => (
+                                                                            <option key={day} value={day}>{day}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Frequência</label>
+                                                                    {parsePeriodicidade(v.Periodicidade).tipo === 'SEMANAL' ? (
+                                                                        <div className="w-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 rounded p-1 text-[10px] font-bold text-center">
+                                                                            Semanal
+                                                                        </div>
+                                                                    ) : (
+                                                                        <select
+                                                                            value={(v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? '2 4' : '1 3'}
+                                                                            onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, v.Dia_Semana, e.target.value === '2 4' ? '2 4' : '1 3')}
+                                                                            className="w-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 rounded p-1 text-[10px] font-bold outline-none"
+                                                                        >
+                                                                            <option value="1 3">Quinzena 1 3</option>
+                                                                            <option value="2 4">Quinzena 2 4</option>
+                                                                        </select>
+                                                                    )}
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => handleExcludeVisit(v.Cod_Cliente)}
+                                                                    className="self-end bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/80 rounded p-1 transition cursor-pointer"
+                                                                    title="Excluir Visita"
+                                                                >
+                                                                    <TrashIcon className="w-4 h-4"/>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Botão para navegar até o cliente na Grade de Ajuste Fino ou Ajustar GPS */}
+                                                        <div className="border-t border-slate-100 dark:border-slate-800 pt-2 space-y-1.5">
                                                             <button
-                                                                onClick={() => handleExcludeVisit(v.Cod_Cliente)}
-                                                                className="self-end bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/80 rounded p-1 transition cursor-pointer"
-                                                                title="Excluir Visita"
+                                                                type="button"
+                                                                onClick={() => handleOpenCoordinateModal(v)}
+                                                                className={`w-full py-1.5 px-3 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs ${
+                                                                    isAnomalousPdv
+                                                                        ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                                                                        : 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800/80'
+                                                                }`}
+                                                                title="Ajustar ou corrigir coordenadas de Latitude e Longitude deste cliente"
                                                             >
-                                                                <TrashIcon className="w-4 h-4"/>
+                                                                <LocationMarkerIcon className="w-3.5 h-3.5" />
+                                                                <span>{isAnomalousPdv ? '⚠️ Corrigir Coordenadas GPS' : 'Ajustar Coordenadas GPS'}</span>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleScrollToPdvInTable(v.Cod_Cliente)}
+                                                                className="w-full py-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/90 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                                                                title="Localizar e rolar até este cliente na Grade de Ajuste Fino"
+                                                            >
+                                                                <ClipboardListIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                                <span>Ver na Tabela</span>
                                                             </button>
                                                         </div>
                                                     </div>
-
-                                                    {/* Botão para navegar até o cliente na Grade de Ajuste Fino ou Ajustar GPS */}
-                                                    <div className="border-t border-slate-100 dark:border-slate-800 pt-2 space-y-1.5">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleOpenCoordinateModal(v)}
-                                                            className={`w-full py-1.5 px-3 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs ${
-                                                                isAnomalousPdv
-                                                                    ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                                                                    : 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800/80'
-                                                            }`}
-                                                            title="Ajustar ou corrigir coordenadas de Latitude e Longitude deste cliente"
-                                                        >
-                                                            <LocationMarkerIcon className="w-3.5 h-3.5" />
-                                                            <span>{isAnomalousPdv ? '⚠️ Corrigir Coordenadas GPS' : 'Ajustar Coordenadas GPS'}</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleScrollToPdvInTable(v.Cod_Cliente)}
-                                                            className="w-full py-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/90 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                                                            title="Localizar e rolar até este cliente na Grade de Ajuste Fino"
-                                                        >
-                                                            <ClipboardListIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                                                            <span>Ver na Tabela</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </Popup>
-                                        </CircleMarker>
+                                                </Popup>
+                                            </CircleMarker>
+                                        </React.Fragment>
                                     );
                                 })}
                             </MapContainer>
@@ -7465,6 +7556,11 @@ export const AjusteRota: React.FC = () => {
                                             <span className="flex items-center space-x-1 text-red-600 font-bold px-1 py-0.5" title="Base de Origem e Destino do Roteiro">
                                                 <span>🏠</span>
                                                 <span>Base</span>
+                                            </span>
+
+                                            <span className="flex items-center space-x-1 text-purple-700 dark:text-purple-300 font-bold px-1 py-0.5" title="Cliente com Particularidade ou Restrição Cadastrada">
+                                                <span className="inline-block w-2.5 h-2.5 rounded-full border-2 border-purple-600 border-dashed bg-purple-100 dark:bg-purple-900/50 shrink-0"/>
+                                                <span>Particularidade</span>
                                             </span>
                                         </div>
                                     </>
