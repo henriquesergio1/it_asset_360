@@ -4447,10 +4447,21 @@ app.get('/api/fuel360/roteiro/sugestoes/pendentes-count', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
+        // Limpeza preventiva de sugestões órfãs (simulações que foram apagadas anteriormente)
+        try {
+            await pool.request().query(`
+                DELETE FROM FuelSimulacaoSugestoes 
+                WHERE ID_RotaHist IS NOT NULL 
+                  AND ID_RotaHist NOT IN (SELECT ID_RotaHist FROM FuelSimulacoesHistorico)
+            `);
+        } catch (cleanErr) {
+            console.warn('[Fuel360 WARN] Falha ao limpar sugestões órfãs:', cleanErr.message);
+        }
         const result = await pool.request().query(`
             SELECT COUNT(*) as count 
-            FROM FuelSimulacaoSugestoes 
-            WHERE Status = 'PENDENTE' OR Status IS NULL
+            FROM FuelSimulacaoSugestoes s
+            INNER JOIN FuelSimulacoesHistorico h ON s.ID_RotaHist = h.ID_RotaHist
+            WHERE s.Status = 'PENDENTE' OR s.Status IS NULL
         `);
         res.json({ count: result.recordset[0]?.count || 0 });
     } catch (err) {
@@ -4484,6 +4495,7 @@ app.delete('/api/fuel360/roteiro/historico/:id', async (req, res) => {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
         const id = req.params.id;
+        await pool.request().input('ID', sql.Int, id).query('DELETE FROM FuelSimulacaoSugestoes WHERE ID_RotaHist = @ID');
         await pool.request().input('ID', sql.Int, id).query('DELETE FROM FuelSimulacoesDiario WHERE ID_RotaHist = @ID');
         await pool.request().input('ID', sql.Int, id).query('DELETE FROM FuelSimulacoesDetalhe WHERE ID_RotaHist = @ID');
         await pool.request().input('ID', sql.Int, id).query('DELETE FROM FuelSimulacoesHistorico WHERE ID_RotaHist = @ID');

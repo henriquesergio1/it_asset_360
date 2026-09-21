@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.194.0',
+    date: 'Hoje',
+    title: 'Fuel360: Exclusão em Cascata e Limpeza de Críticas Órfãs',
+    changes: [
+      'Exclusão em Cascata de Sugestões: Ao apagar uma simulação no histórico, todas as sugestões e críticas de supervisores vinculadas a ela são automaticamente excluídas.',
+      'Limpeza Preventiva de Registros Órfãos: O endpoint de contagem de pendências limpa automaticamente registros órfãos de simulações deletadas anteriormente, zerando notificações fantasmas no banner superior.',
+      'Consistência de Notificações: O banner de críticas de supervisores agora reflete estritamente pendências de simulações existentes e válidas no banco de dados.'
+    ]
+  },
+  {
     version: '3.193.0',
     date: 'Hoje',
     title: 'Fuel360: Ordenamento Espacial por Eixo de Dispersão Territorial (PCA 1D)',
