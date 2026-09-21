@@ -1655,6 +1655,10 @@ export const AjusteRota: React.FC = () => {
     const [isLassoActive, setIsLassoActive] = useState<boolean>(false);
     const [selectedLassoClients, setSelectedLassoClients] = useState<number[]>([]);
 
+    // Gestão de Setores Vagos / Desligados
+    const [assigningVacantSector, setAssigningVacantSector] = useState<number | null>(null);
+    const [selectedNewColabForSector, setSelectedNewColabForSector] = useState<number | ''>('');
+
     // Persistência corporativa dos Parâmetros do Otimizador no SQL Server
     const [savingParamsToDb, setSavingParamsToDb] = useState(false);
     const [paramsSaveFeedback, setParamsSaveFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -2287,6 +2291,13 @@ export const AjusteRota: React.FC = () => {
         });
     }, [colaboradores, teamType]);
 
+    // Identificador de Setor Vago / Desligado (sem colaborador ativo atribuído)
+    const isSectorVacant = useCallback((sellerId?: number | string): boolean => {
+        const sId = Number(sellerId);
+        if (!sId || isNaN(sId)) return false;
+        return !teamColaboradores.some(c => Number(c.CodigoSetor) === sId && c.Ativo);
+    }, [teamColaboradores]);
+
     // Localizador resiliente de colaborador por código de setor e/ou nome, blindando contra colisões entre Vendedores e Promotores
     const getColabBySectorOrName = (sellerId: number, sellerName?: string): Colaborador | undefined => {
         const sId = Number(sellerId);
@@ -2343,24 +2354,30 @@ export const AjusteRota: React.FC = () => {
     const formatSellerDisplayName = (sellerId?: number | string, sellerName?: string): string => {
         const sId = sellerId !== undefined && sellerId !== null ? Number(sellerId) : null;
         let name = (sellerName || '').trim();
+        const isVacant = sId ? isSectorVacant(sId) : false;
         if (!name && sId) {
             const col = getColabBySectorOrName(sId);
-            name = col?.Nome || `Colaborador ${sId}`;
+            name = col?.Nome || (isVacant ? `Setor Vago ${sId}` : `Colaborador ${sId}`);
         }
-        if (!name) return 'Colaborador';
-        // Se já possui o prefixo "101 - ...", retorna direto
+        if (!name) return isVacant ? 'Setor Vago' : 'Colaborador';
+        // Se já possui o prefixo "101 - ...", retorna direto com sufixo [VAGO] se aplicável
         if (/^\d+\s*-\s*/.test(name)) {
+            if (isVacant && !name.toUpperCase().includes('VAGO')) {
+                return `${name} [VAGO]`;
+            }
             return name;
         }
         if (sId && !isNaN(sId) && sId > 0) {
-            return `${sId} - ${name}`;
+            const base = `${sId} - ${name}`;
+            return isVacant && !base.toUpperCase().includes('VAGO') ? `${base} [VAGO]` : base;
         }
         // Tenta buscar o código do setor caso sId não tenha sido fornecido
         const col = getColabBySectorOrName(0, name);
         if (col?.CodigoSetor) {
-            return `${col.CodigoSetor} - ${name}`;
+            const base = `${col.CodigoSetor} - ${name}`;
+            return isVacant && !base.toUpperCase().includes('VAGO') ? `${base} [VAGO]` : base;
         }
-        return name;
+        return isVacant && !name.toUpperCase().includes('VAGO') ? `${name} [VAGO]` : name;
     };
 
     const formatSupervisorDisplayName = (supId?: string | number, supName?: string): string => {
@@ -2598,6 +2615,9 @@ export const AjusteRota: React.FC = () => {
 
     const isSingleSeller = effectiveSellersList.length === 1;
     const isMultipleSellers = effectiveSellersList.length > 1;
+    const vacantSellersList = useMemo(() => {
+        return effectiveSellersList.filter(sId => isSectorVacant(Number(sId)));
+    }, [effectiveSellersList, isSectorVacant]);
 
     // Rotas ajustadas com os filtros interativos aplicados (vendedores da equipe, dias da semana e quinzenas)
     const filteredRoutes = useMemo(() => {
@@ -3501,6 +3521,35 @@ export const AjusteRota: React.FC = () => {
         setIsLassoActive(false);
     };
 
+    // Atribuir um colaborador titular a um setor vago / desligado
+    const handleAssignColabToSector = (sectorId: number, targetColabId: number) => {
+        const targetColab = colaboradores.find(c => c.ID_Colaborador === targetColabId || Number(c.CodigoSetor) === targetColabId);
+        if (!targetColab) {
+            alert("Colaborador selecionado não encontrado.");
+            return;
+        }
+
+        const newSellerName = targetColab.Nome;
+        const newSellerCode = targetColab.CodigoSetor ? Number(targetColab.CodigoSetor) : sectorId;
+
+        let affectedCount = 0;
+        setAdjustedRoutes(prev => prev.map(r => {
+            if (Number(r.Cod_Vend) === Number(sectorId)) {
+                affectedCount++;
+                return {
+                    ...r,
+                    Cod_Vend: newSellerCode,
+                    Nome_Vendedor: newSellerName
+                };
+            }
+            return r;
+        }));
+
+        setAssigningVacantSector(null);
+        setSelectedNewColabForSector('');
+        setCriticaToast(`Sucesso! ${affectedCount} clientes do Setor ${sectorId} foram atribuídos ao titular ${newSellerName}.`);
+    };
+
     // Navegação sob demanda do Mapa para a Grade de Ajuste Fino (acionado pelo botão 'Ver na Tabela' do Popup)
     const handleScrollToPdvInTable = (codCliente: number) => {
         const targetRoute = scopedAdjustedRoutes.find(r => r.Cod_Cliente === codCliente);
@@ -3815,21 +3864,40 @@ export const AjusteRota: React.FC = () => {
         setShowHeatmap(false);
     }, [teamType]);
 
-    // Carregar rotas vigentes para ajuste (carteira integral da equipe)
+    // Carregar rotas vigentes para ajuste (carteira integral da equipe, incluindo setores vagos)
     const handleLoadCurrentRoutes = async () => {
         setLoading(true);
         try {
             // Vendas carrega toda a carteira de clientes do banco pela API
             const data = await getVisitasPrevistas();
             
-            // FILTRAR APENAS COLABORADORES DA EQUIPE SELECIONADA E NORMALIZAR DIA DA SEMANA
+            // FILTRAR REGISTROS VÁLIDOS DE VENDAS E NORMALIZAR DIA DA SEMANA (PRESERVANDO SETORES VAGOS / DESLIGADOS)
+            const vacantSectorsSet = new Set<number>();
+            let vacantClientsCount = 0;
+
             const filteredData = data.filter(v => {
-                let colab = teamColaboradores.find(c => Number(c.CodigoSetor) === Number(v.Cod_Vend));
-                return !!colab;
-            }).map(v => ({
-                ...v,
-                Dia_Semana: normalizeDiaSemana(v.Dia_Semana, v.Data_da_Visita)
-            }));
+                const sId = Number(v.Cod_Vend);
+                return !isNaN(sId) && sId > 0;
+            }).map(v => {
+                const sId = Number(v.Cod_Vend);
+                const colab = teamColaboradores.find(c => Number(c.CodigoSetor) === sId);
+                const isVacant = !colab;
+                if (isVacant) {
+                    vacantSectorsSet.add(sId);
+                    vacantClientsCount++;
+                }
+
+                const cleanName = (v.Nome_Vendedor || '').trim();
+                const nomeFinal = colab 
+                    ? (colab.Nome || cleanName)
+                    : (cleanName && !cleanName.toUpperCase().includes('VAGO') ? `${cleanName} [VAGO]` : (cleanName || `Setor Vago ${sId}`));
+
+                return {
+                    ...v,
+                    Nome_Vendedor: nomeFinal,
+                    Dia_Semana: normalizeDiaSemana(v.Dia_Semana, v.Data_da_Visita)
+                };
+            });
 
             if (filteredData.length === 0) {
                 alert(`Nenhum roteiro vigente de ${teamType} encontrado no sistema.`);
@@ -3841,6 +3909,10 @@ export const AjusteRota: React.FC = () => {
 
             setOriginalRoutes(dataWithCustomCoords);
             setAdjustedRoutes(JSON.parse(JSON.stringify(dataWithCustomCoords)));
+
+            if (vacantSectorsSet.size > 0) {
+                setCriticaToast(`⚠️ Atenção: ${vacantSectorsSet.size} setor(es) vago(s) identificado(s) (${vacantClientsCount} clientes). Você pode atribuir novos titulares ou redistribuir a carteira.`);
+            }
         } catch (e: any) {
             alert("Erro ao carregar rotas: " + e.message);
         } finally {
@@ -5671,6 +5743,11 @@ export const AjusteRota: React.FC = () => {
         const sellerVisits = adjustedRoutes.filter(r => r.Cod_Vend === targetSellerId);
         if (sellerVisits.length === 0) {
             alert(`Nenhuma rota encontrada para o vendedor ID ${targetSellerId}.`);
+            return;
+        }
+
+        if (isSectorVacant(targetSellerId)) {
+            alert(`O Setor ${targetSellerId} está vago e não possui vendedor com base residencial cadastrada.\n\nAtribua um colaborador titular ao setor ou redistribua sua carteira antes de otimizar individualmente.`);
             return;
         }
 
@@ -9071,6 +9148,15 @@ export const AjusteRota: React.FC = () => {
                                                         </button>
                                                     </span>
                                                 )}
+                                                {vacantSellersList.length > 0 && (
+                                                    <span 
+                                                        className="inline-flex items-center gap-1 text-[10px] font-black bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-700 shadow-2xs select-none"
+                                                        title={`${vacantSellersList.length} setor(es) vago(s) identificado(s) no escopo atual. Você pode atribuir novos titulares ou redistribuir a carteira.`}
+                                                    >
+                                                        <span>⚠️</span>
+                                                        <span>{vacantSellersList.length} {vacantSellersList.length === 1 ? 'Setor Vago' : 'Setores Vagos'}</span>
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
 
@@ -9882,18 +9968,24 @@ export const AjusteRota: React.FC = () => {
                                                         }
                                                     });
 
+                                                    const isVacant = isSectorVacant(Number(sellerId));
+
                                                     return (
                                                         <div 
                                                             key={sellerId} 
-                                                            className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-xs transition-all"
+                                                            className={`border rounded-2xl overflow-hidden shadow-xs transition-all ${
+                                                                isVacant 
+                                                                    ? 'border-amber-300 dark:border-amber-700/80 bg-white dark:bg-slate-900 ring-1 ring-amber-400/30' 
+                                                                    : 'border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900'
+                                                            }`}
                                                         >
                                                             {/* Cabeçalho do Vendedor na Sanfona */}
                                                             <div 
                                                                 onClick={() => setOpenSellersMap(prev => ({ ...prev, [sellerId]: !Boolean(prev[sellerId]) }))}
                                                                 className={`flex items-center justify-between gap-3 p-3 sm:p-3.5 cursor-pointer transition-all select-none ${
                                                                     isSellerOpen 
-                                                                        ? 'bg-slate-50/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/80' 
-                                                                        : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
+                                                                        ? (isVacant ? 'bg-amber-50/60 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800/80' : 'bg-slate-50/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/80')
+                                                                        : (isVacant ? 'hover:bg-amber-50/40 dark:hover:bg-amber-950/20' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40')
                                                                 }`}
                                                             >
                                                                 <div className="flex items-center gap-3 shrink-0">
@@ -9902,16 +9994,16 @@ export const AjusteRota: React.FC = () => {
                                                                     </div>
                                                                     <div 
                                                                         className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black text-white shadow-xs shrink-0"
-                                                                        style={{ backgroundColor: sellerColor }}
+                                                                        style={{ backgroundColor: isVacant ? '#d97706' : sellerColor }}
                                                                     >
-                                                                        {sellerDisplayName.slice(0, 2).toUpperCase()}
+                                                                        {isVacant ? '⚠️' : sellerDisplayName.slice(0, 2).toUpperCase()}
                                                                     </div>
                                                                     <div>
                                                                         <div className="flex items-center gap-2">
                                                                             <span className="text-xs font-black text-slate-800 dark:text-white">
                                                                                 {sellerDisplayName}
                                                                             </span>
-                                                                            <span className="text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded font-bold">
+                                                                            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold ${isVacant ? 'text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950' : 'text-slate-400 bg-slate-100 dark:bg-slate-800'}`}>
                                                                                 ID {sellerId}
                                                                             </span>
                                                                         </div>
@@ -9923,6 +10015,17 @@ export const AjusteRota: React.FC = () => {
 
                                                                 {/* Métricas e Ações do Vendedor */}
                                                                 <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                                                                    {/* BADGE DE SETOR VAGO */}
+                                                                    {isVacant && (
+                                                                        <span 
+                                                                            className="bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900/90 text-amber-800 dark:text-amber-200 font-black px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 flex items-center gap-1 shadow-2xs select-none"
+                                                                            title="Este setor não possui colaborador ativo (vendedor desligado ou setor vago)."
+                                                                        >
+                                                                            <span>⚠️</span>
+                                                                            <span>Setor Vago</span>
+                                                                        </span>
+                                                                    )}
+
                                                                     {/* TAG DE ROTA OTIMIZADA */}
                                                                     {isSellerOptimized && (
                                                                         <span 
@@ -10040,6 +10143,38 @@ export const AjusteRota: React.FC = () => {
                                                                             <LocationMarkerIcon className="w-3.5 h-3.5" />
                                                                             <span>{focusedMapSellerId === Number(sellerId) ? 'Focado no Mapa' : 'Ver no Mapa'}</span>
                                                                         </button>
+                                                                    )}
+
+                                                                    {/* AÇÕES DE GESTÃO DO SETOR VAGO */}
+                                                                    {isVacant && (
+                                                                        <>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setAssigningVacantSector(Number(sellerId));
+                                                                                    setSelectedNewColabForSector('');
+                                                                                }}
+                                                                                className="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black px-2.5 py-1 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border border-amber-600 select-none text-[10px]"
+                                                                                title="Atribuir um colaborador titular para assumir a carteira deste setor."
+                                                                            >
+                                                                                <span>👤</span>
+                                                                                <span>Atribuir Titular</span>
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setSourceSectorToExtinguish(String(sellerId));
+                                                                                    setShowExtinguishModal(true);
+                                                                                }}
+                                                                                className="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black px-2.5 py-1 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border border-rose-700 select-none text-[10px]"
+                                                                                title="Redistribuir os clientes deste setor vago entre os outros vendedores da equipe."
+                                                                            >
+                                                                                <span>🔄</span>
+                                                                                <span>Redistribuir / Extinguir</span>
+                                                                            </button>
+                                                                        </>
                                                                     )}
 
                                                                     {/* BOTÃO OTIMIZAR VENDEDOR INDIVIDUAL */}
@@ -11858,6 +11993,87 @@ export const AjusteRota: React.FC = () => {
                                 className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition cursor-pointer shadow-xs"
                             >
                                 Fechar Resumo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE ATRIBUIÇÃO DE TITULAR A SETOR VAGO */}
+            {assigningVacantSector !== null && (
+                <div className="fixed inset-0 z-[9999] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-amber-50/50 dark:bg-amber-950/30">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 flex items-center justify-center text-xl font-bold">
+                                    👤
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white">
+                                        Atribuir Titular ao Setor {assigningVacantSector}
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Preencher vaga vinculando um colaborador à carteira
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setAssigningVacantSector(null)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                            <div className="bg-amber-50 dark:bg-amber-950/40 p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 space-y-1">
+                                <p className="font-bold flex items-center gap-1.5">
+                                    <span>⚠️</span> Setor Vago / Sem Vendedor Ativo Vinculado
+                                </p>
+                                <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
+                                    Este setor possui <strong>{adjustedRoutes.filter(r => Number(r.Cod_Vend) === assigningVacantSector).length} clientes</strong> na carteira atual. Selecione abaixo o colaborador ativo que assumirá a titularidade das rotas deste setor:
+                                </p>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-black uppercase text-slate-600 dark:text-slate-400">
+                                    Colaborador Titular:
+                                </label>
+                                <select
+                                    value={selectedNewColabForSector}
+                                    onChange={(e) => setSelectedNewColabForSector(Number(e.target.value))}
+                                    className="w-full text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl p-3 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500 outline-hidden cursor-pointer"
+                                >
+                                    <option value="">Selecione o colaborador...</option>
+                                    {colaboradores
+                                        .filter(c => c.Ativo && (String(c.Grupo || '').toUpperCase().includes('VEND') || String(c.Grupo || '').toUpperCase().includes('PROM')))
+                                        .sort((a, b) => a.Nome.localeCompare(b.Nome))
+                                        .map(col => (
+                                            <option key={col.ID_Colaborador} value={col.ID_Colaborador}>
+                                                {col.CodigoSetor ? `${col.CodigoSetor} - ` : ''}{col.Nome} {col.Grupo ? `(${col.Grupo})` : ''}
+                                            </option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-end gap-2.5">
+                            <button
+                                type="button"
+                                onClick={() => setAssigningVacantSector(null)}
+                                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                disabled={!selectedNewColabForSector}
+                                onClick={() => handleAssignColabToSector(assigningVacantSector, Number(selectedNewColabForSector))}
+                                className="px-5 py-2 text-xs font-black text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                            >
+                                <span>✓</span>
+                                <span>Confirmar Atribuição</span>
                             </button>
                         </div>
                     </div>

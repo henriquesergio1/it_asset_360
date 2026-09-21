@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.206.0',
+    date: 'Hoje',
+    title: 'Fuel360: Gestão e Atribuição de Setores de Venda Vagos / Desligados',
+    changes: [
+      'Carregamento de Setores Vagos: Ao carregar a rota atual, o sistema agora preserva e carrega integralmente os setores de venda que não possuem vendedor ativo vinculado (desligados, vagos ou em transição).',
+      'Identificação Visual e Alertas: Setores vagos são sinalizados com crachá visual [VAGO / SEM TITULAR] nos filtros, no mapa e nas sanfonas da grade de rotas, acompanhados de um resumo estatístico para o supervisor.',
+      'Atribuição Direta ou Redistribuição: Oferece opções no card do setor vago para preenchê-lo vinculando um novo colaborador titular a toda a carteira ou redistribuir seus clientes entre os vendedores ativos via Otimizador / Extinção de Setor.'
+    ]
+  },
+  {
     version: '3.205.0',
     date: 'Hoje',
     title: 'Fuel360: VRPTW com Janelas de Horário, Simulador What-If e Laço no Mapa',
