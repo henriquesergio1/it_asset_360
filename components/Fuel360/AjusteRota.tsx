@@ -1580,6 +1580,7 @@ export const AjusteRota: React.FC = () => {
     // Controle de Exibição da Grade de Ajuste Fino em Sanfona por Dia (inicia fechado por padrão)
     const [tableViewMode, setTableViewMode] = useState<'accordion' | 'flat'>('accordion');
     const [openDaysMap, setOpenDaysMap] = useState<Record<string, boolean>>({});
+    const [openSellersMap, setOpenSellersMap] = useState<Record<string, boolean>>({});
 
     // Seleção Múltipla e Transferência em Massa de Clientes Sem Atendimento
     const [selectedUnallocatedClients, setSelectedUnallocatedClients] = useState<Set<number>>(new Set());
@@ -2343,6 +2344,13 @@ export const AjusteRota: React.FC = () => {
         return scopedAdjustedRoutes;
     }, [scopedAdjustedRoutes, selectedTeamSellers, selectedPromoter]);
 
+    const effectiveSellersList = useMemo(() => {
+        return Array.from(new Set(effectiveScopedRoutes.map(r => String(r.Cod_Vend))));
+    }, [effectiveScopedRoutes]);
+
+    const isSingleSeller = effectiveSellersList.length === 1;
+    const isMultipleSellers = effectiveSellersList.length > 1;
+
     // Rotas ajustadas com os filtros interativos aplicados (vendedores da equipe, dias da semana e quinzenas)
     const filteredRoutes = useMemo(() => {
         return effectiveScopedRoutes.filter(v => {
@@ -2590,24 +2598,30 @@ export const AjusteRota: React.FC = () => {
 
     // Funções explícitas e determinísticas para expandir e recolher todas as sanfonas da grade
     const handleExpandAllDays = () => {
+        setOpenSellersMap(prev => {
+            const allOpen: Record<string, boolean> = { ...prev };
+            effectiveSellersList.forEach(s => { allOpen[s] = true; });
+            return allOpen;
+        });
         setOpenDaysMap(prev => {
             const allOpen: Record<string, boolean> = { ...prev };
-            visibleDays.forEach(d => { allOpen[d] = true; });
-            WEEKDAYS.forEach(d => { allOpen[d] = true; });
+            visibleDays.forEach(d => { 
+                allOpen[d] = true; 
+                effectiveSellersList.forEach(s => { allOpen[`${s}-${d}`] = true; });
+            });
+            WEEKDAYS.forEach(d => { 
+                allOpen[d] = true; 
+                effectiveSellersList.forEach(s => { allOpen[`${s}-${d}`] = true; });
+            });
             allOpen['SEM ATENDIMENTO'] = true;
+            effectiveSellersList.forEach(s => { allOpen[`${s}-SEM ATENDIMENTO`] = true; });
             return allOpen;
         });
     };
 
     const handleCollapseAllDays = () => {
-        setOpenDaysMap(prev => {
-            const allClosed: Record<string, boolean> = {};
-            Object.keys(prev).forEach(k => { allClosed[k] = false; });
-            visibleDays.forEach(d => { allClosed[d] = false; });
-            WEEKDAYS.forEach(d => { allClosed[d] = false; });
-            allClosed['SEM ATENDIMENTO'] = false;
-            return allClosed;
-        });
+        setOpenSellersMap({});
+        setOpenDaysMap({});
     };
 
     // Resumo Operacional Consolidado de KM, Tempo e Balanceamento Quinzena a Quinzena
@@ -2677,6 +2691,25 @@ export const AjusteRota: React.FC = () => {
         let totalServiceTime13 = 0;
         let totalTravelTime24 = 0;
         let totalServiceTime24 = 0;
+
+        const sellerDayMap: Record<string, {
+            day: string;
+            pdvs13: number;
+            km13: number;
+            time13: number;
+            travelTime13: number;
+            serviceTime13: number;
+            pdvs24: number;
+            km24: number;
+            time24: number;
+            travelTime24: number;
+            serviceTime24: number;
+            totalKm: number;
+            totalTime: number;
+            maxSellerTime13?: number;
+            maxSellerTime24?: number;
+            isOverloaded?: boolean;
+        }> = {};
 
         WEEKDAYS.forEach(day => {
             const dayVisits = routesToAnalyze.filter(r => r.Dia_Semana === day);
@@ -2756,9 +2789,29 @@ export const AjusteRota: React.FC = () => {
                 if (sellerTotalTime24 > maxSellerTime24) maxSellerTime24 = sellerTotalTime24;
 
                 const sellerMaxTime = Math.max(sellerTotalTime13, sellerTotalTime24);
-                if (optLimitHours && sellerMaxTime > dayLimitMin && (sellerMaxTime - dayLimitMin) >= 60) {
+                const isSellerDayOverloaded = optLimitHours ? (sellerMaxTime > dayLimitMin && (sellerMaxTime - dayLimitMin) >= 60) : false;
+                if (isSellerDayOverloaded) {
                     anySellerOverloaded = true;
                 }
+
+                sellerDayMap[`${sellerId}-${day}`] = {
+                    day,
+                    pdvs13: v13.length,
+                    km13: metrics13.totalKm,
+                    time13: sellerTotalTime13,
+                    travelTime13: metrics13.travelMinutes,
+                    serviceTime13: srv13,
+                    pdvs24: v24.length,
+                    km24: metrics24.totalKm,
+                    time24: sellerTotalTime24,
+                    travelTime24: metrics24.travelMinutes,
+                    serviceTime24: srv24,
+                    totalKm: Math.round((metrics13.totalKm + metrics24.totalKm) * 10) / 10,
+                    totalTime: sellerTotalTime13 + sellerTotalTime24,
+                    maxSellerTime13: sellerTotalTime13,
+                    maxSellerTime24: sellerTotalTime24,
+                    isOverloaded: isSellerDayOverloaded
+                };
             });
 
             dayKm13 = Math.round(dayKm13 * 10) / 10;
@@ -2833,6 +2886,7 @@ export const AjusteRota: React.FC = () => {
             quinzenal24Count,
             daysMetrics,
             dayMap,
+            sellerDayMap,
             totalPdvs13,
             totalPdvs24,
             totalVisitsMonth,
@@ -3882,6 +3936,13 @@ export const AjusteRota: React.FC = () => {
                 accumulatedAssigned += quota;
             }
 
+            // Envelope de Cotas Rígidas: faixa estrita de clientes por dia ativo (tolerância máxima ±2 PDVs da cota diária)
+            // Impede anomalias como esvaziamento (15 PDVs) ou inchaço (33 PDVs)
+            const avgClientsPerActiveDay = uniqueClients.length / activeDays.length;
+            const quotaTolerance = Math.max(1, Math.min(2, Math.round(avgClientsPerActiveDay * 0.12)));
+            const minAllowedClientsPerDay = Math.max(1, Math.floor(avgClientsPerActiveDay - quotaTolerance));
+            const maxAllowedClientsPerDay = Math.ceil(avgClientsPerActiveDay + quotaTolerance);
+
             // Distância média dos clientes à base do vendedor para estimativa viária realista
             let avgDistFromBaseKm = 15;
             if (validCoords.length > 0 && baseLat && baseLng) {
@@ -4160,7 +4221,7 @@ export const AjusteRota: React.FC = () => {
                     const diff1 = dayAssignedClients[d1].length - dayQuotas[d1];
                     const diff2 = dayAssignedClients[d2].length - dayQuotas[d2];
 
-                    if (diff1 > 0 && diff2 < 0) {
+                    if (diff1 > 0 && diff2 < 0 && dayAssignedClients[d1].length > minAllowedClientsPerDay && dayAssignedClients[d2].length < maxAllowedClientsPerDay) {
                         // Encontra o cliente em d1 que está MAIS PRÓXIMO da média de d2 (borda contígua real)
                         let bestCandidateIdx = -1;
                         let minDistToD2 = Infinity;
@@ -4183,7 +4244,7 @@ export const AjusteRota: React.FC = () => {
                             const [moved] = dayAssignedClients[d1].splice(bestCandidateIdx, 1);
                             dayAssignedClients[d2].unshift(moved);
                         }
-                    } else if (diff2 > 0 && diff1 < 0) {
+                    } else if (diff2 > 0 && diff1 < 0 && dayAssignedClients[d2].length > minAllowedClientsPerDay && dayAssignedClients[d1].length < maxAllowedClientsPerDay) {
                         // Encontra o cliente em d2 que está MAIS PRÓXIMO da média de d1 (borda contígua real)
                         let bestCandidateIdx = -1;
                         let minDistToD1 = Infinity;
@@ -4391,7 +4452,7 @@ export const AjusteRota: React.FC = () => {
 
             // 2.5.4. Nivelamento de Carga Horária e Jornada Diária (Workload Balancing)
             // Harmoniza a jornada total (Trânsito + Atendimento) entre os dias ativos,
-            // impedindo disparidades extremas (ex: dias com 10h+ ao lado de dias com 5h).
+            // impedindo disparidades extremas e respeitando rigorosamente os limites de cota [minAllowedClientsPerDay, maxAllowedClientsPerDay]
             if (K > 1 && optBalanceWorkload) {
                 const isDayAllowedForClient = (client: typeof uniqueClients[0], dayName: string) => {
                     const restr = clienteRestricoesMap.get(client.sampleVisit.Cod_Cliente);
@@ -4405,70 +4466,67 @@ export const AjusteRota: React.FC = () => {
                     return clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
                 };
 
-                const getEstimatedDayWorkload = (cList: typeof uniqueClients) => {
-                    const coords = cList.filter(c => c.lat && c.lng).map(c => ({ lat: c.lat, lng: c.lng }));
-                    const travelMins = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, coords, optEndAtLastClient).travelMinutes;
+                const getOrderedDayMetrics = (cList: typeof uniqueClients) => {
+                    if (cList.length === 0) return { travelMins: 0, serviceMins: 0, totalMins: 0, totalKm: 0 };
+                    const valid = cList.filter(c => c.lat && c.lng);
+                    if (valid.length === 0) {
+                        const srv = cList.reduce((sum, c) => sum + (c.tipo === 'SEMANAL' ? getClientServiceTime(c.sampleVisit) : getClientServiceTime(c.sampleVisit) * 0.5), 0);
+                        return { travelMins: 0, serviceMins: srv, totalMins: srv, totalKm: 0 };
+                    }
+                    const stops = valid.map(c => ({ lat: c.lat, lng: c.lng }));
+                    const orderedStops = optimizeDayCircuit2Opt({ lat: baseLat, lng: baseLng }, stops, optEndAtLastClient);
+                    const circuit = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, orderedStops, optEndAtLastClient);
                     const serviceMins = cList.reduce((sum, c) => {
                         const srv = getClientServiceTime(c.sampleVisit);
                         return sum + (c.tipo === 'SEMANAL' ? srv : srv * 0.5);
                     }, 0);
-                    return travelMins + serviceMins;
+                    return {
+                        travelMins: circuit.travelMinutes,
+                        serviceMins,
+                        totalMins: circuit.travelMinutes + serviceMins,
+                        totalKm: circuit.totalKm
+                    };
                 };
 
-                for (let wlIter = 0; wlIter < 6; wlIter++) {
-                    const dayWorkloads = dayAssignedClients.map(cList => getEstimatedDayWorkload(cList));
+                for (let wlIter = 0; wlIter < 5; wlIter++) {
+                    const dayMetricsList = dayAssignedClients.map(cList => getOrderedDayMetrics(cList));
                     let maxDayIdx = 0;
                     let minDayIdx = 0;
                     for (let d = 1; d < K; d++) {
-                        if (dayWorkloads[d] > dayWorkloads[maxDayIdx]) maxDayIdx = d;
-                        if (dayWorkloads[d] < dayWorkloads[minDayIdx]) minDayIdx = d;
+                        if (dayMetricsList[d].totalMins > dayMetricsList[maxDayIdx].totalMins) maxDayIdx = d;
+                        if (dayMetricsList[d].totalMins < dayMetricsList[minDayIdx].totalMins) minDayIdx = d;
                     }
 
-                    const workloadGap = dayWorkloads[maxDayIdx] - dayWorkloads[minDayIdx];
-                    if (workloadGap <= 60 || dayAssignedClients[maxDayIdx].length <= 2) break;
+                    const workloadGap = dayMetricsList[maxDayIdx].totalMins - dayMetricsList[minDayIdx].totalMins;
+                    if (workloadGap <= 45 || dayAssignedClients[maxDayIdx].length <= minAllowedClientsPerDay) break;
 
                     const clientsHigh = dayAssignedClients[maxDayIdx];
                     const clientsLow = dayAssignedClients[minDayIdx];
                     const dayNameLow = activeDays[minDayIdx];
                     const dayNameHigh = activeDays[maxDayIdx];
 
-                    // Centróides para não permitir dispersão geográfica absurda
+                    // Centróides
                     const lowCoords = clientsLow.filter(c => c.lat && c.lng);
                     const centerLowLat = lowCoords.length > 0 ? lowCoords.reduce((s, c) => s + c.lat, 0) / lowCoords.length : baseLat;
                     const centerLowLng = lowCoords.length > 0 ? lowCoords.reduce((s, c) => s + c.lng, 0) / lowCoords.length : baseLng;
 
+                    const highCoords = clientsHigh.filter(c => c.lat && c.lng);
+                    const centerHighLat = highCoords.length > 0 ? highCoords.reduce((s, c) => s + c.lat, 0) / highCoords.length : baseLat;
+                    const centerHighLng = highCoords.length > 0 ? highCoords.reduce((s, c) => s + c.lng, 0) / highCoords.length : baseLng;
+
                     let bestSwap: { idxHigh: number; idxLow: number; improvement: number } | null = null;
                     let bestMove: { idxHigh: number; improvement: number } | null = null;
 
-                    // 1. Tentar transferência direta (se o dia de alta tiver mais clientes que o de baixa)
-                    if (clientsHigh.length > clientsLow.length) {
-                        for (let iH = clientsHigh.length - 1; iH >= 0; iH--) {
-                            const cH = clientsHigh[iH];
-                            if (!isDayAllowedForClient(cH, dayNameLow) || isCitySatellite(cH)) continue;
-
-                            // Verificar se o cliente não fica excessivamente isolado do dia de destino (máximo 25 km ou próximo ao centro)
-                            const distToCenterLow = calcDist(cH.lat, cH.lng, centerLowLat, centerLowLng);
-                            if (distToCenterLow > 25 && lowCoords.length > 0) continue;
-
-                            const cHTime = cH.tipo === 'SEMANAL' ? getClientServiceTime(cH.sampleVisit) : getClientServiceTime(cH.sampleVisit) * 0.5;
-                            const newHighTime = dayWorkloads[maxDayIdx] - cHTime;
-                            const newLowTime = dayWorkloads[minDayIdx] + cHTime;
-                            const newGap = Math.abs(newHighTime - newLowTime);
-
-                            if (newGap < workloadGap - 15) {
-                                const improvement = workloadGap - newGap;
-                                if (!bestMove || improvement > bestMove.improvement) {
-                                    bestMove = { idxHigh: iH, improvement };
-                                }
-                            }
-                        }
-                    }
-
-                    // 2. Tentar permuta (swap) de clientes entre os dias para nivelar tempo
+                    // 1. Tentar permuta (swap 1-para-1) preservando a contagem exata de clientes
                     for (let iH = 0; iH < clientsHigh.length; iH++) {
                         const cH = clientsHigh[iH];
                         if (!isDayAllowedForClient(cH, dayNameLow) || isCitySatellite(cH)) continue;
                         const srvH = cH.tipo === 'SEMANAL' ? getClientServiceTime(cH.sampleVisit) : getClientServiceTime(cH.sampleVisit) * 0.5;
+
+                        // cH não pode estar longe demais do centro de Low
+                        const distH_to_Low = calcDist(cH.lat, cH.lng, centerLowLat, centerLowLng);
+                        const distH_to_High = calcDist(cH.lat, cH.lng, centerHighLat, centerHighLng);
+                        if (distH_to_Low > distH_to_High + 5.0) continue;
 
                         for (let iL = 0; iL < clientsLow.length; iL++) {
                             const cL = clientsLow[iL];
@@ -4477,9 +4535,13 @@ export const AjusteRota: React.FC = () => {
                             const srvL = cL.tipo === 'SEMANAL' ? getClientServiceTime(cL.sampleVisit) : getClientServiceTime(cL.sampleVisit) * 0.5;
 
                             if (srvH > srvL) {
+                                const distL_to_High = calcDist(cL.lat, cL.lng, centerHighLat, centerHighLng);
+                                const distL_to_Low = calcDist(cL.lat, cL.lng, centerLowLat, centerLowLng);
+                                if (distL_to_High > distL_to_Low + 5.0) continue;
+
                                 const diffSrv = srvH - srvL;
-                                const newHighTime = dayWorkloads[maxDayIdx] - diffSrv;
-                                const newLowTime = dayWorkloads[minDayIdx] + diffSrv;
+                                const newHighTime = dayMetricsList[maxDayIdx].totalMins - diffSrv;
+                                const newLowTime = dayMetricsList[minDayIdx].totalMins + diffSrv;
                                 const newGap = Math.abs(newHighTime - newLowTime);
 
                                 if (newGap < workloadGap - 15) {
@@ -4487,6 +4549,31 @@ export const AjusteRota: React.FC = () => {
                                     if (!bestSwap || improvement > bestSwap.improvement) {
                                         bestSwap = { idxHigh: iH, idxLow: iL, improvement };
                                     }
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. Tentar transferência direta SOMENTE se ambos os dias estiverem dentro da faixa [minAllowed, maxAllowed]
+                    if (clientsHigh.length > minAllowedClientsPerDay && clientsLow.length < maxAllowedClientsPerDay) {
+                        for (let iH = clientsHigh.length - 1; iH >= 0; iH--) {
+                            const cH = clientsHigh[iH];
+                            if (!isDayAllowedForClient(cH, dayNameLow) || isCitySatellite(cH)) continue;
+
+                            const distH_to_Low = calcDist(cH.lat, cH.lng, centerLowLat, centerLowLng);
+                            const distH_to_High = calcDist(cH.lat, cH.lng, centerHighLat, centerHighLng);
+                            // O cliente precisa estar geograficamente na zona de transição entre os dois dias (não no extremo oposto)
+                            if (distH_to_Low > distH_to_High + 3.0) continue;
+
+                            const cHTime = cH.tipo === 'SEMANAL' ? getClientServiceTime(cH.sampleVisit) : getClientServiceTime(cH.sampleVisit) * 0.5;
+                            const newHighTime = dayMetricsList[maxDayIdx].totalMins - cHTime;
+                            const newLowTime = dayMetricsList[minDayIdx].totalMins + cHTime;
+                            const newGap = Math.abs(newHighTime - newLowTime);
+
+                            if (newGap < workloadGap - 15) {
+                                const improvement = workloadGap - newGap;
+                                if (!bestMove || improvement > bestMove.improvement) {
+                                    bestMove = { idxHigh: iH, improvement };
                                 }
                             }
                         }
@@ -8137,13 +8224,13 @@ export const AjusteRota: React.FC = () => {
                                                 onClick={handleOptimizeSimulate}
                                                 disabled={loading || effectiveScopedRoutes.length === 0}
                                                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-3.5 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 h-[32px]"
-                                                title={selectedTeamSellers.size === 1 || selectedPromoter !== 'ALL'
+                                                title={isSingleSeller
                                                     ? `Executar algoritmo de otimização de rotas apenas para o vendedor selecionado (${effectiveScopedRoutes.length} PDVs)`
-                                                    : `Executar algoritmo de otimização de rotas para o escopo selecionado (${effectiveScopedRoutes.length} PDVs)`
+                                                    : `Executar algoritmo de otimização de rotas para ${effectiveSellersList.length > 1 ? `${effectiveSellersList.length} vendedores selecionados` : 'os vendedores do escopo'} (${effectiveScopedRoutes.length} PDVs)`
                                                 }
                                             >
                                                 <RefreshIcon className="w-3.5 h-3.5 mr-1.5" />
-                                                <span>{selectedTeamSellers.size === 1 || selectedPromoter !== 'ALL' ? 'Otimizar Vendedor' : 'Otimizar Rotas'}</span>
+                                                <span>{isSingleSeller ? 'Otimizar Vendedor' : (effectiveSellersList.length > 1 ? `Otimizar ${effectiveSellersList.length} Vendedores` : 'Otimizar Rotas')}</span>
                                             </button>
                                             <button
                                                 type="button"
@@ -8158,13 +8245,13 @@ export const AjusteRota: React.FC = () => {
                                                 onClick={handleOpenSaveModal}
                                                 disabled={saving || effectiveScopedRoutes.length === 0}
                                                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition h-[32px] disabled:opacity-50 cursor-pointer"
-                                                title={selectedTeamSellers.size === 1 || selectedPromoter !== 'ALL'
+                                                title={isSingleSeller
                                                     ? `Salvar simulação contendo apenas o vendedor selecionado (${effectiveScopedRoutes.length} PDVs)`
-                                                    : `Salvar simulação contendo os ${effectiveScopedRoutes.length} PDVs do escopo atual`
+                                                    : `Salvar simulação contendo os ${effectiveScopedRoutes.length} PDVs dos ${effectiveSellersList.length > 1 ? `${effectiveSellersList.length} vendedores selecionados` : 'vendedores da equipe'}`
                                                 }
                                             >
                                                 {saving ? <SpinnerIcon className="w-3.5 h-3.5 animate-spin mr-1.5"/> : <CheckCircleIcon className="w-3.5 h-3.5 mr-1.5"/>}
-                                                <span>{selectedTeamSellers.size === 1 || selectedPromoter !== 'ALL' ? 'Salvar Simulação (Vendedor)' : 'Salvar Simulação'}</span>
+                                                <span>{isSingleSeller ? 'Salvar Simulação (Vendedor)' : (effectiveSellersList.length > 1 ? `Salvar Simulação (${effectiveSellersList.length} Vendedores)` : 'Salvar Simulação')}</span>
                                             </button>
                                         </div>
                                     </div>
@@ -8356,28 +8443,17 @@ export const AjusteRota: React.FC = () => {
                             </div>
 
                             {tableViewMode === 'accordion' ? (
-                                /* VISÃO AGRUPADA POR DIA EM SANFONA */
-                                <div className="flex-1 overflow-auto custom-scrollbar space-y-3 pr-1">
-                                    {visibleDays.map(day => {
-                                        const rawDayRoutes = sortedRoutes.filter(r => r.Dia_Semana === day);
-                                        const dayRoutes = (day !== 'SEM ATENDIMENTO' && (sortField === 'Cod_Cliente' || sortField === 'Sequencia'))
-                                            ? [...rawDayRoutes].sort((a, b) => {
-                                                const seqA = visitOrderMap.get(`${a.Cod_Vend}-${a.Dia_Semana}-${a.Cod_Cliente}`);
-                                                const seqB = visitOrderMap.get(`${b.Cod_Vend}-${b.Dia_Semana}-${b.Cod_Cliente}`);
-                                                const orderA = selectedQuinzenaFilter === '2_4' ? (seqA?.order24 ?? 999) : (seqA?.order13 ?? seqA?.order24 ?? 999);
-                                                const orderB = selectedQuinzenaFilter === '2_4' ? (seqB?.order24 ?? 999) : (seqB?.order13 ?? seqB?.order24 ?? 999);
-                                                if (orderA !== orderB) return sortDirection === 'asc' ? (orderA - orderB) : (orderB - orderA);
-                                                return Number(a.Cod_Cliente) - Number(b.Cod_Cliente);
-                                            })
-                                            : rawDayRoutes;
-                                        const isOpen = Boolean(openDaysMap[day]);
+                                /* VISÃO AGRUPADA POR DIA EM SANFONA (COM SUPORTE A MÚLTIPLOS VENDEDORES) */
+                                (() => {
+                                    const renderDayAccordionCard = (day: string, dayRoutes: VisitaPrevista[], sellerId?: string) => {
+                                        const isOpen = sellerId ? Boolean(openDaysMap[`${sellerId}-${day}`]) : Boolean(openDaysMap[day]);
                                         const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: day, bg: 'bg-indigo-600' };
-                                        const dayMetrics = operationalSummary.dayMap[day];
+                                        const dayMetrics = sellerId ? operationalSummary.sellerDayMap?.[`${sellerId}-${day}`] : operationalSummary.dayMap[day];
                                         const isUnallocated = day === 'SEM ATENDIMENTO';
                                         const dayOverload = (!isUnallocated && dayMetrics && optLimitHours) ? (() => {
                                             const activeDaysSet = new Set(optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
                                             const isInactiveDay = !activeDaysSet.has(day);
-                                            const isSingleSellerView = (selectedTeamSellers.size === 1) || (selectedPromoter !== 'ALL');
+                                            const isSingleSellerView = sellerId !== undefined || (selectedTeamSellers.size === 1) || (selectedPromoter !== 'ALL');
                                             const maxDayTime = isSingleSellerView
                                                 ? Math.max(dayMetrics.time13, dayMetrics.time24)
                                                 : Math.max(dayMetrics.maxSellerTime13 || 0, dayMetrics.maxSellerTime24 || 0);
@@ -8416,9 +8492,17 @@ export const AjusteRota: React.FC = () => {
                                             };
                                         })() : null;
 
+                                        const toggleOpen = () => {
+                                            if (sellerId) {
+                                                setOpenDaysMap(prev => ({ ...prev, [`${sellerId}-${day}`]: !Boolean(prev[`${sellerId}-${day}`]) }));
+                                            } else {
+                                                setOpenDaysMap(prev => ({ ...prev, [day]: !Boolean(prev[day]) }));
+                                            }
+                                        };
+
                                         return (
                                             <div 
-                                                key={day} 
+                                                key={sellerId ? `${sellerId}-${day}` : day} 
                                                 className={`border rounded-2xl overflow-hidden shadow-2xs transition-all ${
                                                     isUnallocated 
                                                         ? 'border-red-300 dark:border-red-800/80 bg-red-50/20 dark:bg-red-950/10' 
@@ -8427,7 +8511,7 @@ export const AjusteRota: React.FC = () => {
                                             >
                                                 {/* Cabeçalho da Sanfona do Dia */}
                                                 <div 
-                                                    onClick={() => setOpenDaysMap(prev => ({ ...prev, [day]: !Boolean(prev[day]) }))}
+                                                    onClick={toggleOpen}
                                                     className={`flex items-center justify-between gap-2.5 sm:gap-4 p-2.5 sm:p-3 cursor-pointer transition-all select-none overflow-x-auto custom-scrollbar ${
                                                         isOpen 
                                                             ? (isUnallocated 
@@ -8653,19 +8737,129 @@ export const AjusteRota: React.FC = () => {
                                                 )}
                                             </div>
                                         );
-                                    })}
-                                    {sortedRoutes.length > 0 && (
-                                        <div className="p-2.5 text-center text-slate-400 dark:text-slate-500 text-[10px] bg-slate-50 dark:bg-slate-800/60 font-medium flex items-center justify-between px-4 border border-slate-100 dark:border-slate-800 rounded-xl">
-                                            <span>
-                                                Exibindo {sortedRoutes.length} PDVs organizados por dia
-                                                {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
-                                            </span>
-                                            <span className="font-bold text-slate-500 dark:text-slate-400">
-                                                Total no Escopo: {effectiveScopedRoutes.length} PDVs (~{operationalSummary.totalVisitsMonth} visitas/mês)
-                                            </span>
+                                    };
+
+                                    return (
+                                        <div className="flex-1 overflow-auto custom-scrollbar space-y-3 pr-1">
+                                            {isMultipleSellers ? (
+                                                /* MÚLTIPLOS VENDEDORES: AGRUPADOS EM SANFONAS INDIVIDUAIS POR VENDEDOR */
+                                                effectiveSellersList.map(sellerId => {
+                                                    const sellerVisits = sortedRoutes.filter(r => String(r.Cod_Vend) === sellerId);
+                                                    const sellerColab = getColabBySectorOrName(Number(sellerId), sellerVisits[0]?.Nome_Vendedor);
+                                                    const sellerDisplayName = formatSellerDisplayName(Number(sellerId), sellerColab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`));
+                                                    const sellerColor = promoterColorMap.get(String(sellerId)) || '#4f46e5';
+                                                    const isSellerOpen = Boolean(openSellersMap[sellerId]);
+                                                    const hasOverloadedDay = visibleDays.some(d => operationalSummary.sellerDayMap?.[`${sellerId}-${d}`]?.isOverloaded);
+                                                    const sellerTotalKm = visibleDays.reduce((sum, d) => sum + (operationalSummary.sellerDayMap?.[`${sellerId}-${d}`]?.totalKm || 0), 0);
+
+                                                    return (
+                                                        <div 
+                                                            key={sellerId} 
+                                                            className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-xs transition-all"
+                                                        >
+                                                            {/* Cabeçalho do Vendedor na Sanfona */}
+                                                            <div 
+                                                                onClick={() => setOpenSellersMap(prev => ({ ...prev, [sellerId]: !Boolean(prev[sellerId]) }))}
+                                                                className={`flex items-center justify-between gap-3 p-3 sm:p-3.5 cursor-pointer transition-all select-none ${
+                                                                    isSellerOpen 
+                                                                        ? 'bg-slate-50/90 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/80' 
+                                                                        : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center gap-3 shrink-0">
+                                                                    <div className={`p-1.5 rounded-xl transition-transform duration-200 ${isSellerOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60' : 'text-slate-400 bg-slate-100 dark:bg-slate-800'}`}>
+                                                                        <ChevronDownIcon className="w-4 h-4" />
+                                                                    </div>
+                                                                    <div 
+                                                                        className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black text-white shadow-xs shrink-0"
+                                                                        style={{ backgroundColor: sellerColor }}
+                                                                    >
+                                                                        {sellerDisplayName.slice(0, 2).toUpperCase()}
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-xs font-black text-slate-800 dark:text-white">
+                                                                                {sellerDisplayName}
+                                                                            </span>
+                                                                            <span className="text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded font-bold">
+                                                                                ID {sellerId}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                                                                            {sellerVisits.length} PDVs no escopo
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Métricas do Vendedor */}
+                                                                <div className="flex items-center gap-2 text-[10px]">
+                                                                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold px-2.5 py-1 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                                                                        🛣️ {Math.round(sellerTotalKm * 10) / 10} KM total
+                                                                    </span>
+                                                                    <span className="bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-black px-2.5 py-1 rounded-xl border border-indigo-200/60 dark:border-indigo-800/60">
+                                                                        📍 {sellerVisits.length} PDVs
+                                                                    </span>
+                                                                    {hasOverloadedDay && (
+                                                                        <span className="bg-red-100 dark:bg-red-950/70 text-red-700 dark:text-red-300 font-black px-2 py-1 rounded-xl border border-red-300 dark:border-red-800 animate-pulse">
+                                                                            🚨 Sobrecarga
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Dias da Semana do Vendedor (Sanfona Aninhada) */}
+                                                            {isSellerOpen && (
+                                                                <div className="p-3 bg-slate-50/40 dark:bg-slate-900/40 space-y-2.5">
+                                                                    {visibleDays.map(day => {
+                                                                        const rawDayRoutes = sellerVisits.filter(r => r.Dia_Semana === day);
+                                                                        const dayRoutes = (day !== 'SEM ATENDIMENTO' && (sortField === 'Cod_Cliente' || sortField === 'Sequencia'))
+                                                                            ? [...rawDayRoutes].sort((a, b) => {
+                                                                                const seqA = visitOrderMap.get(`${a.Cod_Vend}-${a.Dia_Semana}-${a.Cod_Cliente}`);
+                                                                                const seqB = visitOrderMap.get(`${b.Cod_Vend}-${b.Dia_Semana}-${b.Cod_Cliente}`);
+                                                                                const orderA = selectedQuinzenaFilter === '2_4' ? (seqA?.order24 ?? 999) : (seqA?.order13 ?? seqA?.order24 ?? 999);
+                                                                                const orderB = selectedQuinzenaFilter === '2_4' ? (seqB?.order24 ?? 999) : (seqB?.order13 ?? seqB?.order24 ?? 999);
+                                                                                if (orderA !== orderB) return sortDirection === 'asc' ? (orderA - orderB) : (orderB - orderA);
+                                                                                return Number(a.Cod_Cliente) - Number(b.Cod_Cliente);
+                                                                            })
+                                                                            : rawDayRoutes;
+                                                                        return renderDayAccordionCard(day, dayRoutes, sellerId);
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                /* VENDEDOR ÚNICO: RENDERIZA DIRETAMENTE OS DIAS DA SEMANA */
+                                                visibleDays.map(day => {
+                                                    const rawDayRoutes = sortedRoutes.filter(r => r.Dia_Semana === day);
+                                                    const dayRoutes = (day !== 'SEM ATENDIMENTO' && (sortField === 'Cod_Cliente' || sortField === 'Sequencia'))
+                                                        ? [...rawDayRoutes].sort((a, b) => {
+                                                            const seqA = visitOrderMap.get(`${a.Cod_Vend}-${a.Dia_Semana}-${a.Cod_Cliente}`);
+                                                            const seqB = visitOrderMap.get(`${b.Cod_Vend}-${b.Dia_Semana}-${b.Cod_Cliente}`);
+                                                            const orderA = selectedQuinzenaFilter === '2_4' ? (seqA?.order24 ?? 999) : (seqA?.order13 ?? seqA?.order24 ?? 999);
+                                                            const orderB = selectedQuinzenaFilter === '2_4' ? (seqB?.order24 ?? 999) : (seqB?.order13 ?? seqB?.order24 ?? 999);
+                                                            if (orderA !== orderB) return sortDirection === 'asc' ? (orderA - orderB) : (orderB - orderA);
+                                                            return Number(a.Cod_Cliente) - Number(b.Cod_Cliente);
+                                                        })
+                                                        : rawDayRoutes;
+                                                    return renderDayAccordionCard(day, dayRoutes);
+                                                })
+                                            )}
+                                            {sortedRoutes.length > 0 && (
+                                                <div className="p-2.5 text-center text-slate-400 dark:text-slate-500 text-[10px] bg-slate-50 dark:bg-slate-800/60 font-medium flex items-center justify-between px-4 border border-slate-100 dark:border-slate-800 rounded-xl">
+                                                    <span>
+                                                        Exibindo {sortedRoutes.length} PDVs organizados por dia
+                                                        {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
+                                                    </span>
+                                                    <span className="font-bold text-slate-500 dark:text-slate-400">
+                                                        Total no Escopo: {effectiveScopedRoutes.length} PDVs (~{operationalSummary.totalVisitsMonth} visitas/mês)
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
+                                    );
+                                })()
                             ) : (
                                 /* VISÃO EM LISTA CONTÍNUA TRADICIONAL */
                                 <div className="flex-1 overflow-auto custom-scrollbar border border-slate-100 dark:border-slate-800 rounded-xl">

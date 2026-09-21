@@ -9,6 +9,18 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.196.0',
+    date: 'Hoje',
+    title: 'Fuel360: Visão Sanfona por Vendedor e Balanceamento com Cotas Rígidas',
+    changes: [
+      'Visão Sanfona por Vendedor: Ao selecionar múltiplos colaboradores da equipe, o painel agrupa as rotas em sanfonas individuais por vendedor, permitindo expandir e analisar o dia a dia e as métricas de cada um de forma organizada.',
+      'Botão Dinâmico de Otimização e Gravação: O botão agora identifica a seleção de múltiplos vendedores e exibe o texto no plural ("Otimizar Vendedores" / "Salvar Simulação"), refletindo exatamente o escopo.',
+      'Travamento Rígido de Cotas por Dia (Hard Quota Envelope): O algoritmo agora impede anomalias de distribuição, garantindo que nenhum dia da semana fique desproporcionalmente esvaziado ou sobrecarregado.',
+      'Balanceamento Viário Ordenado Real: As transferências e trocas de clientes entre dias adjacentes calculam o circuito 2-Opt ordenado real e o custo marginal de desvio, eliminando ziguezagues e picos de quilometragem.',
+      'Equalização Simétrica de Quinzenas: Divisão homogênea entre os ciclos 1/3 e 2/4 dentro de cada dia da semana.'
+    ]
+  },
+  {
     version: '3.195.0',
     date: 'Hoje',
     title: 'Fuel360: Encerramento no Último Cliente e Balanceamento de Carga Horária',
