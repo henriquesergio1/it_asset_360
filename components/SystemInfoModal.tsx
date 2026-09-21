@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.204.0',
+    date: 'Hoje',
+    title: 'Fuel360: Minimização de Vendedores e Dimensionamento de Equipe na Re-setorização',
+    changes: [
+      'Modo Minimização de Vendedores (Consolidação Máxima): Permite ao gestor preencher a capacidade máxima de jornada viável de cada vendedor com base em sua residência e tempo de atendimento, concentrando a carteira no menor número de vendedores possível.',
+      'Identificação de Vendedores Excedentes: O sistema diagnostica automaticamente quantos colaboradores são estritamente necessários para cobrir toda a carteira e identifica quais vendedores sobram na equipe com 0 clientes.',
+      'Otimização por Menor Tempo de Deslocamento: As rotas consideram o endereço base de cada vendedor para minimizar o tempo de trânsito viário e maximizar o adensamento geográfico de cada rota.'
+    ]
+  },
+  {
     version: '3.203.0',
     date: 'Hoje',
     title: 'Fuel360: Re-setorização Territorial Multi-Vendedor no Ajuste de Rota',

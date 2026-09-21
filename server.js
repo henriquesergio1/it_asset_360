@@ -2442,6 +2442,10 @@ async function ensureFuelTablesExist(pool) {
             if (checkColResectorize.recordset.length === 0) {
                 await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD OptAutoResectorizeSellers BIT NOT NULL DEFAULT 0;");
             }
+            const checkColResectMode = await pool.request().query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelParametrosOtimizacao' AND COLUMN_NAME = 'OptResectorizeMode'");
+            if (checkColResectMode.recordset.length === 0) {
+                await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD OptResectorizeMode NVARCHAR(50) NOT NULL DEFAULT 'BALANCED';");
+            }
         }
     } catch (err) {
         console.error('AVISO ao verificar/criar tabelas Fuel360:', err.message);
@@ -3173,6 +3177,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
         const optGroupSmallCitiesInSingleCycle = b.optGroupSmallCitiesInSingleCycle !== undefined ? (b.optGroupSmallCitiesInSingleCycle ? 1 : 0) : 1;
         const optSmallCityThreshold = parseInt(b.optSmallCityThreshold, 10) || 15;
         const optAutoResectorizeSellers = b.optAutoResectorizeSellers ? 1 : 0;
+        const optResectorizeMode = b.optResectorizeMode === 'MINIMIZE_SELLERS' ? 'MINIMIZE_SELLERS' : 'BALANCED';
         const userName = b.usuario || req.user?.Nome || req.user?.Usuario || 'Operador Fuel';
 
         await pool.request()
@@ -3192,6 +3197,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
             .input('OptGroupSmallCitiesInSingleCycle', sql.Bit, optGroupSmallCitiesInSingleCycle)
             .input('OptSmallCityThreshold', sql.Int, optSmallCityThreshold)
             .input('OptAutoResectorizeSellers', sql.Bit, optAutoResectorizeSellers)
+            .input('OptResectorizeMode', sql.NVarChar(50), optResectorizeMode)
             .input('UsuarioAtualizacao', sql.NVarChar(255), userName)
             .query(`
                 IF EXISTS (SELECT 1 FROM FuelParametrosOtimizacao WHERE Chave = @Chave)
@@ -3212,6 +3218,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         OptGroupSmallCitiesInSingleCycle = @OptGroupSmallCitiesInSingleCycle,
                         OptSmallCityThreshold = @OptSmallCityThreshold,
                         OptAutoResectorizeSellers = @OptAutoResectorizeSellers,
+                        OptResectorizeMode = @OptResectorizeMode,
                         DataAtualizacao = GETDATE(),
                         UsuarioAtualizacao = @UsuarioAtualizacao
                     WHERE Chave = @Chave;
@@ -3223,7 +3230,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         OptLimitHours, OptMaxHours, OptDays, OptSatHalfPeriod,
                         OptBalanceWorkload, OptAvoidFridayDistant, OptSequenceStrategy,
                         OptEndAtLastClient, OptGroupSmallCitiesInSingleCycle, OptSmallCityThreshold,
-                        OptAutoResectorizeSellers,
+                        OptAutoResectorizeSellers, OptResectorizeMode,
                         DataAtualizacao, UsuarioAtualizacao
                     )
                     VALUES (
@@ -3231,7 +3238,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         @OptLimitHours, @OptMaxHours, @OptDays, @OptSatHalfPeriod,
                         @OptBalanceWorkload, @OptAvoidFridayDistant, @OptSequenceStrategy,
                         @OptEndAtLastClient, @OptGroupSmallCitiesInSingleCycle, @OptSmallCityThreshold,
-                        @OptAutoResectorizeSellers,
+                        @OptAutoResectorizeSellers, @OptResectorizeMode,
                         GETDATE(), @UsuarioAtualizacao
                     );
                 END
