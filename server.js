@@ -2430,6 +2430,14 @@ async function ensureFuelTablesExist(pool) {
             if (checkCol.recordset.length === 0) {
                 await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD OptEndAtLastClient BIT NOT NULL DEFAULT 0;");
             }
+            const checkColGroupCities = await pool.request().query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelParametrosOtimizacao' AND COLUMN_NAME = 'OptGroupSmallCitiesInSingleCycle'");
+            if (checkColGroupCities.recordset.length === 0) {
+                await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD OptGroupSmallCitiesInSingleCycle BIT NOT NULL DEFAULT 1;");
+            }
+            const checkColThreshold = await pool.request().query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelParametrosOtimizacao' AND COLUMN_NAME = 'OptSmallCityThreshold'");
+            if (checkColThreshold.recordset.length === 0) {
+                await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD OptSmallCityThreshold INT NOT NULL DEFAULT 15;");
+            }
         }
     } catch (err) {
         console.error('AVISO ao verificar/criar tabelas Fuel360:', err.message);
@@ -3158,6 +3166,8 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
         const optAvoidFridayDistant = b.optAvoidFridayDistant ? 1 : 0;
         const optSequenceStrategy = b.optSequenceStrategy || 'FAR_TO_NEAR';
         const optEndAtLastClient = b.optEndAtLastClient ? 1 : 0;
+        const optGroupSmallCitiesInSingleCycle = b.optGroupSmallCitiesInSingleCycle !== undefined ? (b.optGroupSmallCitiesInSingleCycle ? 1 : 0) : 1;
+        const optSmallCityThreshold = parseInt(b.optSmallCityThreshold, 10) || 15;
         const userName = b.usuario || req.user?.Nome || req.user?.Usuario || 'Operador Fuel';
 
         await pool.request()
@@ -3174,6 +3184,8 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
             .input('OptAvoidFridayDistant', sql.Bit, optAvoidFridayDistant)
             .input('OptSequenceStrategy', sql.NVarChar(50), optSequenceStrategy)
             .input('OptEndAtLastClient', sql.Bit, optEndAtLastClient)
+            .input('OptGroupSmallCitiesInSingleCycle', sql.Bit, optGroupSmallCitiesInSingleCycle)
+            .input('OptSmallCityThreshold', sql.Int, optSmallCityThreshold)
             .input('UsuarioAtualizacao', sql.NVarChar(255), userName)
             .query(`
                 IF EXISTS (SELECT 1 FROM FuelParametrosOtimizacao WHERE Chave = @Chave)
@@ -3191,6 +3203,8 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         OptAvoidFridayDistant = @OptAvoidFridayDistant,
                         OptSequenceStrategy = @OptSequenceStrategy,
                         OptEndAtLastClient = @OptEndAtLastClient,
+                        OptGroupSmallCitiesInSingleCycle = @OptGroupSmallCitiesInSingleCycle,
+                        OptSmallCityThreshold = @OptSmallCityThreshold,
                         DataAtualizacao = GETDATE(),
                         UsuarioAtualizacao = @UsuarioAtualizacao
                     WHERE Chave = @Chave;
@@ -3201,13 +3215,15 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         Chave, OptLimitClients, OptMaxClients, OptLimitKm, OptMaxKm,
                         OptLimitHours, OptMaxHours, OptDays, OptSatHalfPeriod,
                         OptBalanceWorkload, OptAvoidFridayDistant, OptSequenceStrategy,
-                        OptEndAtLastClient, DataAtualizacao, UsuarioAtualizacao
+                        OptEndAtLastClient, OptGroupSmallCitiesInSingleCycle, OptSmallCityThreshold,
+                        DataAtualizacao, UsuarioAtualizacao
                     )
                     VALUES (
                         @Chave, @OptLimitClients, @OptMaxClients, @OptLimitKm, @OptMaxKm,
                         @OptLimitHours, @OptMaxHours, @OptDays, @OptSatHalfPeriod,
                         @OptBalanceWorkload, @OptAvoidFridayDistant, @OptSequenceStrategy,
-                        @OptEndAtLastClient, GETDATE(), @UsuarioAtualizacao
+                        @OptEndAtLastClient, @OptGroupSmallCitiesInSingleCycle, @OptSmallCityThreshold,
+                        GETDATE(), @UsuarioAtualizacao
                     );
                 END
             `);

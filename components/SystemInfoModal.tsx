@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.202.0',
+    date: 'Hoje',
+    title: 'Fuel360: Agrupamento Monocíclico de Cidades por Tempo de Jornada',
+    changes: [
+      'Agrupamento Integral de Cidades em Quinzena Única: Cidades com poucos clientes (como Arapeí, Lavrinhas, Silveiras) agora são alocadas 100% na mesma quinzena (1/3 ou 2/4), eliminando viagens rodoviárias duplicadas em semanas alternadas.',
+      'Critério de Capacidade por Carga Horária Total: A alocação integral em bloco avalia prioritariamente o tempo total de atendimento e trânsito diário, permitindo agrupar volumes maiores de clientes (mesmo acima de 10 PDVs) desde que caibam no orçamento de jornada do dia.',
+      'Novos Parâmetros Corporativos: Adicionadas opções de configuração e teto flexível de PDVs no painel de parâmetros de otimização integrado ao banco de dados SQL Server.'
+    ]
+  },
+  {
     version: '3.201.0',
     date: 'Hoje',
     title: 'Fuel360: Visão Consolidada de Todos os Vendedores com Cores no Mapa',

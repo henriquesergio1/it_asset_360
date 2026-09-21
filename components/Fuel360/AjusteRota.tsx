@@ -1448,6 +1448,24 @@ export const AjusteRota: React.FC = () => {
         localStorage.setItem('fuel_opt_end_at_last_client', String(optEndAtLastClient));
     }, [optEndAtLastClient]);
 
+    const [optGroupSmallCitiesInSingleCycle, setOptGroupSmallCitiesInSingleCycle] = useState<boolean>(() => {
+        const saved = localStorage.getItem('fuel_opt_group_small_cities');
+        return saved !== null ? saved === 'true' : true;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_group_small_cities', String(optGroupSmallCitiesInSingleCycle));
+    }, [optGroupSmallCitiesInSingleCycle]);
+
+    const [optSmallCityThreshold, setOptSmallCityThreshold] = useState<number>(() => {
+        const saved = localStorage.getItem('fuel_opt_small_city_threshold');
+        return saved !== null ? Number(saved) : 15;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_small_city_threshold', String(optSmallCityThreshold));
+    }, [optSmallCityThreshold]);
+
     // Persistência corporativa dos Parâmetros do Otimizador no SQL Server
     const [savingParamsToDb, setSavingParamsToDb] = useState(false);
     const [paramsSaveFeedback, setParamsSaveFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -1473,6 +1491,8 @@ export const AjusteRota: React.FC = () => {
                 if (p.OptAvoidFridayDistant !== undefined && p.OptAvoidFridayDistant !== null) setOptAvoidFridayDistant(Boolean(p.OptAvoidFridayDistant));
                 if (p.OptSequenceStrategy) setOptSequenceStrategy(p.OptSequenceStrategy as SequenceStrategy);
                 if (p.OptEndAtLastClient !== undefined && p.OptEndAtLastClient !== null) setOptEndAtLastClient(Boolean(p.OptEndAtLastClient));
+                if (p.OptGroupSmallCitiesInSingleCycle !== undefined && p.OptGroupSmallCitiesInSingleCycle !== null) setOptGroupSmallCitiesInSingleCycle(Boolean(p.OptGroupSmallCitiesInSingleCycle));
+                if (p.OptSmallCityThreshold !== undefined && p.OptSmallCityThreshold !== null) setOptSmallCityThreshold(Number(p.OptSmallCityThreshold));
             }
         } catch (e) {
             console.warn('[Fuel360] Falha ao carregar parâmetros do otimizador do banco:', e);
@@ -1501,6 +1521,8 @@ export const AjusteRota: React.FC = () => {
                 optAvoidFridayDistant,
                 optSequenceStrategy,
                 optEndAtLastClient,
+                optGroupSmallCitiesInSingleCycle,
+                optSmallCityThreshold,
                 usuario: currentUser
             };
 
@@ -4609,32 +4631,60 @@ export const AjusteRota: React.FC = () => {
                         }
                     });
 
-                    // Cidades satélites: se a cidade for a única do dia ou contiver volume suficiente,
-                    // subdivide equilibradamente para evitar que um ciclo fique zerado ou com sobrecarga
+                    const protectedCityGroupedClients = new Set<string | number>();
+
+                    const dayLimitHours = (activeDays[d] === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
+                    const dayLimitMins = dayLimitHours * 60;
+                    const weeklyWorkloadMins = semanais.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit) + interStopTravelMins, 0);
+
+                    // Cidades satélites:
+                    // Se optGroupSmallCitiesInSingleCycle estiver ativo e a carga horária total da cidade couber na jornada diária,
+                    // agrupa 100% dos clientes da cidade em um único ciclo quinzenal com folga no outro ciclo,
+                    // evitando viagens repetidas até a cidade toda semana.
                     satGroups.forEach((sList) => {
-                        const totalInDayWithoutSat = semanais.length + nonSat.length;
-                        const wouldEmptyOtherCycle = (semanais.length === 0 && satGroups.size === 1);
-                        const isLargeGroup = sList.length >= 4;
+                        const cityServiceTimeMins = sList.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
+                        const cityInternalTravelMins = Math.max(0, (sList.length - 1) * interStopTravelMins);
+                        const cityTotalWorkloadMins = cityServiceTimeMins + cityInternalTravelMins;
 
-                        if (wouldEmptyOtherCycle || (isLargeGroup && sList.length > (totalInDayWithoutSat + 2))) {
-                            // Subdivide a cidade entre os dois ciclos de forma geograficamente contígua
-                            sList.sort((a, b) => a.polarAngle - b.polarAngle);
-                            const half = Math.ceil(sList.length / 2);
-                            const part1 = sList.slice(0, half);
-                            const part2 = sList.slice(half);
+                        // Verifica se a carga da cidade cabe confortavelmente na jornada diária (com margem de deslocamento)
+                        const canGroupInSingleCycle = optGroupSmallCitiesInSingleCycle &&
+                            sList.length <= optSmallCityThreshold &&
+                            (weeklyWorkloadMins + cityTotalWorkloadMins <= dayLimitMins * 0.9 || cityTotalWorkloadMins <= dayLimitMins * 0.85);
 
-                            if (q13.length <= q24.length) {
-                                q13.push(...part1);
-                                q24.push(...part2);
-                            } else {
-                                q24.push(...part1);
-                                q13.push(...part2);
-                            }
-                        } else {
+                        if (canGroupInSingleCycle) {
+                            // Aloca a cidade inteira no ciclo com menor carga
                             if (q13.length <= q24.length) {
                                 q13.push(...sList);
                             } else {
                                 q24.push(...sList);
+                            }
+                            // Blinda os clientes da cidade para não serem desmembrados na equalização fina
+                            sList.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
+                        } else {
+                            const totalInDayWithoutSat = semanais.length + nonSat.length;
+                            const wouldEmptyOtherCycle = (semanais.length === 0 && satGroups.size === 1);
+                            const isLargeGroup = sList.length >= 4;
+
+                            if (wouldEmptyOtherCycle || (isLargeGroup && sList.length > (totalInDayWithoutSat + 2))) {
+                                // Subdivide a cidade entre os dois ciclos de forma geograficamente contígua
+                                sList.sort((a, b) => a.polarAngle - b.polarAngle);
+                                const half = Math.ceil(sList.length / 2);
+                                const part1 = sList.slice(0, half);
+                                const part2 = sList.slice(half);
+
+                                if (q13.length <= q24.length) {
+                                    q13.push(...part1);
+                                    q24.push(...part2);
+                                } else {
+                                    q24.push(...part1);
+                                    q13.push(...part2);
+                                }
+                            } else {
+                                if (q13.length <= q24.length) {
+                                    q13.push(...sList);
+                                } else {
+                                    q24.push(...sList);
+                                }
                             }
                         }
                     });
@@ -4650,18 +4700,18 @@ export const AjusteRota: React.FC = () => {
                     });
 
                     // Equalização fina: garante que a diferença entre q13 e q24 seja no máximo 1 cliente
-                    // Salvaguarda: NUNCA move clientes com quinzena fixada (fixed13 / fixed24)!
+                    // Salvaguarda: NUNCA move clientes com quinzena fixada (fixed13 / fixed24) nem de cidades agrupadas em ciclo único!
                     let maxLoop = 15;
                     while (Math.abs(q13.length - q24.length) > 1 && maxLoop-- > 0) {
                         if (q13.length > q24.length + 1) {
-                            const movableIdx = q13.findLastIndex(c => !fixed13.includes(c));
+                            const movableIdx = q13.findLastIndex(c => !fixed13.includes(c) && !protectedCityGroupedClients.has(c.sampleVisit.Cod_Cliente));
                             if (movableIdx !== -1) {
                                 q24.push(q13.splice(movableIdx, 1)[0]);
                             } else {
                                 break;
                             }
                         } else if (q24.length > q13.length + 1) {
-                            const movableIdx = q24.findLastIndex(c => !fixed24.includes(c));
+                            const movableIdx = q24.findLastIndex(c => !fixed24.includes(c) && !protectedCityGroupedClients.has(c.sampleVisit.Cod_Cliente));
                             if (movableIdx !== -1) {
                                 q13.push(q24.splice(movableIdx, 1)[0]);
                             } else {
@@ -9573,6 +9623,48 @@ export const AjusteRota: React.FC = () => {
                                                     className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer shrink-0"
                                                 />
                                             </label>
+
+                                            <div className="pt-2 border-t border-slate-200/50 dark:border-slate-700/50 space-y-2">
+                                                <label className="flex items-center justify-between cursor-pointer">
+                                                    <div className="pr-2">
+                                                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300 block">
+                                                            Agrupar Cidades Pequenas em 1 Quinzena
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-400 block">
+                                                            Concentra cidades satélites em um único ciclo quinzenal se a carga horária couber no dia, evitando idas repetidas toda semana
+                                                        </span>
+                                                    </div>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={optGroupSmallCitiesInSingleCycle} 
+                                                        onChange={(e) => setOptGroupSmallCitiesInSingleCycle(e.target.checked)}
+                                                        className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer shrink-0"
+                                                    />
+                                                </label>
+                                                {optGroupSmallCitiesInSingleCycle && (
+                                                    <div className="flex items-center justify-between pl-2 border-l-2 border-indigo-400 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 p-2 rounded-r-lg">
+                                                        <div className="pr-2">
+                                                            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block">
+                                                                Teto Máx. de Clientes por Cidade:
+                                                            </span>
+                                                            <span className="text-[10px] text-slate-400 block">
+                                                                Agrupa até este volume de clientes caso o tempo de jornada permita
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <input
+                                                                type="number"
+                                                                min="2"
+                                                                max="50"
+                                                                value={optSmallCityThreshold}
+                                                                onChange={(e) => setOptSmallCityThreshold(Math.max(2, parseInt(e.target.value) || 15))}
+                                                                className="w-16 p-1 text-center font-bold text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-indigo-600 dark:text-indigo-400 focus:ring-2 focus:ring-indigo-500"
+                                                            />
+                                                            <span className="text-[10px] text-slate-500 font-bold">PDVs</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
