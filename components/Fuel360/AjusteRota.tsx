@@ -1355,6 +1355,7 @@ export const AjusteRota: React.FC = () => {
             unallocatedCount?: number;
             mode?: 'simulate' | 'strict' | 'flexibilize';
             hoursLimit?: number;
+            resectorizedCount?: number;
         } | null;
     } | null>(null);
 
@@ -1466,6 +1467,15 @@ export const AjusteRota: React.FC = () => {
         localStorage.setItem('fuel_opt_small_city_threshold', String(optSmallCityThreshold));
     }, [optSmallCityThreshold]);
 
+    const [optAutoResectorizeSellers, setOptAutoResectorizeSellers] = useState<boolean>(() => {
+        const saved = localStorage.getItem('fuel_opt_auto_resectorize_sellers');
+        return saved !== null ? saved === 'true' : false;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_auto_resectorize_sellers', String(optAutoResectorizeSellers));
+    }, [optAutoResectorizeSellers]);
+
     // Persistência corporativa dos Parâmetros do Otimizador no SQL Server
     const [savingParamsToDb, setSavingParamsToDb] = useState(false);
     const [paramsSaveFeedback, setParamsSaveFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -1493,6 +1503,7 @@ export const AjusteRota: React.FC = () => {
                 if (p.OptEndAtLastClient !== undefined && p.OptEndAtLastClient !== null) setOptEndAtLastClient(Boolean(p.OptEndAtLastClient));
                 if (p.OptGroupSmallCitiesInSingleCycle !== undefined && p.OptGroupSmallCitiesInSingleCycle !== null) setOptGroupSmallCitiesInSingleCycle(Boolean(p.OptGroupSmallCitiesInSingleCycle));
                 if (p.OptSmallCityThreshold !== undefined && p.OptSmallCityThreshold !== null) setOptSmallCityThreshold(Number(p.OptSmallCityThreshold));
+                if (p.OptAutoResectorizeSellers !== undefined && p.OptAutoResectorizeSellers !== null) setOptAutoResectorizeSellers(Boolean(p.OptAutoResectorizeSellers));
             }
         } catch (e) {
             console.warn('[Fuel360] Falha ao carregar parâmetros do otimizador do banco:', e);
@@ -1523,6 +1534,7 @@ export const AjusteRota: React.FC = () => {
                 optEndAtLastClient,
                 optGroupSmallCitiesInSingleCycle,
                 optSmallCityThreshold,
+                optAutoResectorizeSellers,
                 usuario: currentUser
             };
 
@@ -3860,6 +3872,7 @@ export const AjusteRota: React.FC = () => {
             escopoDesc: string;
             mode?: 'simulate' | 'strict' | 'flexibilize';
             hoursLimit?: number;
+            resectorizedCount?: number;
         }
     ) => {
         if (sellers.length === 0) return [];
@@ -4953,13 +4966,204 @@ export const AjusteRota: React.FC = () => {
                     totalClients: result.length,
                     unallocatedCount,
                     mode: summaryMeta.mode,
-                    hoursLimit: summaryMeta.hoursLimit
+                    hoursLimit: summaryMeta.hoursLimit,
+                    resectorizedCount: summaryMeta.resectorizedCount
                 }
             });
         } else {
             setOptimizeProgress(null);
         }
         return result;
+    };
+
+    // Função de Re-setorização Territorial Multi-Vendedor (Transferência e Balanceamento Inteligente de PDVs)
+    const resectorizeSellersTerritories = (
+        sellers: number[],
+        allRoutes: VisitaPrevista[],
+        targetScopeRoutes: VisitaPrevista[]
+    ) => {
+        if (sellers.length <= 1) {
+            return { updatedRoutes: allRoutes, transferCount: 0, transferredClientsCount: 0 };
+        }
+
+        // 1. Mapear bases residenciais e perfis dos vendedores participantes
+        interface SellerProfile {
+            id: number;
+            name: string;
+            baseLat: number;
+            baseLng: number;
+            assignedClients: Set<number>;
+            maxTarget: number;
+        }
+
+        const sellerProfiles: SellerProfile[] = sellers.map(sId => {
+            const sellerVisits = targetScopeRoutes.filter(r => r.Cod_Vend === sId);
+            const colab = getColabBySectorOrName(sId, sellerVisits[0]?.Nome_Vendedor);
+            const name = colab?.Nome || sellerVisits[0]?.Nome_Vendedor || `Vendedor ${sId}`;
+
+            const validCoords = sellerVisits.filter(v => v.Lat && v.Long);
+            let baseLat = colab?.LatitudeBase || 0;
+            let baseLng = colab?.LongitudeBase || 0;
+            if ((!baseLat || !baseLng) && validCoords.length > 0) {
+                baseLat = validCoords.reduce((acc, v) => acc + (v.Lat || 0), 0) / validCoords.length;
+                baseLng = validCoords.reduce((acc, v) => acc + (v.Long || 0), 0) / validCoords.length;
+            }
+
+            return {
+                id: sId,
+                name,
+                baseLat,
+                baseLng,
+                assignedClients: new Set<number>(),
+                maxTarget: 0
+            };
+        });
+
+        // 2. Mapear clientes únicos do escopo
+        interface ClientInfo {
+            cod: number;
+            cidade: string;
+            lat: number;
+            lng: number;
+            originalSellerId: number;
+            originalSellerName: string;
+            isLocked: boolean;
+        }
+
+        const clientsMap = new Map<number, ClientInfo>();
+        targetScopeRoutes.forEach(r => {
+            if (!r.Cod_Cliente) return;
+            if (!clientsMap.has(r.Cod_Cliente)) {
+                const restr = clienteRestricoesMap.get(r.Cod_Cliente);
+                const isLocked = Boolean(restr && restr.Ativo !== false && restr.Observacao && restr.Observacao.toLowerCase().includes('fixo'));
+                clientsMap.set(r.Cod_Cliente, {
+                    cod: r.Cod_Cliente,
+                    cidade: (r.Cidade || '').trim().toUpperCase(),
+                    lat: r.Lat || 0,
+                    lng: r.Long || 0,
+                    originalSellerId: r.Cod_Vend,
+                    originalSellerName: r.Nome_Vendedor,
+                    isLocked
+                });
+            }
+        });
+
+        const allClients = Array.from(clientsMap.values());
+        if (allClients.length === 0) {
+            return { updatedRoutes: allRoutes, transferCount: 0, transferredClientsCount: 0 };
+        }
+
+        // Centroide de referência da equipe
+        const validCoords = allClients.filter(c => c.lat && c.lng);
+        const teamAvgLat = validCoords.length > 0
+            ? validCoords.reduce((s, c) => s + c.lat, 0) / validCoords.length
+            : -23.18;
+        const teamAvgLng = validCoords.length > 0
+            ? validCoords.reduce((s, c) => s + c.lng, 0) / validCoords.length
+            : -45.88;
+
+        allClients.forEach(c => {
+            if (!c.lat || !c.lng) {
+                c.lat = teamAvgLat;
+                c.lng = teamAvgLng;
+            }
+        });
+
+        // 3. Capacidade balanceada por vendedor (com margem de tolerância até ±25%)
+        const targetClientsPerSeller = Math.ceil(allClients.length / sellers.length);
+        const maxCapacityPerSeller = Math.ceil(targetClientsPerSeller * 1.25);
+        sellerProfiles.forEach(sp => {
+            sp.maxTarget = maxCapacityPerSeller;
+        });
+
+        // 4. Agrupamento por cidades satélites para manter coesão territorial municipal
+        const cityGroups = new Map<string, ClientInfo[]>();
+        allClients.forEach(c => {
+            const k = c.cidade || 'GERAL';
+            if (!cityGroups.has(k)) cityGroups.set(k, []);
+            cityGroups.get(k)!.push(c);
+        });
+
+        const assignmentMap = new Map<number, { sellerId: number; sellerName: string }>();
+
+        // 4.1. Clientes fixados por trava corporativa
+        allClients.forEach(c => {
+            if (c.isLocked) {
+                const sp = sellerProfiles.find(s => s.id === c.originalSellerId);
+                if (sp) {
+                    sp.assignedClients.add(c.cod);
+                    assignmentMap.set(c.cod, { sellerId: sp.id, sellerName: sp.name });
+                }
+            }
+        });
+
+        // 4.2. Cidades pequenas/satélites (<= optSmallCityThreshold clientes) atribuídas em bloco para o vendedor mais próximo
+        cityGroups.forEach((cList, cityName) => {
+            if (cityName !== 'GERAL' && cList.length <= optSmallCityThreshold && cList.every(c => !c.isLocked)) {
+                const cityLat = cList.reduce((s, c) => s + c.lat, 0) / cList.length;
+                const cityLng = cList.reduce((s, c) => s + c.lng, 0) / cList.length;
+
+                const sortedSellers = [...sellerProfiles].sort((a, b) => {
+                    const distA = calcDist(a.baseLat || teamAvgLat, a.baseLng || teamAvgLng, cityLat, cityLng);
+                    const distB = calcDist(b.baseLat || teamAvgLat, b.baseLng || teamAvgLng, cityLat, cityLng);
+                    return distA - distB;
+                });
+
+                let chosen = sortedSellers.find(s => (s.assignedClients.size + cList.length) <= s.maxTarget);
+                if (!chosen) chosen = sortedSellers[0];
+
+                cList.forEach(c => {
+                    chosen!.assignedClients.add(c.cod);
+                    assignmentMap.set(c.cod, { sellerId: chosen!.id, sellerName: chosen!.name });
+                });
+            }
+        });
+
+        // 4.3. Demais clientes individuais: alocação por menor distância com balanceamento suave
+        const unassignedClients = allClients.filter(c => !assignmentMap.has(c.cod));
+        unassignedClients.forEach(c => {
+            let bestSeller: SellerProfile = sellerProfiles[0];
+            let bestScore = Infinity;
+
+            sellerProfiles.forEach(sp => {
+                const d = calcDist(sp.baseLat || teamAvgLat, sp.baseLng || teamAvgLng, c.lat, c.lng);
+                const loadFactor = sp.assignedClients.size / (targetClientsPerSeller || 1);
+                // Custo combina proximidade viária em km e ocupação relativa da carteira
+                const score = d + (loadFactor * 15);
+                if (score < bestScore && sp.assignedClients.size < sp.maxTarget) {
+                    bestScore = score;
+                    bestSeller = sp;
+                }
+            });
+
+            bestSeller.assignedClients.add(c.cod);
+            assignmentMap.set(c.cod, { sellerId: bestSeller.id, sellerName: bestSeller.name });
+        });
+
+        // 5. Aplicar as alterações nas rotas e contabilizar transferências
+        let transferCount = 0;
+        const transferredClientsSet = new Set<number>();
+
+        const updatedRoutes = allRoutes.map(r => {
+            if (!r.Cod_Cliente || !assignmentMap.has(r.Cod_Cliente)) return r;
+            const assign = assignmentMap.get(r.Cod_Cliente)!;
+            if (r.Cod_Vend !== assign.sellerId) {
+                transferCount++;
+                transferredClientsSet.add(r.Cod_Cliente);
+                return {
+                    ...r,
+                    Cod_Vend: assign.sellerId,
+                    Nome_Vendedor: assign.sellerName
+                };
+            }
+            return r;
+        });
+
+        return {
+            updatedRoutes,
+            transferCount,
+            transferredClientsCount: transferredClientsSet.size
+        };
     };
 
     const handleOptimizeSimulate = async () => {
@@ -4991,10 +5195,23 @@ export const AjusteRota: React.FC = () => {
                 ? 'do vendedor selecionado' 
                 : (scopeMode === 'equipe' ? 'da equipe de supervisão selecionada' : 'geral'));
 
-        const result = await runOptimizationForSellers(sellers, adjustedRoutes, true, {
+        let baseRoutesForOptimization = adjustedRoutes;
+        let resectorizedCount = 0;
+
+        if (optAutoResectorizeSellers && sellers.length > 1) {
+            const resectorizeResult = resectorizeSellersTerritories(sellers, adjustedRoutes, effectiveScopedRoutes);
+            if (resectorizeResult.transferredClientsCount > 0) {
+                baseRoutesForOptimization = resectorizeResult.updatedRoutes;
+                resectorizedCount = resectorizeResult.transferredClientsCount;
+                setAdjustedRoutes(resectorizeResult.updatedRoutes);
+            }
+        }
+
+        const result = await runOptimizationForSellers(sellers, baseRoutesForOptimization, true, {
             title: isSingleSeller ? `Otimização de ${sellerNameDesc} Concluída` : 'Otimização e Roteirização Concluída',
-            escopoDesc: `Escopo: ${escopoDesc}`,
-            mode: 'simulate'
+            escopoDesc: `Escopo: ${escopoDesc}${resectorizedCount > 0 ? ` (${resectorizedCount} PDVs re-setorizados entre vendedores)` : ''}`,
+            mode: 'simulate',
+            resectorizedCount
         });
         if (result && result.length === 0) {
             alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
@@ -9670,7 +9887,46 @@ export const AjusteRota: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* GRUPO 3: ESTRATÉGIA DE SEQUENCIAMENTO DAS VISITAS */}
+                            {/* GRUPO 3: RE-SETORIZAÇÃO TERRITORIAL MULTI-VENDEDOR (TRANSFERÊNCIA DE CLIENTES) */}
+                            <div className={`border rounded-2xl p-4 space-y-2 transition-colors ${
+                                optAutoResectorizeSellers 
+                                    ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700 shadow-sm' 
+                                    : 'bg-slate-50/80 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/80'
+                            }`}>
+                                <label className="flex items-center justify-between cursor-pointer">
+                                    <div className="space-y-0.5 pr-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                                                <span>👥</span> Re-setorizar Clientes entre Vendedores
+                                            </span>
+                                            {optAutoResectorizeSellers && (
+                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-600 text-white shadow-2xs">
+                                                    Ativado
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            Ao carregar a equipe de um supervisor ou múltiplos vendedores, redistribui os clientes entre eles com base na proximidade de suas bases residenciais e no equilíbrio de carteira, permitindo transferências inteligentes de PDVs para reduzir o deslocamento viário total da equipe.
+                                        </p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={optAutoResectorizeSellers}
+                                        onChange={(e) => setOptAutoResectorizeSellers(e.target.checked)}
+                                        className="rounded text-indigo-600 focus:ring-indigo-500 w-5 h-5 cursor-pointer shrink-0"
+                                    />
+                                </label>
+                                {optAutoResectorizeSellers && (
+                                    <div className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-100/70 dark:bg-indigo-900/40 p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 flex items-start gap-1.5 mt-2">
+                                        <span className="shrink-0 text-sm">💡</span>
+                                        <span>
+                                            <strong>Como funciona:</strong> O algoritmo analisa todos os clientes da equipe, preserva cidades pequenas como bloco único e aloca cada cliente ao vendedor cuja residência estiver mais próxima, respeitando uma margem equilibrada de clientes por carteira.
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* GRUPO 4: ESTRATÉGIA DE SEQUENCIAMENTO DAS VISITAS */}
                             <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 space-y-2">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
@@ -10003,6 +10259,13 @@ export const AjusteRota: React.FC = () => {
                                         <span className="text-indigo-600 dark:text-indigo-400 font-bold shrink-0">🔒</span>
                                         <span><strong>Carteiras Blindadas:</strong> 100% de integridade por colaborador.</span>
                                     </div>
+
+                                    {optimizeProgress.completedSummary.resectorizedCount && optimizeProgress.completedSummary.resectorizedCount > 0 ? (
+                                        <div className="mt-2 pt-2 border-t border-indigo-200/60 dark:border-indigo-700/60 flex items-center space-x-2 text-indigo-700 dark:text-indigo-300 font-medium">
+                                            <span className="shrink-0 text-sm">🔄</span>
+                                            <span><strong>Re-setorização Territorial Aplicada:</strong> {optimizeProgress.completedSummary.resectorizedCount} PDVs foram redistribuídos entre os vendedores para otimizar as áreas de atendimento.</span>
+                                        </div>
+                                    ) : null}
 
                                     {optimizeProgress.completedSummary.mode === 'flexibilize' && (
                                         <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center space-x-2 text-amber-700 dark:text-amber-400 font-medium">

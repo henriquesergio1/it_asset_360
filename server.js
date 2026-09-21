@@ -2438,6 +2438,10 @@ async function ensureFuelTablesExist(pool) {
             if (checkColThreshold.recordset.length === 0) {
                 await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD OptSmallCityThreshold INT NOT NULL DEFAULT 15;");
             }
+            const checkColResectorize = await pool.request().query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelParametrosOtimizacao' AND COLUMN_NAME = 'OptAutoResectorizeSellers'");
+            if (checkColResectorize.recordset.length === 0) {
+                await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD OptAutoResectorizeSellers BIT NOT NULL DEFAULT 0;");
+            }
         }
     } catch (err) {
         console.error('AVISO ao verificar/criar tabelas Fuel360:', err.message);
@@ -3168,6 +3172,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
         const optEndAtLastClient = b.optEndAtLastClient ? 1 : 0;
         const optGroupSmallCitiesInSingleCycle = b.optGroupSmallCitiesInSingleCycle !== undefined ? (b.optGroupSmallCitiesInSingleCycle ? 1 : 0) : 1;
         const optSmallCityThreshold = parseInt(b.optSmallCityThreshold, 10) || 15;
+        const optAutoResectorizeSellers = b.optAutoResectorizeSellers ? 1 : 0;
         const userName = b.usuario || req.user?.Nome || req.user?.Usuario || 'Operador Fuel';
 
         await pool.request()
@@ -3186,6 +3191,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
             .input('OptEndAtLastClient', sql.Bit, optEndAtLastClient)
             .input('OptGroupSmallCitiesInSingleCycle', sql.Bit, optGroupSmallCitiesInSingleCycle)
             .input('OptSmallCityThreshold', sql.Int, optSmallCityThreshold)
+            .input('OptAutoResectorizeSellers', sql.Bit, optAutoResectorizeSellers)
             .input('UsuarioAtualizacao', sql.NVarChar(255), userName)
             .query(`
                 IF EXISTS (SELECT 1 FROM FuelParametrosOtimizacao WHERE Chave = @Chave)
@@ -3205,6 +3211,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         OptEndAtLastClient = @OptEndAtLastClient,
                         OptGroupSmallCitiesInSingleCycle = @OptGroupSmallCitiesInSingleCycle,
                         OptSmallCityThreshold = @OptSmallCityThreshold,
+                        OptAutoResectorizeSellers = @OptAutoResectorizeSellers,
                         DataAtualizacao = GETDATE(),
                         UsuarioAtualizacao = @UsuarioAtualizacao
                     WHERE Chave = @Chave;
@@ -3216,6 +3223,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         OptLimitHours, OptMaxHours, OptDays, OptSatHalfPeriod,
                         OptBalanceWorkload, OptAvoidFridayDistant, OptSequenceStrategy,
                         OptEndAtLastClient, OptGroupSmallCitiesInSingleCycle, OptSmallCityThreshold,
+                        OptAutoResectorizeSellers,
                         DataAtualizacao, UsuarioAtualizacao
                     )
                     VALUES (
@@ -3223,6 +3231,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         @OptLimitHours, @OptMaxHours, @OptDays, @OptSatHalfPeriod,
                         @OptBalanceWorkload, @OptAvoidFridayDistant, @OptSequenceStrategy,
                         @OptEndAtLastClient, @OptGroupSmallCitiesInSingleCycle, @OptSmallCityThreshold,
+                        @OptAutoResectorizeSellers,
                         GETDATE(), @UsuarioAtualizacao
                     );
                 END

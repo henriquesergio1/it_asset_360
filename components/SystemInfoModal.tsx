@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.203.0',
+    date: 'Hoje',
+    title: 'Fuel360: Re-setorização Territorial Multi-Vendedor no Ajuste de Rota',
+    changes: [
+      'Re-setorização Territorial da Equipe: Nova opção no otimizador que redistribui clientes entre múltiplos vendedores selecionados (ou equipe inteira do supervisor) com base na proximidade geográfica das bases residenciais e no equilíbrio de carteira.',
+      'Otimização de Fronteiras e Troca Inteligente de PDVs: Permite a transferência de clientes entre vendedores para eliminar sobreposições de rotas e reduzir quilometragem total da equipe antes da roteirização diária.',
+      'Parâmetro Corporativo Configurável: Controle no modal de parâmetros sincronizado com o SQL Server, operando como recurso opcional sob demanda e preservando as travas e restrições corporativas de clientes.'
+    ]
+  },
+  {
     version: '3.202.0',
     date: 'Hoje',
     title: 'Fuel360: Agrupamento Monocíclico de Cidades por Tempo de Jornada',
