@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.201.0',
+    date: 'Hoje',
+    title: 'Fuel360: Visão Consolidada de Todos os Vendedores com Cores no Mapa',
+    changes: [
+      'Opção "Todos os Vendedores" no Link de Crítica: Disponibilizada a seleção unificada da equipe no dropdown de setores, permitindo aos supervisores visualizar o panorama completo de atendimento da região.',
+      'Diferenciação Cromática por Vendedor: Cada vendedor recebe uma cor exclusiva no mapa para seus PDVs e base residencial, facilitando a identificação visual de sobreposições e o planejamento de trocas/remanejamento de clientes.',
+      'Legenda Interativa e Bases Multi-Vendedor: Barra de legenda com chip de cor para cada vendedor e marcadores residenciais individuais para análise de proximidade territorial.'
+    ]
+  },
+  {
     version: '3.200.2',
     date: 'Hoje',
     title: 'Fuel360: Correção de Identificação de Base e Supervisor no Link de Crítica',

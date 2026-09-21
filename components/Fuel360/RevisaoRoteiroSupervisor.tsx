@@ -53,6 +53,26 @@ export const DAY_COLORS: Record<string, { bg: string; text: string; border: stri
     'SEM ATENDIMENTO': { bg: 'bg-red-600', text: 'text-red-600', border: 'border-red-500', hex: '#ef4444', label: 'SEM ATEND.' }
 };
 
+// --- PALETA CROMÁTICA OFICIAL POR VENDEDOR PARA VISÃO MULTI-SETOR NO MAPA ---
+export const SELLER_COLORS: { hex: string; bg: string; text: string; border: string }[] = [
+    { hex: '#2563eb', bg: 'bg-blue-600', text: 'text-blue-600', border: 'border-blue-500' },       // Azul Royal
+    { hex: '#16a34a', bg: 'bg-emerald-600', text: 'text-emerald-600', border: 'border-emerald-500' }, // Verde Esmeralda
+    { hex: '#9333ea', bg: 'bg-purple-600', text: 'text-purple-600', border: 'border-purple-500' },   // Roxo
+    { hex: '#ea580c', bg: 'bg-orange-600', text: 'text-orange-600', border: 'border-orange-500' },   // Laranja
+    { hex: '#db2777', bg: 'bg-pink-600', text: 'text-pink-600', border: 'border-pink-500' },       // Pink
+    { hex: '#0891b2', bg: 'bg-cyan-600', text: 'text-cyan-600', border: 'border-cyan-500' },       // Ciano
+    { hex: '#d97706', bg: 'bg-amber-600', text: 'text-amber-600', border: 'border-amber-500' },     // Âmbar
+    { hex: '#4f46e5', bg: 'bg-indigo-600', text: 'text-indigo-600', border: 'border-indigo-500' },   // Índigo
+    { hex: '#e11d48', bg: 'bg-rose-600', text: 'text-rose-600', border: 'border-rose-500' },       // Rosa Carmesim
+    { hex: '#059669', bg: 'bg-teal-600', text: 'text-teal-600', border: 'border-teal-500' },       // Teal
+    { hex: '#ca8a04', bg: 'bg-yellow-600', text: 'text-yellow-600', border: 'border-yellow-500' },   // Dourado
+    { hex: '#0284c7', bg: 'bg-sky-600', text: 'text-sky-600', border: 'border-sky-500' },         // Azul Celeste
+    { hex: '#be123c', bg: 'bg-red-700', text: 'text-red-700', border: 'border-red-600' },         // Vermelho Vinho
+    { hex: '#475569', bg: 'bg-slate-600', text: 'text-slate-600', border: 'border-slate-500' },     // Slate
+    { hex: '#84cc16', bg: 'bg-lime-600', text: 'text-lime-600', border: 'border-lime-500' },       // Lima
+    { hex: '#6366f1', bg: 'bg-violet-600', text: 'text-violet-600', border: 'border-violet-500' }    // Violeta
+];
+
 const WEEKDAYS = ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA'];
 
 const normalizeDiaSemana = (dia: string | number | undefined): string => {
@@ -444,21 +464,42 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         return [];
     }, [simulacaoData]);
 
-    // Setar o primeiro vendedor por default
+    // Mapeamento de cores exclusivas para cada vendedor
+    const sellerColorMap = useMemo(() => {
+        const map = new Map<string, { hex: string; bg: string; text: string; border: string }>();
+        sellersList.forEach((s, idx) => {
+            map.set(String(s.id), SELLER_COLORS[idx % SELLER_COLORS.length]);
+        });
+        return map;
+    }, [sellersList]);
+
+    // Setar o primeiro vendedor por default apenas na primeira carga
+    const initialSellerSetRef = useRef<boolean>(false);
     useEffect(() => {
-        if (sellersList.length > 0 && selectedSeller === 'ALL') {
+        if (sellersList.length > 0 && !initialSellerSetRef.current) {
             setSelectedSeller(sellersList[0].id);
+            initialSellerSetRef.current = true;
         }
     }, [sellersList]);
 
-    // Obter clientes do setor selecionado
+    // Obter clientes do setor selecionado com vínculo de vendedor
     const currentSellerClients = useMemo(() => {
         if (sellersList.length === 0) return [];
         if (selectedSeller === 'ALL') {
-            return sellersList.flatMap(s => s.clients);
+            return sellersList.flatMap(s =>
+                s.clients.map((c: any) => ({
+                    ...c,
+                    _sellerId: String(s.id),
+                    _sellerName: s.name
+                }))
+            );
         }
         const s = sellersList.find(item => item.id === selectedSeller);
-        return s ? s.clients : [];
+        return s ? s.clients.map((c: any) => ({
+            ...c,
+            _sellerId: String(s.id),
+            _sellerName: s.name
+        })) : [];
     }, [sellersList, selectedSeller]);
 
     // Identificar tipo de equipe da simulação ('vendedores' ou 'promotores')
@@ -630,6 +671,33 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
 
         return null;
     }, [simulacaoData, sellersList, selectedSeller, currentSellerClients, getColabForCurrentSeller, teamType]);
+
+    // Bases de todos os vendedores para o modo ALL
+    const allSellersBases = useMemo(() => {
+        if (!simulacaoData || selectedSeller !== 'ALL') return [];
+        const bases: any[] = [];
+        sellersList.forEach((s, idx) => {
+            const firstClient = s.clients[0];
+            const rawSellerName = s.name || firstClient?.Nome_Vendedor || '';
+            const rawSellerCode = s.id || firstClient?.Cod_Vend || '';
+            const colab = getColabForCurrentSeller(rawSellerCode, rawSellerName);
+            const colorCfg = sellerColorMap.get(String(s.id)) || SELLER_COLORS[idx % SELLER_COLORS.length];
+
+            if (colab && colab.LatitudeBase && colab.LongitudeBase && Math.abs(Number(colab.LatitudeBase)) > 0.001) {
+                bases.push({
+                    sellerId: String(s.id),
+                    sellerName: s.name,
+                    color: colorCfg.hex,
+                    codigoSetor: colab.CodigoSetor || rawSellerCode,
+                    name: colab.Nome || rawSellerName,
+                    address: colab.EnderecoBase || 'Residência do Colaborador',
+                    lat: Number(colab.LatitudeBase),
+                    lng: Number(colab.LongitudeBase)
+                });
+            }
+        });
+        return bases;
+    }, [simulacaoData, selectedSeller, sellersList, getColabForCurrentSeller, sellerColorMap]);
 
     // Filtragem por Semana e Dia
     const filteredVisits = useMemo(() => {
@@ -838,7 +906,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         let isMounted = true;
 
         const calculateTracks = async () => {
-            if (filteredVisits.length === 0) {
+            if (filteredVisits.length === 0 || selectedSeller === 'ALL') {
                 setRoadTracks([]);
                 return;
             }
@@ -978,7 +1046,11 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     // Limites do Mapa (Enquadra a Base e todas as Paradas)
     const mapBounds = useMemo<L.LatLngBoundsExpression | null>(() => {
         const pts: [number, number][] = [];
-        if (activeBaseInfo) {
+        if (selectedSeller === 'ALL') {
+            allSellersBases.forEach(b => {
+                if (b.lat && b.lng) pts.push([b.lat, b.lng]);
+            });
+        } else if (activeBaseInfo) {
             pts.push([activeBaseInfo.lat, activeBaseInfo.lng]);
         }
         filteredVisits.forEach((v: any) => {
@@ -996,7 +1068,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             ];
         }
         return pts as L.LatLngBoundsExpression;
-    }, [filteredVisits, activeBaseInfo]);
+    }, [filteredVisits, activeBaseInfo, selectedSeller, allSellersBases]);
 
     // Abrir Modal de Sugestão
     const handleOpenSuggestionModal = (client?: any) => {
@@ -1128,6 +1200,9 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     onChange={e => setSelectedSeller(e.target.value)}
                                     className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none cursor-pointer pr-1 py-0.5 max-w-[230px] sm:max-w-xs"
                                 >
+                                    <option value="ALL" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-black">
+                                        👥 TODOS OS VENDEDORES ({sellersList.reduce((acc, s) => acc + s.clients.length, 0)} PDVs)
+                                    </option>
                                     {sellersList.map(s => (
                                         <option key={s.id} value={s.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                                             {s.name} ({s.clients.length} PDVs)
@@ -1366,6 +1441,41 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                         </span>
                     </div>
 
+                    {/* LEGENDA MULTI-VENDEDOR QUANDO 'ALL' ESTIVER SELECIONADO */}
+                    {selectedSeller === 'ALL' && (
+                        <div className="mb-3 px-3 py-2 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                    <Users size={12} className="text-indigo-500" />
+                                    Cores por Vendedor / Setor (Clique para isolar)
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-bold">
+                                    {sellersList.length} vendedores • {sellersList.reduce((acc, s) => acc + s.clients.length, 0)} PDVs
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto pr-1">
+                                {sellersList.map((s, idx) => {
+                                    const colorCfg = sellerColorMap.get(String(s.id)) || SELLER_COLORS[idx % SELLER_COLORS.length];
+                                    return (
+                                        <button
+                                            key={s.id}
+                                            type="button"
+                                            onClick={() => setSelectedSeller(s.id)}
+                                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-bold border transition hover:scale-105 cursor-pointer bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-2xs"
+                                            title={`Clique para filtrar apenas ${s.name}`}
+                                        >
+                                            <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: colorCfg.hex }} />
+                                            <span className="truncate max-w-[130px] sm:max-w-[170px] text-slate-800 dark:text-slate-100">{s.name}</span>
+                                            <span className="text-[10px] font-mono px-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                                {s.clients.length}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="w-full h-[520px] rounded-2xl overflow-hidden relative border border-slate-200 dark:border-slate-800">
                         {mapBounds ? (
                             <MapContainer
@@ -1380,8 +1490,8 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     attribution='&copy; OpenStreetMap contributors'
                                 />
 
-                                {/* Traçado Viário da Rota com Malha OSRM Real */}
-                                {roadTracks.map((track) => {
+                                {/* Traçado Viário da Rota com Malha OSRM Real (quando vendedor individual selecionado) */}
+                                {selectedSeller !== 'ALL' && roadTracks.map((track) => {
                                     if (!track.points || track.points.length < 2) return null;
                                     return (
                                         <Polyline
@@ -1396,33 +1506,64 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     );
                                 })}
 
-                                {/* Marcador Especial da Base (Padronizado com Ajuste de Rota) */}
-                                {activeBaseInfo && filteredVisits.length > 0 && (
-                                    <Marker
-                                        position={[activeBaseInfo.lat, activeBaseInfo.lng]}
-                                        icon={createHomeIcon('#ef4444')}
-                                        zIndexOffset={1000}
-                                    >
-                                        <Popup>
-                                            <div className="text-xs p-1 space-y-1 font-sans min-w-[200px]">
-                                                <div className="flex items-center space-x-1.5 text-red-600 dark:text-red-400 font-black">
-                                                    <span>🏠</span>
-                                                    <span className="uppercase tracking-wider text-[10px]">BASE / RESIDÊNCIA</span>
-                                                </div>
-                                                <p className="text-slate-900 dark:text-slate-100 font-bold text-sm">
-                                                    {formatSellerDisplayName(activeBaseInfo.codigoSetor || selectedSeller, activeBaseInfo.name)}
-                                                </p>
-                                                {activeBaseInfo.address && (
-                                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                                                        {activeBaseInfo.address}
+                                {/* Marcadores Especiais das Bases Residenciais: No modo ALL exibe de todos os vendedores com suas cores */}
+                                {selectedSeller === 'ALL' ? (
+                                    allSellersBases.map((base) => (
+                                        <Marker
+                                            key={`base-${base.sellerId}`}
+                                            position={[base.lat, base.lng]}
+                                            icon={createHomeIcon(base.color)}
+                                            zIndexOffset={1000}
+                                        >
+                                            <Popup>
+                                                <div className="text-xs p-1 space-y-1 font-sans min-w-[200px]">
+                                                    <div className="flex items-center space-x-1.5 font-black" style={{ color: base.color }}>
+                                                        <span>🏠</span>
+                                                        <span className="uppercase tracking-wider text-[10px]">BASE / RESIDÊNCIA</span>
+                                                    </div>
+                                                    <p className="text-slate-900 dark:text-slate-100 font-bold text-sm">
+                                                        {formatSellerDisplayName(base.codigoSetor, base.name)}
                                                     </p>
-                                                )}
-                                                <p className="text-[9px] text-slate-400 dark:text-slate-500 italic">
-                                                    Ponto de partida e retorno diário do colaborador
-                                                </p>
-                                            </div>
-                                        </Popup>
-                                    </Marker>
+                                                    {base.address && (
+                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                                                            {base.address}
+                                                        </p>
+                                                    )}
+                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 italic">
+                                                        Ponto de partida e retorno diário do colaborador
+                                                    </p>
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    ))
+                                ) : (
+                                    activeBaseInfo && filteredVisits.length > 0 && (
+                                        <Marker
+                                            position={[activeBaseInfo.lat, activeBaseInfo.lng]}
+                                            icon={createHomeIcon('#ef4444')}
+                                            zIndexOffset={1000}
+                                        >
+                                            <Popup>
+                                                <div className="text-xs p-1 space-y-1 font-sans min-w-[200px]">
+                                                    <div className="flex items-center space-x-1.5 text-red-600 dark:text-red-400 font-black">
+                                                        <span>🏠</span>
+                                                        <span className="uppercase tracking-wider text-[10px]">BASE / RESIDÊNCIA</span>
+                                                    </div>
+                                                    <p className="text-slate-900 dark:text-slate-100 font-bold text-sm">
+                                                        {formatSellerDisplayName(activeBaseInfo.codigoSetor || selectedSeller, activeBaseInfo.name)}
+                                                    </p>
+                                                    {activeBaseInfo.address && (
+                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                                                            {activeBaseInfo.address}
+                                                        </p>
+                                                    )}
+                                                    <p className="text-[9px] text-slate-400 dark:text-slate-500 italic">
+                                                        Ponto de partida e retorno diário do colaborador
+                                                    </p>
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    )
                                 )}
 
                                 {/* Marcadores Numerados dos Clientes */}
@@ -1438,7 +1579,12 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                         (v.id && item.id === v.id)
                                     ) + 1;
                                     const pinSeq = selectedDay === 'ALL' ? (daySeq > 0 ? daySeq : index + 1) : (index + 1);
-                                    const pinColor = DAY_COLORS[dayKey]?.hex || '#2563eb';
+
+                                    // Determinação da Cor: No modo TODOS OS VENDEDORES usa a cor do vendedor; caso contrário usa a cor do dia
+                                    const sellerId = String(v._sellerId || v.Cod_Vend || '');
+                                    const sellerColorCfg = sellerColorMap.get(sellerId) || SELLER_COLORS[0];
+                                    const pinColor = selectedSeller === 'ALL' ? sellerColorCfg.hex : (DAY_COLORS[dayKey]?.hex || '#2563eb');
+
                                     const isSelected = Boolean(highlightedClient && (
                                         (v.Cod_Cliente && highlightedClient.Cod_Cliente === v.Cod_Cliente) ||
                                         (v.id && highlightedClient.id === v.id)
@@ -1463,6 +1609,15 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                                         </span>
                                                         <span className="text-[10px] text-slate-500 font-mono">PDV {v.Cod_Cliente}</span>
                                                     </div>
+
+                                                    {/* TAG DO VENDEDOR QUANDO NO MODO TODOS */}
+                                                    {selectedSeller === 'ALL' && (
+                                                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold border" style={{ backgroundColor: `${pinColor}15`, color: pinColor, borderColor: `${pinColor}40` }}>
+                                                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: pinColor }} />
+                                                            <span>Vendedor: {v._sellerName || `Setor ${sellerId}`}</span>
+                                                        </div>
+                                                    )}
+
                                                     <p className="font-bold text-slate-900 leading-tight">
                                                         {v.Cod_Cliente ? `${v.Cod_Cliente} - ${v.Razao_Social || v.nome}` : (v.Razao_Social || v.nome)}
                                                     </p>
@@ -1526,30 +1681,56 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
 
                     <div className="flex-1 overflow-y-auto max-h-[520px] pr-1 space-y-2">
                         {/* CARD DA BASE (STOP 0 - PARTIDA E RETORNO) */}
-                        {activeBaseInfo && filteredVisits.length > 0 && (
-                            <div className="p-2.5 rounded-2xl bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/30 dark:border-rose-800/50 flex items-center justify-between gap-2.5">
+                        {selectedSeller === 'ALL' ? (
+                            <div className="p-2.5 rounded-2xl bg-indigo-500/10 dark:bg-indigo-950/30 border border-indigo-500/30 dark:border-indigo-800/50 flex items-center justify-between gap-2.5">
                                 <div className="flex items-center gap-2.5">
-                                    <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-red-500 to-red-700 text-white font-black text-xs flex items-center justify-center shrink-0 border-2 border-white shadow-xs">
+                                    <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white font-black text-xs flex items-center justify-center shrink-0 border-2 border-white shadow-xs">
                                         🏠
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             <span className="text-xs font-black text-slate-900 dark:text-white">
-                                                {formatSellerDisplayName(activeBaseInfo.codigoSetor || selectedSeller, activeBaseInfo.name)}
+                                                {allSellersBases.length} Bases Residenciais no Mapa
                                             </span>
-                                            <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-rose-600 text-white uppercase tracking-wider">
-                                                BASE / RESIDÊNCIA
+                                            <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-indigo-600 text-white uppercase tracking-wider">
+                                                MULTI-SETOR
                                             </span>
                                         </div>
-                                        <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[280px]">
-                                            {activeBaseInfo.address}
+                                        <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                                            Pontos de partida com as cores exclusivas de cada vendedor
                                         </div>
                                     </div>
                                 </div>
-                                <span className="text-[10px] font-bold text-rose-700 dark:text-rose-300 shrink-0">
-                                    Stop 0
+                                <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 shrink-0">
+                                    Equipe
                                 </span>
                             </div>
+                        ) : (
+                            activeBaseInfo && filteredVisits.length > 0 && (
+                                <div className="p-2.5 rounded-2xl bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/30 dark:border-rose-800/50 flex items-center justify-between gap-2.5">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-red-500 to-red-700 text-white font-black text-xs flex items-center justify-center shrink-0 border-2 border-white shadow-xs">
+                                            🏠
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span className="text-xs font-black text-slate-900 dark:text-white">
+                                                    {formatSellerDisplayName(activeBaseInfo.codigoSetor || selectedSeller, activeBaseInfo.name)}
+                                                </span>
+                                                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-rose-600 text-white uppercase tracking-wider">
+                                                    BASE / RESIDÊNCIA
+                                                </span>
+                                            </div>
+                                            <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[280px]">
+                                                {activeBaseInfo.address}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-rose-700 dark:text-rose-300 shrink-0">
+                                        Stop 0
+                                    </span>
+                                </div>
+                            )
                         )}
 
                         {itineraryStops.length === 0 ? (
@@ -1565,7 +1746,12 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     (v.id && item.id === v.id)
                                 ) + 1;
                                 const pinSeq = selectedDay === 'ALL' ? (daySeq > 0 ? daySeq : idx + 1) : (idx + 1);
-                                const pinColor = DAY_COLORS[dayKey]?.hex || '#2563eb';
+
+                                // Determinação da Cor: No modo TODOS OS VENDEDORES usa a cor do vendedor; caso contrário usa a cor do dia
+                                const sellerId = String(v._sellerId || v.Cod_Vend || '');
+                                const sellerColorCfg = sellerColorMap.get(sellerId) || SELLER_COLORS[0];
+                                const pinColor = selectedSeller === 'ALL' ? sellerColorCfg.hex : (DAY_COLORS[dayKey]?.hex || '#2563eb');
+
                                 const isSelected = Boolean(highlightedClient && (
                                     (v.Cod_Cliente && highlightedClient.Cod_Cliente === v.Cod_Cliente) ||
                                     (v.id && highlightedClient.id === v.id)
@@ -1595,6 +1781,17 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                                     <span className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
                                                         {v.Cod_Cliente ? `${v.Cod_Cliente} - ${v.Razao_Social || v.nome}` : (v.Razao_Social || v.nome)}
                                                     </span>
+
+                                                    {/* TAG DO VENDEDOR QUANDO NO MODO TODOS */}
+                                                    {selectedSeller === 'ALL' && (
+                                                        <span
+                                                            className="text-[9px] font-black px-1.5 py-0.2 rounded border shadow-2xs"
+                                                            style={{ backgroundColor: `${pinColor}15`, color: pinColor, borderColor: `${pinColor}40` }}
+                                                        >
+                                                            {v._sellerName ? v._sellerName.split(' - ')[0] : `Setor ${sellerId}`}
+                                                        </span>
+                                                    )}
+
                                                     {/* BADGE DE FREQUÊNCIA (1 3 / 2 4 / 1 2 3 4) */}
                                                     <span
                                                         className={`text-[9px] font-black px-1.5 py-0.2 rounded border ${freqInfo.badgeClass}`}
