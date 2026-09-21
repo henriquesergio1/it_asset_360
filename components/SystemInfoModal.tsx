@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.198.0',
+    date: 'Hoje',
+    title: 'Fuel360: Motor Multi-Cenários e Nivelamento Inteligente de Carga Horária',
+    changes: [
+      'Simulação e Teste de Múltiplos Cenários: O algoritmo gera e compara de 8 a 16 cenários concorrentes de particionamento e distribuição, analisando diferentes cortes espaciais e ponderações.',
+      'Nivelamento Inteligente de Tempo Total: Substituição da contagem pura de PDVs pelo tempo total de jornada (atendimento por canal + trânsito viário 2-Opt), impedindo dias subutilizados (ex: 3h) e dias sobrecarregados (ex: >8h).',
+      'Seleção da Melhor Solução por Score: O sistema calcula uma pontuação multi-objetivo e seleciona automaticamente a distribuição que zera sobrecargas, equaliza os tempos diários e minimiza a quilometragem.'
+    ]
+  },
+  {
     version: '3.197.2',
     date: 'Hoje',
     title: 'Fuel360: Ordenação Numérica Estável dos Vendedores na Sanfona',

@@ -4142,459 +4142,395 @@ export const AjusteRota: React.FC = () => {
                 );
             }
 
-            // 2.3. Varredura Contígua dos Clusters
-            let sweepClusters: GeoCluster[] = [];
-
-            // Se uma cidade representa a carteira dominante (ex: Ilhabela com todos os clientes):
-            const isSingleDominantCity = cityGroups.size === 1;
-            if (isSingleDominantCity && clusters.every(cl => cl.linearProj !== undefined)) {
-                // Preserva o ordenamento 100% contíguo no eixo linear (do Extremo Sul ao Extremo Norte)
-                sweepClusters = [...clusters].sort((a, b) => (a.linearProj ?? 0) - (b.linearProj ?? 0));
-            } else {
-                // Varredura Angular Contígua para carteiras multimodais com várias cidades
-                clusters.sort((a, b) => a.polarAngle - b.polarAngle);
-
-                let maxGap = -1;
-                let bestCutIdx = 0;
-                for (let i = 0; i < clusters.length; i++) {
-                    const nextIdx = (i + 1) % clusters.length;
-                    let angleGap = clusters[nextIdx].polarAngle - clusters[i].polarAngle;
-                    if (angleGap < 0) angleGap += 2 * Math.PI;
-                    if (angleGap > maxGap) {
-                        maxGap = angleGap;
-                        bestCutIdx = nextIdx;
-                    }
-                }
-                sweepClusters = [
-                    ...clusters.slice(bestCutIdx),
-                    ...clusters.slice(0, bestCutIdx)
-                ];
-            }
-
-            // 2.4. Particionamento 1D Ótimo dos Clusters para os Dias Ativos (DP Min-Cost)
-            const M = sweepClusters.length;
+            // 2.3. Motor Multi-Cenários de Inteligência e Balanceamento de Carga Horária Total
             const K = activeDays.length;
 
-            const dp: number[][] = Array.from({ length: K + 1 }, () => Array(M + 1).fill(Infinity));
-            const parent: number[][] = Array.from({ length: K + 1 }, () => Array(M + 1).fill(-1));
-            dp[0][0] = 0;
+            const isDayAllowedForClient = (client: typeof uniqueClients[0], dayName: string) => {
+                const restr = clienteRestricoesMap.get(client.sampleVisit.Cod_Cliente);
+                if (!restr || !restr.DiasPermitidos || !restr.DiasPermitidos.trim()) return true;
+                const allowed = restr.DiasPermitidos.split(',').map(item => normalizeDiaSemana(item.trim()));
+                return allowed.includes(dayName);
+            };
 
-            const clusterSizes = sweepClusters.map(c => c.clients.length);
-            const prefixSizes: number[] = [0];
-            for (let i = 0; i < M; i++) {
-                prefixSizes.push(prefixSizes[i] + clusterSizes[i]);
-            }
+            const isCitySatellite = (client: typeof uniqueClients[0]) => {
+                const cCity = (client.sampleVisit.Cidade || '').trim().toUpperCase();
+                return clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
+            };
 
-            for (let d = 1; d <= K; d++) {
-                const targetQ = dayQuotas[d - 1];
-                for (let i = d; i <= M; i++) {
-                    for (let j = d - 1; j < i; j++) {
-                        if (dp[d - 1][j] === Infinity) continue;
-                        const countInDay = prefixSizes[i] - prefixSizes[j];
-                        const diff = countInDay - targetQ;
-                        const cost = dp[d - 1][j] + (diff * diff) + (countInDay === 0 ? 50000 : 0);
-                        if (cost < dp[d][i]) {
-                            dp[d][i] = cost;
-                            parent[d][i] = j;
+            const getClientWorkloadMins = (c: typeof uniqueClients[0]) => {
+                const srv = getClientServiceTime(c.sampleVisit);
+                const freqFactor = c.tipo === 'SEMANAL' ? 1.0 : 0.5;
+                return (srv * freqFactor) + interStopTravelMins;
+            };
+
+            const totalPortfolioWorkloadMins = uniqueClients.reduce((acc, c) => acc + getClientWorkloadMins(c), 0);
+            const targetWorkloadPerDayMins = totalPortfolioWorkloadMins / totalWeight;
+
+            const getOrderedDayMetrics = (cList: typeof uniqueClients) => {
+                if (cList.length === 0) return { travelMins: 0, serviceMins: 0, totalMins: 0, totalKm: 0 };
+                const valid = cList.filter(c => c.lat && c.lng);
+                if (valid.length === 0) {
+                    const srv = cList.reduce((sum, c) => sum + (c.tipo === 'SEMANAL' ? getClientServiceTime(c.sampleVisit) : getClientServiceTime(c.sampleVisit) * 0.5), 0);
+                    return { travelMins: 0, serviceMins: srv, totalMins: srv, totalKm: 0 };
+                }
+                const stops = valid.map(c => ({ lat: c.lat, lng: c.lng }));
+                const orderedStops = stops.length <= 35 
+                    ? optimizeDayCircuit2Opt({ lat: baseLat, lng: baseLng }, stops, optEndAtLastClient)
+                    : stops;
+                const circuit = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, orderedStops, optEndAtLastClient);
+                const serviceMins = cList.reduce((sum, c) => {
+                    const srv = getClientServiceTime(c.sampleVisit);
+                    return sum + (c.tipo === 'SEMANAL' ? srv : srv * 0.5);
+                }, 0);
+                return {
+                    travelMins: circuit.travelMinutes,
+                    serviceMins,
+                    totalMins: circuit.travelMinutes + serviceMins,
+                    totalKm: circuit.totalKm
+                };
+            };
+
+            // Função de Particionamento 1D via Programação Dinâmica (DP)
+            const partitionClustersDP = (
+                sweep: GeoCluster[], 
+                criterion: 'COUNT' | 'WORKLOAD'
+            ): Array<typeof uniqueClients> => {
+                const M_len = sweep.length;
+                if (M_len === 0) return Array.from({ length: K }, () => []);
+
+                const dp: number[][] = Array.from({ length: K + 1 }, () => Array(M_len + 1).fill(Infinity));
+                const parent: number[][] = Array.from({ length: K + 1 }, () => Array(M_len + 1).fill(-1));
+                dp[0][0] = 0;
+
+                const clusterWeights = sweep.map(cl => 
+                    criterion === 'WORKLOAD' 
+                        ? cl.clients.reduce((sum, c) => sum + getClientWorkloadMins(c), 0)
+                        : cl.clients.length
+                );
+                const prefixWeights: number[] = [0];
+                for (let i = 0; i < M_len; i++) {
+                    prefixWeights.push(prefixWeights[i] + clusterWeights[i]);
+                }
+
+                for (let d = 1; d <= K; d++) {
+                    const targetVal = criterion === 'WORKLOAD' 
+                        ? targetWorkloadPerDayMins * getDayWeight(activeDays[d - 1])
+                        : dayQuotas[d - 1];
+
+                    for (let i = d; i <= M_len; i++) {
+                        for (let j = d - 1; j < i; j++) {
+                            if (dp[d - 1][j] === Infinity) continue;
+                            const valInDay = prefixWeights[i] - prefixWeights[j];
+                            const diff = valInDay - targetVal;
+                            const cost = dp[d - 1][j] + (diff * diff) + (valInDay === 0 ? 50000 : 0);
+                            if (cost < dp[d][i]) {
+                                dp[d][i] = cost;
+                                parent[d][i] = j;
+                            }
                         }
                     }
                 }
+
+                const dayPart: Array<typeof uniqueClients> = Array.from({ length: K }, () => []);
+                let curI = M_len;
+                for (let d = K; d >= 1; d--) {
+                    const prevJ = parent[d][curI] >= 0 ? parent[d][curI] : Math.max(0, curI - 1);
+                    const slice = sweep.slice(prevJ, curI);
+                    slice.forEach(cl => dayPart[d - 1].push(...cl.clients));
+                    curI = prevJ;
+                }
+                return dayPart;
+            };
+
+            // GERAÇÃO DE CENÁRIOS CONCORRENTES (8 a 16 CENÁRIOS)
+            interface CandidateScenario {
+                name: string;
+                partition: Array<typeof uniqueClients>;
             }
 
-            const dayClusters: GeoCluster[][] = Array.from({ length: K }, () => []);
-            let curI = M;
-            for (let d = K; d >= 1; d--) {
-                const prevJ = parent[d][curI] >= 0 ? parent[d][curI] : Math.max(0, curI - 1);
-                dayClusters[d - 1] = sweepClusters.slice(prevJ, curI);
-                curI = prevJ;
-            }
+            const candidateScenarios: CandidateScenario[] = [];
+            const isSingleDominantCity = cityGroups.size === 1;
 
-            const dayAssignedClients: Array<typeof uniqueClients> = Array.from({ length: K }, () => []);
-            dayClusters.forEach((cList, dIdx) => {
-                cList.forEach(cl => {
-                    dayAssignedClients[dIdx].push(...cl.clients);
+            if (isSingleDominantCity && clusters.every(cl => cl.linearProj !== undefined)) {
+                // Cenários lineares PCA (Sul -> Norte e Norte -> Sul)
+                const sweepAsc = [...clusters].sort((a, b) => (a.linearProj ?? 0) - (b.linearProj ?? 0));
+                const sweepDesc = [...clusters].sort((a, b) => (b.linearProj ?? 0) - (a.linearProj ?? 0));
+
+                candidateScenarios.push({
+                    name: 'PCA Linear Ascendente (Count DP)',
+                    partition: partitionClustersDP(sweepAsc, 'COUNT')
                 });
-            });
+                candidateScenarios.push({
+                    name: 'PCA Linear Ascendente (Workload DP)',
+                    partition: partitionClustersDP(sweepAsc, 'WORKLOAD')
+                });
+                candidateScenarios.push({
+                    name: 'PCA Linear Descendente (Count DP)',
+                    partition: partitionClustersDP(sweepDesc, 'COUNT')
+                });
+                candidateScenarios.push({
+                    name: 'PCA Linear Descendente (Workload DP)',
+                    partition: partitionClustersDP(sweepDesc, 'WORKLOAD')
+                });
+            } else {
+                // Cenários angulares com múltiplos pontos de corte rotacionados
+                const sortedAngular = [...clusters].sort((a, b) => a.polarAngle - b.polarAngle);
+                const numAngularStarts = Math.min(sortedAngular.length, 8);
 
-            // 2.5. Refinamento de Borda Fina entre Dias Adjacentes (Apenas clientes não-satélites)
-            for (let pass = 0; pass < 5; pass++) {
-                for (let i = 0; i < K - 1; i++) {
-                    const d1 = i;
-                    const d2 = i + 1;
-                    const diff1 = dayAssignedClients[d1].length - dayQuotas[d1];
-                    const diff2 = dayAssignedClients[d2].length - dayQuotas[d2];
+                for (let sIdx = 0; sIdx < numAngularStarts; sIdx++) {
+                    const cutIdx = Math.floor((sIdx * sortedAngular.length) / numAngularStarts);
+                    const rotatedSweep = [
+                        ...sortedAngular.slice(cutIdx),
+                        ...sortedAngular.slice(0, cutIdx)
+                    ];
 
-                    if (diff1 > 0 && diff2 < 0 && dayAssignedClients[d1].length > minAllowedClientsPerDay && dayAssignedClients[d2].length < maxAllowedClientsPerDay) {
-                        // Encontra o cliente em d1 que está MAIS PRÓXIMO da média de d2 (borda contígua real)
-                        let bestCandidateIdx = -1;
-                        let minDistToD2 = Infinity;
-                        const d2Lat = dayAssignedClients[d2].reduce((s, x) => s + (x.lat || 0), 0) / (dayAssignedClients[d2].length || 1);
-                        const d2Lng = dayAssignedClients[d2].reduce((s, x) => s + (x.lng || 0), 0) / (dayAssignedClients[d2].length || 1);
-
-                        for (let cIdx = 0; cIdx < dayAssignedClients[d1].length; cIdx++) {
-                            const c = dayAssignedClients[d1][cIdx];
-                            const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
-                            const isSat = clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
-                            if (isSat) continue;
-
-                            const dist = calcDist(c.lat, c.lng, d2Lat, d2Lng);
-                            if (dist < minDistToD2) {
-                                minDistToD2 = dist;
-                                bestCandidateIdx = cIdx;
-                            }
-                        }
-                        if (bestCandidateIdx >= 0) {
-                            const [moved] = dayAssignedClients[d1].splice(bestCandidateIdx, 1);
-                            dayAssignedClients[d2].unshift(moved);
-                        }
-                    } else if (diff2 > 0 && diff1 < 0 && dayAssignedClients[d2].length > minAllowedClientsPerDay && dayAssignedClients[d1].length < maxAllowedClientsPerDay) {
-                        // Encontra o cliente em d2 que está MAIS PRÓXIMO da média de d1 (borda contígua real)
-                        let bestCandidateIdx = -1;
-                        let minDistToD1 = Infinity;
-                        const d1Lat = dayAssignedClients[d1].reduce((s, x) => s + (x.lat || 0), 0) / (dayAssignedClients[d1].length || 1);
-                        const d1Lng = dayAssignedClients[d1].reduce((s, x) => s + (x.lng || 0), 0) / (dayAssignedClients[d1].length || 1);
-
-                        for (let cIdx = 0; cIdx < dayAssignedClients[d2].length; cIdx++) {
-                            const c = dayAssignedClients[d2][cIdx];
-                            const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
-                            const isSat = clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
-                            if (isSat) continue;
-
-                            const dist = calcDist(c.lat, c.lng, d1Lat, d1Lng);
-                            if (dist < minDistToD1) {
-                                minDistToD1 = dist;
-                                bestCandidateIdx = cIdx;
-                            }
-                        }
-                        if (bestCandidateIdx >= 0) {
-                            const [moved] = dayAssignedClients[d2].splice(bestCandidateIdx, 1);
-                            dayAssignedClients[d1].push(moved);
-                        }
-                    }
-                }
-            }
-
-            // 2.5.1. Otimização de Sexta-feira: Evitar rotas distantes na sexta-feira (priorizar de segunda a quinta)
-            if (optAvoidFridayDistant && activeDays.includes('SEXTA-FEIRA')) {
-                const fridayIdx = activeDays.indexOf('SEXTA-FEIRA');
-                // Considerar apenas dias úteis (Segunda a Sexta), preservando o Sábado se estiver ativo
-                const weekdayIndices = activeDays
-                    .map((day, idx) => ({ day, idx }))
-                    .filter(item => item.day !== 'SÁBADO');
-
-                if (weekdayIndices.length > 1 && fridayIdx !== -1) {
-                    const getAvgDistFromBase = (clients: typeof uniqueClients) => {
-                        if (!clients || clients.length === 0) return 0;
-                        return clients.reduce((sum, c) => sum + (c.distFromBase || 0), 0) / clients.length;
-                    };
-
-                    const fridayDist = getAvgDistFromBase(dayAssignedClients[fridayIdx]);
-
-                    // Encontrar o dia da semana útil que possui a MENOR distância média da base (rota mais próxima/local)
-                    let minWeekdayIdx = fridayIdx;
-                    let minWeekdayDist = fridayDist;
-
-                    weekdayIndices.forEach(item => {
-                        const dist = getAvgDistFromBase(dayAssignedClients[item.idx]);
-                        if (dist < minWeekdayDist) {
-                            minWeekdayDist = dist;
-                            minWeekdayIdx = item.idx;
-                        }
+                    candidateScenarios.push({
+                        name: `Angular Offset ${sIdx + 1} (Count DP)`,
+                        partition: partitionClustersDP(rotatedSweep, 'COUNT')
                     });
-
-                    // Se houver outro dia da semana (Segunda a Quinta) com rota mais próxima da base que a sexta, permuta
-                    if (minWeekdayIdx !== fridayIdx) {
-                        const tempClients = dayAssignedClients[fridayIdx];
-                        dayAssignedClients[fridayIdx] = dayAssignedClients[minWeekdayIdx];
-                        dayAssignedClients[minWeekdayIdx] = tempClients;
-
-                        // Ajustar cotas dos buckets correspondentes
-                        const tempQuota = dayBuckets[fridayIdx].targetQuota;
-                        dayBuckets[fridayIdx].targetQuota = dayBuckets[minWeekdayIdx].targetQuota;
-                        dayBuckets[minWeekdayIdx].targetQuota = tempQuota;
-                    }
+                    candidateScenarios.push({
+                        name: `Angular Offset ${sIdx + 1} (Workload DP)`,
+                        partition: partitionClustersDP(rotatedSweep, 'WORKLOAD')
+                    });
                 }
             }
 
-            // 2.5.3. Otimizador de Diâmetro e Eliminação de Outliers de Rota
-            if (K > 1 && uniqueClients.length > K) {
-                const isDayAllowedForClient = (client: typeof uniqueClients[0], dayName: string) => {
-                    const restr = clienteRestricoesMap.get(client.sampleVisit.Cod_Cliente);
-                    if (!restr || !restr.DiasPermitidos || !restr.DiasPermitidos.trim()) return true;
-                    const allowed = restr.DiasPermitidos.split(',').map(item => normalizeDiaSemana(item.trim()));
-                    return allowed.includes(dayName);
-                };
+            // SIMULAÇÃO, REFINAMENTO E SELEÇÃO DO MELHOR CENÁRIO
+            let bestScenarioPartition: Array<typeof uniqueClients> | null = null;
+            let bestScenarioScore = Infinity;
 
-                const isCitySatellite = (client: typeof uniqueClients[0]) => {
-                    const cCity = (client.sampleVisit.Cidade || '').trim().toUpperCase();
-                    return clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
-                };
+            candidateScenarios.forEach((scenario) => {
+                const currentPart = scenario.partition.map(cList => [...cList]);
 
-                for (let iter = 0; iter < 4; iter++) {
-                    let anySwapMade = false;
+                // 1. Respeitar hard constraints de DiasPermitidos
+                if (clienteRestricoesMap.size > 0) {
+                    for (let d = 0; d < K; d++) {
+                        const currentDay = activeDays[d];
+                        const clientsInDay = currentPart[d];
 
-                    // Centróides médios de cada dia
-                    const dayCenters = dayAssignedClients.map(cList => {
-                        const valid = cList.filter(c => c.lat && c.lng);
-                        if (valid.length === 0) return { lat: baseLat, lng: baseLng };
-                        return {
-                            lat: valid.reduce((s, c) => s + c.lat, 0) / valid.length,
-                            lng: valid.reduce((s, c) => s + c.lng, 0) / valid.length
+                        for (let i = clientsInDay.length - 1; i >= 0; i--) {
+                            const client = clientsInDay[i];
+                            const cod = client.sampleVisit.Cod_Cliente;
+                            const restr = clienteRestricoesMap.get(cod);
+
+                            if (restr && restr.DiasPermitidos && restr.DiasPermitidos.trim()) {
+                                const allowedDays = restr.DiasPermitidos.split(',').map(item => normalizeDiaSemana(item.trim()));
+                                if (!allowedDays.includes(currentDay)) {
+                                    const targetDay = activeDays.find(ad => allowedDays.includes(ad));
+                                    if (targetDay) {
+                                        const targetDIdx = activeDays.indexOf(targetDay);
+                                        if (targetDIdx !== -1 && targetDIdx !== d) {
+                                            const [moved] = clientsInDay.splice(i, 1);
+                                            currentPart[targetDIdx].push(moved);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Refinamento de Borda Fina
+                for (let pass = 0; pass < 3; pass++) {
+                    for (let i = 0; i < K - 1; i++) {
+                        const d1 = i;
+                        const d2 = i + 1;
+                        const diff1 = currentPart[d1].length - dayQuotas[d1];
+                        const diff2 = currentPart[d2].length - dayQuotas[d2];
+
+                        if (diff1 > 0 && diff2 < 0 && currentPart[d1].length > minAllowedClientsPerDay && currentPart[d2].length < maxAllowedClientsPerDay) {
+                            let bestCandidateIdx = -1;
+                            let minDistToD2 = Infinity;
+                            const d2Lat = currentPart[d2].reduce((s, x) => s + (x.lat || 0), 0) / (currentPart[d2].length || 1);
+                            const d2Lng = currentPart[d2].reduce((s, x) => s + (x.lng || 0), 0) / (currentPart[d2].length || 1);
+
+                            for (let cIdx = 0; cIdx < currentPart[d1].length; cIdx++) {
+                                const c = currentPart[d1][cIdx];
+                                if (isCitySatellite(c) || !isDayAllowedForClient(c, activeDays[d2])) continue;
+                                const dist = calcDist(c.lat, c.lng, d2Lat, d2Lng);
+                                if (dist < minDistToD2) {
+                                    minDistToD2 = dist;
+                                    bestCandidateIdx = cIdx;
+                                }
+                            }
+                            if (bestCandidateIdx >= 0) {
+                                const [moved] = currentPart[d1].splice(bestCandidateIdx, 1);
+                                currentPart[d2].unshift(moved);
+                            }
+                        }
+                    }
+                }
+
+                // 3. Otimização de Sexta-feira
+                if (optAvoidFridayDistant && activeDays.includes('SEXTA-FEIRA')) {
+                    const fridayIdx = activeDays.indexOf('SEXTA-FEIRA');
+                    const weekdayIndices = activeDays
+                        .map((day, idx) => ({ day, idx }))
+                        .filter(item => item.day !== 'SÁBADO');
+
+                    if (weekdayIndices.length > 1 && fridayIdx !== -1) {
+                        const getAvgDistFromBase = (clients: typeof uniqueClients) => {
+                            if (!clients || clients.length === 0) return 0;
+                            return clients.reduce((sum, c) => sum + (c.distFromBase || 0), 0) / clients.length;
                         };
-                    });
 
-                    for (let dA = 0; dA < K; dA++) {
-                        const clientsA = dayAssignedClients[dA];
-                        const centerA = dayCenters[dA];
-                        const dayNameA = activeDays[dA];
+                        const fridayDist = getAvgDistFromBase(currentPart[fridayIdx]);
+                        let minWeekdayIdx = fridayIdx;
+                        let minWeekdayDist = fridayDist;
 
-                        for (let iA = clientsA.length - 1; iA >= 0; iA--) {
-                            const cA = clientsA[iA];
-                            if (!cA.lat || !cA.lng || isCitySatellite(cA)) continue;
-
-                            const distA_centerA = calcDist(cA.lat, cA.lng, centerA.lat, centerA.lng);
-
-                            // Encontra o dia dB onde cA fica mais perto
-                            let bestTargetDay = -1;
-                            let bestImprovement = 0;
-
-                            for (let dB = 0; dB < K; dB++) {
-                                if (dA === dB) continue;
-                                const dayNameB = activeDays[dB];
-                                if (!isDayAllowedForClient(cA, dayNameB)) continue;
-
-                                const centerB = dayCenters[dB];
-                                const distA_centerB = calcDist(cA.lat, cA.lng, centerB.lat, centerB.lng);
-
-                                // Se cA estiver mais perto do centro de B do que do seu próprio centro
-                                if (distA_centerA > distA_centerB + 2.0) {
-                                    const diff = distA_centerA - distA_centerB;
-                                    if (diff > bestImprovement) {
-                                        bestImprovement = diff;
-                                        bestTargetDay = dB;
-                                    }
-                                }
+                        weekdayIndices.forEach(item => {
+                            const dist = getAvgDistFromBase(currentPart[item.idx]);
+                            if (dist < minWeekdayDist) {
+                                minWeekdayDist = dist;
+                                minWeekdayIdx = item.idx;
                             }
+                        });
 
-                            if (bestTargetDay !== -1) {
-                                const dB = bestTargetDay;
-                                const clientsB = dayAssignedClients[dB];
-                                const centerB = dayCenters[dB];
-                                const dayNameB = activeDays[dB];
-
-                                // Procura o melhor cB em dB para permuta
-                                let bestCandidateIdx = -1;
-                                let bestCandidateScore = -Infinity;
-
-                                for (let iB = 0; iB < clientsB.length; iB++) {
-                                    const cB = clientsB[iB];
-                                    if (cB.tipo !== cA.tipo) continue; // Preservação estrita de tipo
-                                    if (!isDayAllowedForClient(cB, dayNameA)) continue;
-                                    if (isCitySatellite(cB)) continue;
-
-                                    const distB_centerB = calcDist(cB.lat, cB.lng, centerB.lat, centerB.lng);
-                                    const distB_centerA = calcDist(cB.lat, cB.lng, centerA.lat, centerA.lng);
-
-                                    // Custo original vs Novo custo da soma dos dois clientes
-                                    const currentCost = distA_centerA + distB_centerB;
-                                    const swappedCost = calcDist(cA.lat, cA.lng, centerB.lat, centerB.lng) + distB_centerA;
-                                    const netSavings = currentCost - swappedCost;
-
-                                    if (netSavings > bestCandidateScore) {
-                                        bestCandidateScore = netSavings;
-                                        bestCandidateIdx = iB;
-                                    }
-                                }
-
-                                if (bestCandidateIdx !== -1 && bestCandidateScore > 0) {
-                                    const [movedA] = clientsA.splice(iA, 1);
-                                    const [movedB] = clientsB.splice(bestCandidateIdx, 1);
-                                    clientsA.push(movedB);
-                                    clientsB.push(movedA);
-                                    anySwapMade = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (!anySwapMade) break;
-                }
-            }
-
-            // 2.5.2. Garantia de Cumprimento dos Dias Permitidos por Cliente (Hard Constraints)
-            if (clienteRestricoesMap.size > 0) {
-                for (let d = 0; d < K; d++) {
-                    const currentDay = activeDays[d];
-                    const clientsInDay = dayAssignedClients[d];
-
-                    for (let i = clientsInDay.length - 1; i >= 0; i--) {
-                        const client = clientsInDay[i];
-                        const cod = client.sampleVisit.Cod_Cliente;
-                        const restr = clienteRestricoesMap.get(cod);
-
-                        if (restr && restr.DiasPermitidos && restr.DiasPermitidos.trim()) {
-                            const allowedDays = restr.DiasPermitidos
-                                .split(',')
-                                .map(item => normalizeDiaSemana(item.trim()));
-
-                            if (!allowedDays.includes(currentDay)) {
-                                const targetDay = activeDays.find(ad => allowedDays.includes(ad));
-                                if (targetDay) {
-                                    const targetDIdx = activeDays.indexOf(targetDay);
-                                    if (targetDIdx !== -1 && targetDIdx !== d) {
-                                        const [moved] = clientsInDay.splice(i, 1);
-                                        dayAssignedClients[targetDIdx].push(moved);
-                                    }
-                                }
-                            }
+                        if (minWeekdayIdx !== fridayIdx) {
+                            const tempClients = currentPart[fridayIdx];
+                            currentPart[fridayIdx] = currentPart[minWeekdayIdx];
+                            currentPart[minWeekdayIdx] = tempClients;
                         }
                     }
                 }
-            }
 
-            // 2.5.4. Nivelamento de Carga Horária e Jornada Diária (Workload Balancing)
-            // Harmoniza a jornada total (Trânsito + Atendimento) entre os dias ativos,
-            // impedindo disparidades extremas e respeitando rigorosamente os limites de cota [minAllowedClientsPerDay, maxAllowedClientsPerDay]
-            if (K > 1 && optBalanceWorkload) {
-                const isDayAllowedForClient = (client: typeof uniqueClients[0], dayName: string) => {
-                    const restr = clienteRestricoesMap.get(client.sampleVisit.Cod_Cliente);
-                    if (!restr || !restr.DiasPermitidos || !restr.DiasPermitidos.trim()) return true;
-                    const allowed = restr.DiasPermitidos.split(',').map(item => normalizeDiaSemana(item.trim()));
-                    return allowed.includes(dayName);
-                };
-
-                const isCitySatellite = (client: typeof uniqueClients[0]) => {
-                    const cCity = (client.sampleVisit.Cidade || '').trim().toUpperCase();
-                    return clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
-                };
-
-                const getOrderedDayMetrics = (cList: typeof uniqueClients) => {
-                    if (cList.length === 0) return { travelMins: 0, serviceMins: 0, totalMins: 0, totalKm: 0 };
-                    const valid = cList.filter(c => c.lat && c.lng);
-                    if (valid.length === 0) {
-                        const srv = cList.reduce((sum, c) => sum + (c.tipo === 'SEMANAL' ? getClientServiceTime(c.sampleVisit) : getClientServiceTime(c.sampleVisit) * 0.5), 0);
-                        return { travelMins: 0, serviceMins: srv, totalMins: srv, totalKm: 0 };
-                    }
-                    const stops = valid.map(c => ({ lat: c.lat, lng: c.lng }));
-                    const orderedStops = optimizeDayCircuit2Opt({ lat: baseLat, lng: baseLng }, stops, optEndAtLastClient);
-                    const circuit = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, orderedStops, optEndAtLastClient);
-                    const serviceMins = cList.reduce((sum, c) => {
-                        const srv = getClientServiceTime(c.sampleVisit);
-                        return sum + (c.tipo === 'SEMANAL' ? srv : srv * 0.5);
-                    }, 0);
-                    return {
-                        travelMins: circuit.travelMinutes,
-                        serviceMins,
-                        totalMins: circuit.travelMinutes + serviceMins,
-                        totalKm: circuit.totalKm
-                    };
-                };
-
-                for (let wlIter = 0; wlIter < 5; wlIter++) {
-                    const dayMetricsList = dayAssignedClients.map(cList => getOrderedDayMetrics(cList));
-                    let maxDayIdx = 0;
-                    let minDayIdx = 0;
-                    for (let d = 1; d < K; d++) {
-                        if (dayMetricsList[d].totalMins > dayMetricsList[maxDayIdx].totalMins) maxDayIdx = d;
-                        if (dayMetricsList[d].totalMins < dayMetricsList[minDayIdx].totalMins) minDayIdx = d;
-                    }
-
-                    const workloadGap = dayMetricsList[maxDayIdx].totalMins - dayMetricsList[minDayIdx].totalMins;
-                    if (workloadGap <= 45 || dayAssignedClients[maxDayIdx].length <= minAllowedClientsPerDay) break;
-
-                    const clientsHigh = dayAssignedClients[maxDayIdx];
-                    const clientsLow = dayAssignedClients[minDayIdx];
-                    const dayNameLow = activeDays[minDayIdx];
-                    const dayNameHigh = activeDays[maxDayIdx];
-
-                    // Centróides
-                    const lowCoords = clientsLow.filter(c => c.lat && c.lng);
-                    const centerLowLat = lowCoords.length > 0 ? lowCoords.reduce((s, c) => s + c.lat, 0) / lowCoords.length : baseLat;
-                    const centerLowLng = lowCoords.length > 0 ? lowCoords.reduce((s, c) => s + c.lng, 0) / lowCoords.length : baseLng;
-
-                    const highCoords = clientsHigh.filter(c => c.lat && c.lng);
-                    const centerHighLat = highCoords.length > 0 ? highCoords.reduce((s, c) => s + c.lat, 0) / highCoords.length : baseLat;
-                    const centerHighLng = highCoords.length > 0 ? highCoords.reduce((s, c) => s + c.lng, 0) / highCoords.length : baseLng;
-
-                    let bestSwap: { idxHigh: number; idxLow: number; improvement: number } | null = null;
-                    let bestMove: { idxHigh: number; improvement: number } | null = null;
-
-                    // 1. Tentar permuta (swap 1-para-1) preservando a contagem exata de clientes
-                    for (let iH = 0; iH < clientsHigh.length; iH++) {
-                        const cH = clientsHigh[iH];
-                        if (!isDayAllowedForClient(cH, dayNameLow) || isCitySatellite(cH)) continue;
-                        const srvH = cH.tipo === 'SEMANAL' ? getClientServiceTime(cH.sampleVisit) : getClientServiceTime(cH.sampleVisit) * 0.5;
-
-                        // cH não pode estar longe demais do centro de Low
-                        const distH_to_Low = calcDist(cH.lat, cH.lng, centerLowLat, centerLowLng);
-                        const distH_to_High = calcDist(cH.lat, cH.lng, centerHighLat, centerHighLng);
-                        if (distH_to_Low > distH_to_High + 5.0) continue;
-
-                        for (let iL = 0; iL < clientsLow.length; iL++) {
-                            const cL = clientsLow[iL];
-                            if (cL.tipo !== cH.tipo) continue;
-                            if (!isDayAllowedForClient(cL, dayNameHigh) || isCitySatellite(cL)) continue;
-                            const srvL = cL.tipo === 'SEMANAL' ? getClientServiceTime(cL.sampleVisit) : getClientServiceTime(cL.sampleVisit) * 0.5;
-
-                            if (srvH > srvL) {
-                                const distL_to_High = calcDist(cL.lat, cL.lng, centerHighLat, centerHighLng);
-                                const distL_to_Low = calcDist(cL.lat, cL.lng, centerLowLat, centerLowLng);
-                                if (distL_to_High > distL_to_Low + 5.0) continue;
-
-                                const diffSrv = srvH - srvL;
-                                const newHighTime = dayMetricsList[maxDayIdx].totalMins - diffSrv;
-                                const newLowTime = dayMetricsList[minDayIdx].totalMins + diffSrv;
-                                const newGap = Math.abs(newHighTime - newLowTime);
-
-                                if (newGap < workloadGap - 15) {
-                                    const improvement = workloadGap - newGap;
-                                    if (!bestSwap || improvement > bestSwap.improvement) {
-                                        bestSwap = { idxHigh: iH, idxLow: iL, improvement };
-                                    }
-                                }
-                            }
+                // 4. Busca Local Iterativa de Nivelamento de Carga Horária (Workload Balancing com Swaps e Transferências)
+                if (K > 1 && optBalanceWorkload) {
+                    for (let wlIter = 0; wlIter < 12; wlIter++) {
+                        const metricsList = currentPart.map(cList => getOrderedDayMetrics(cList));
+                        let maxD = 0;
+                        let minD = 0;
+                        for (let d = 1; d < K; d++) {
+                            if (metricsList[d].totalMins > metricsList[maxD].totalMins) maxD = d;
+                            if (metricsList[d].totalMins < metricsList[minD].totalMins) minD = d;
                         }
-                    }
 
-                    // 2. Tentar transferência direta SOMENTE se ambos os dias estiverem dentro da faixa [minAllowed, maxAllowed]
-                    if (clientsHigh.length > minAllowedClientsPerDay && clientsLow.length < maxAllowedClientsPerDay) {
-                        for (let iH = clientsHigh.length - 1; iH >= 0; iH--) {
+                        const gapMins = metricsList[maxD].totalMins - metricsList[minD].totalMins;
+                        if (gapMins <= 35) break;
+
+                        const clientsHigh = currentPart[maxD];
+                        const clientsLow = currentPart[minD];
+                        const dayNameHigh = activeDays[maxD];
+                        const dayNameLow = activeDays[minD];
+
+                        const lowCoords = clientsLow.filter(c => c.lat && c.lng);
+                        const centerLowLat = lowCoords.length > 0 ? lowCoords.reduce((s, c) => s + c.lat, 0) / lowCoords.length : baseLat;
+                        const centerLowLng = lowCoords.length > 0 ? lowCoords.reduce((s, c) => s + c.lng, 0) / lowCoords.length : baseLng;
+
+                        const highCoords = clientsHigh.filter(c => c.lat && c.lng);
+                        const centerHighLat = highCoords.length > 0 ? highCoords.reduce((s, c) => s + c.lat, 0) / highCoords.length : baseLat;
+                        const centerHighLng = highCoords.length > 0 ? highCoords.reduce((s, c) => s + c.lng, 0) / highCoords.length : baseLng;
+
+                        let bestSwap: { idxHigh: number; idxLow: number; improvement: number } | null = null;
+                        let bestMove: { idxHigh: number; improvement: number } | null = null;
+
+                        // A. Permuta 1-para-1 entre dias
+                        for (let iH = 0; iH < clientsHigh.length; iH++) {
                             const cH = clientsHigh[iH];
                             if (!isDayAllowedForClient(cH, dayNameLow) || isCitySatellite(cH)) continue;
+                            const srvH = getClientWorkloadMins(cH);
 
                             const distH_to_Low = calcDist(cH.lat, cH.lng, centerLowLat, centerLowLng);
                             const distH_to_High = calcDist(cH.lat, cH.lng, centerHighLat, centerHighLng);
-                            // O cliente precisa estar geograficamente na zona de transição entre os dois dias (não no extremo oposto)
-                            if (distH_to_Low > distH_to_High + 3.0) continue;
+                            if (distH_to_Low > distH_to_High + 8.0) continue;
 
-                            const cHTime = cH.tipo === 'SEMANAL' ? getClientServiceTime(cH.sampleVisit) : getClientServiceTime(cH.sampleVisit) * 0.5;
-                            const newHighTime = dayMetricsList[maxDayIdx].totalMins - cHTime;
-                            const newLowTime = dayMetricsList[minDayIdx].totalMins + cHTime;
-                            const newGap = Math.abs(newHighTime - newLowTime);
+                            for (let iL = 0; iL < clientsLow.length; iL++) {
+                                const cL = clientsLow[iL];
+                                if (!isDayAllowedForClient(cL, dayNameHigh) || isCitySatellite(cL)) continue;
+                                const srvL = getClientWorkloadMins(cL);
 
-                            if (newGap < workloadGap - 15) {
-                                const improvement = workloadGap - newGap;
-                                if (!bestMove || improvement > bestMove.improvement) {
-                                    bestMove = { idxHigh: iH, improvement };
+                                if (srvH > srvL) {
+                                    const distL_to_High = calcDist(cL.lat, cL.lng, centerHighLat, centerHighLng);
+                                    const distL_to_Low = calcDist(cL.lat, cL.lng, centerLowLat, centerLowLng);
+                                    if (distL_to_High > distL_to_Low + 8.0) continue;
+
+                                    const diff = srvH - srvL;
+                                    const newHigh = metricsList[maxD].totalMins - diff;
+                                    const newLow = metricsList[minD].totalMins + diff;
+                                    const newGap = Math.abs(newHigh - newLow);
+
+                                    if (newGap < gapMins - 10) {
+                                        const improvement = gapMins - newGap;
+                                        if (!bestSwap || improvement > bestSwap.improvement) {
+                                            bestSwap = { idxHigh: iH, idxLow: iL, improvement };
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    if (bestSwap && (!bestMove || bestSwap.improvement >= bestMove.improvement)) {
-                        const [movedH] = clientsHigh.splice(bestSwap.idxHigh, 1);
-                        const [movedL] = clientsLow.splice(bestSwap.idxLow, 1);
-                        clientsHigh.push(movedL);
-                        clientsLow.push(movedH);
-                    } else if (bestMove) {
-                        const [movedH] = clientsHigh.splice(bestMove.idxHigh, 1);
-                        clientsLow.push(movedH);
-                    } else {
-                        break;
+                        // B. Transferência Direta respeitando envelope de cotas
+                        if (clientsHigh.length > minAllowedClientsPerDay && clientsLow.length < maxAllowedClientsPerDay) {
+                            for (let iH = clientsHigh.length - 1; iH >= 0; iH--) {
+                                const cH = clientsHigh[iH];
+                                if (!isDayAllowedForClient(cH, dayNameLow) || isCitySatellite(cH)) continue;
+
+                                const distH_to_Low = calcDist(cH.lat, cH.lng, centerLowLat, centerLowLng);
+                                const distH_to_High = calcDist(cH.lat, cH.lng, centerHighLat, centerHighLng);
+                                if (distH_to_Low > distH_to_High + 5.0) continue;
+
+                                const cHTime = getClientWorkloadMins(cH);
+                                const newHigh = metricsList[maxD].totalMins - cHTime;
+                                const newLow = metricsList[minD].totalMins + cHTime;
+                                const newGap = Math.abs(newHigh - newLow);
+
+                                if (newGap < gapMins - 10) {
+                                    const improvement = gapMins - newGap;
+                                    if (!bestMove || improvement > bestMove.improvement) {
+                                        bestMove = { idxHigh: iH, improvement };
+                                    }
+                                }
+                            }
+                        }
+
+                        if (bestSwap && (!bestMove || bestSwap.improvement >= bestMove.improvement)) {
+                            const [movedH] = clientsHigh.splice(bestSwap.idxHigh, 1);
+                            const [movedL] = clientsLow.splice(bestSwap.idxLow, 1);
+                            clientsHigh.push(movedL);
+                            clientsLow.push(movedH);
+                        } else if (bestMove) {
+                            const [movedH] = clientsHigh.splice(bestMove.idxHigh, 1);
+                            clientsLow.push(movedH);
+                        } else {
+                            break;
+                        }
                     }
                 }
-            }
+
+                // 5. Avaliação do Score Multi-Objetivo do Cenário
+                const finalMetrics = currentPart.map(cList => getOrderedDayMetrics(cList));
+                let scenarioOverloadMins = 0;
+                let maxDayOverload = 0;
+                let totalKmSum = 0;
+                const times: number[] = [];
+
+                for (let d = 0; d < K; d++) {
+                    const t = finalMetrics[d].totalMins;
+                    times.push(t);
+                    totalKmSum += finalMetrics[d].totalKm;
+                    const dayLimitHours = (activeDays[d] === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
+                    const dayLimitMins = dayLimitHours * 60;
+                    if (optLimitHours && t > dayLimitMins) {
+                        const excess = t - dayLimitMins;
+                        scenarioOverloadMins += excess;
+                        if (excess > maxDayOverload) maxDayOverload = excess;
+                    }
+                }
+
+                const meanT = times.reduce((a, b) => a + b, 0) / (times.length || 1);
+                const varianceT = times.reduce((acc, t) => acc + Math.pow(t - meanT, 2), 0) / (times.length || 1);
+                const stdDevT = Math.sqrt(varianceT);
+
+                // Score de qualidade: prioriza eliminar sobrecargas e equilibrar o tempo diário
+                const score = (maxDayOverload * 1500) + (scenarioOverloadMins * 150) + (stdDevT * 35) + (totalKmSum * 1.5);
+
+                if (score < bestScenarioScore) {
+                    bestScenarioScore = score;
+                    bestScenarioPartition = currentPart;
+                }
+            });
+
+            const dayAssignedClients: Array<typeof uniqueClients> = bestScenarioPartition || Array.from({ length: K }, () => []);
 
             // 2.6. Distribuição Interna e Equalização Quinzenal Homogênea
             for (let d = 0; d < K; d++) {
