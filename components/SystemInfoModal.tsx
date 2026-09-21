@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.200.2',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Identificação de Base e Supervisor no Link de Crítica',
+    changes: [
+      'Blindagem por Tipo de Equipe (Vendedor x Promotor): Na tela pública de revisão/crítica pelo supervisor, a busca de colaboradores agora filtra estritamente pelo Grupo correspondente (Vendas/Vendedor para simulações comerciais), eliminando colisões de código de setor entre vendedores e promotores.',
+      'Resolução Resiliente de Base Residencial: Garantido que a partida e retorno no mapa apresentem a residência exata do vendedor selecionado (casando código de setor e nome), prevenindo a exibição indevida de dados de promotores com o mesmo código numérico.'
+    ]
+  },
+  {
     version: '3.200.1',
     date: 'Hoje',
     title: 'Fuel360: Cores Oficiais dos Dias da Semana ao Focar Vendedor no Mapa',

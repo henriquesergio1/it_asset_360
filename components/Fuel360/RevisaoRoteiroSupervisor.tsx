@@ -461,6 +461,101 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         return s ? s.clients : [];
     }, [sellersList, selectedSeller]);
 
+    // Identificar tipo de equipe da simulação ('vendedores' ou 'promotores')
+    const teamType = useMemo<'vendedores' | 'promotores'>(() => {
+        const rawType = simulacaoData?.snapshot?.teamType;
+        if (rawType === 'promotores') return 'promotores';
+        if (rawType === 'vendedores') return 'vendedores';
+
+        const desc = String(simulacaoData?.descricao || '').toUpperCase();
+        if (desc.includes('PROMOTOR') || desc.includes('PROMOTORES') || desc.includes('[PROMOTOR]')) {
+            return 'promotores';
+        }
+        return 'vendedores';
+    }, [simulacaoData]);
+
+    // Localizador resiliente de colaborador por código de setor e/ou nome, blindando contra colisões entre Vendedores e Promotores
+    const getColabForCurrentSeller = useCallback((sellerId: string | number, sellerName?: string) => {
+        const colabList: any[] = simulacaoData?.collaborators || [];
+        if (colabList.length === 0) return undefined;
+
+        const sCodeNum = Number(sellerId);
+        // Limpar prefixo "217 - " se houver no sellerName
+        let cleanName = (sellerName || '').trim();
+        if (/^\d+\s*-\s*/.test(cleanName)) {
+            cleanName = cleanName.replace(/^\d+\s*-\s*/, '').trim();
+        }
+        const normName = cleanName.toLowerCase();
+
+        // 1. Filtrar lista estrita da equipe ativa (vendedores ou promotores)
+        const teamColabs = colabList.filter((c: any) => {
+            const g = String(c.Grupo || '').trim().toUpperCase();
+            if (teamType === 'vendedores') {
+                return g === 'VENDEDOR' || g === 'VENDEDORES' || g === 'VENDAS';
+            }
+            return g === 'PROMOTOR' || g === 'PROMOTORES' || g === 'PROMOÇÃO' || g === 'PROMOCAO';
+        });
+
+        // 1.1 Match exato de Código E Nome no time ativo (máxima precisão de desempate)
+        if (normName) {
+            const exactInTeam = teamColabs.find((c: any) => 
+                (sCodeNum > 0 && Number(c.CodigoSetor) === sCodeNum) &&
+                c.Nome && c.Nome.trim().toLowerCase() === normName
+            );
+            if (exactInTeam) return exactInTeam;
+
+            // 1.2 Match por Código E semelhança de Nome no time ativo
+            const byCodeAndNameLike = teamColabs.find((c: any) => {
+                if (sCodeNum > 0 && Number(c.CodigoSetor) !== sCodeNum) return false;
+                const cName = (c.Nome || '').trim().toLowerCase();
+                return cName.includes(normName) || normName.includes(cName);
+            });
+            if (byCodeAndNameLike) return byCodeAndNameLike;
+        }
+
+        // 1.3 Match apenas por Código no time ativo
+        if (sCodeNum > 0) {
+            const byCodeInTeam = teamColabs.find((c: any) => Number(c.CodigoSetor) === sCodeNum);
+            if (byCodeInTeam) return byCodeInTeam;
+        }
+
+        // 1.4 Match por ID_Pulsus no time ativo
+        const byPulsusInTeam = teamColabs.find((c: any) => c.ID_Pulsus && String(c.ID_Pulsus) === String(sellerId));
+        if (byPulsusInTeam) return byPulsusInTeam;
+
+        // 1.5 Match apenas por Nome no time ativo
+        if (normName) {
+            const byNameInTeam = teamColabs.find((c: any) => {
+                const cName = (c.Nome || '').trim().toLowerCase();
+                return cName === normName || cName.includes(normName) || normName.includes(cName);
+            });
+            if (byNameInTeam) return byNameInTeam;
+        }
+
+        // 2. Fallback resiliente: caso o colaborador não esteja com o Grupo correto no cadastro,
+        // busca no pool geral MAS prioriza correspondência estrita de nome para evitar pegar outra pessoa com mesmo código
+        if (normName) {
+            const exactGlobal = colabList.find((c: any) => 
+                (sCodeNum > 0 && Number(c.CodigoSetor) === sCodeNum) &&
+                c.Nome && c.Nome.trim().toLowerCase() === normName
+            );
+            if (exactGlobal) return exactGlobal;
+
+            const byNameGlobal = colabList.find((c: any) => {
+                const cName = (c.Nome || '').trim().toLowerCase();
+                return cName === normName || (normName.length > 5 && (cName.includes(normName) || normName.includes(cName)));
+            });
+            if (byNameGlobal) return byNameGlobal;
+        }
+
+        // Se só temos o código e não há nome disponível para validação cruzada
+        if (sCodeNum > 0) {
+            return colabList.find((c: any) => Number(c.CodigoSetor) === sCodeNum);
+        }
+
+        return undefined;
+    }, [simulacaoData, teamType]);
+
     // Identificação do Supervisor vinculado ao vendedor selecionado (com formato Cód - Nome)
     const currentSupervisor = useMemo<string>(() => {
         if (!currentSellerClients || currentSellerClients.length === 0) return '';
@@ -468,8 +563,8 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         if (!found) {
             const currentSellerObj = sellersList.find(s => s.id === selectedSeller);
             const rawSellerCode = currentSellerObj?.id || selectedSeller;
-            const colabList: any[] = simulacaoData?.collaborators || [];
-            const colab = colabList.find(c => String(c.CodigoSetor) === String(rawSellerCode) || String(c.ID_Pulsus) === String(rawSellerCode));
+            const rawSellerName = currentSellerObj?.name || '';
+            const colab = getColabForCurrentSeller(rawSellerCode, rawSellerName);
             if (colab && (colab.Nome_Supervisor || colab.NomeSupervisor || colab.Supervisor)) {
                 const sNome = (colab.Nome_Supervisor || colab.NomeSupervisor || colab.Supervisor).trim();
                 const sCod = colab.Cod_Supervisor || colab.CodSupervisor || '';
@@ -484,7 +579,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             return `${sCod} - ${sNome}`;
         }
         return sNome || (sCod ? `Supervisor ${sCod}` : '');
-    }, [currentSellerClients, sellersList, selectedSeller, simulacaoData]);
+    }, [currentSellerClients, sellersList, selectedSeller, getColabForCurrentSeller]);
 
     // Auto-preenchimento do nome do supervisor quando identificado
     useEffect(() => {
@@ -502,23 +597,15 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         const rawSellerName = currentSellerObj?.name || firstClient?.Nome_Vendedor || '';
         const rawSellerCode = currentSellerObj?.id || firstClient?.Cod_Vend || selectedSeller;
 
-        // 1. Tentar encontrar nos colaboradores da simulação
-        const colabList: any[] = simulacaoData.collaborators || [];
-        const sCodeNum = Number(rawSellerCode);
-        const normName = rawSellerName.trim().toLowerCase();
-
-        const colab = colabList.find(c => 
-            (sCodeNum > 0 && Number(c.CodigoSetor) === sCodeNum) ||
-            (c.ID_Pulsus && String(c.ID_Pulsus) === String(rawSellerCode)) ||
-            (c.Nome && normName && (c.Nome.trim().toLowerCase() === normName || normName.includes(c.Nome.trim().toLowerCase()) || c.Nome.trim().toLowerCase().includes(normName)))
-        );
+        // 1. Tentar encontrar nos colaboradores da simulação usando a blindagem por equipe e nome
+        const colab = getColabForCurrentSeller(rawSellerCode, rawSellerName);
 
         if (colab && colab.LatitudeBase && colab.LongitudeBase && Math.abs(Number(colab.LatitudeBase)) > 0.001) {
             const finalCode = colab.CodigoSetor || rawSellerCode;
             const finalName = colab.Nome || rawSellerName;
             return {
                 type: 'COLABORADOR' as const,
-                label: 'Base do Vendedor',
+                label: teamType === 'vendedores' ? 'Base do Vendedor' : 'Base do Promotor',
                 codigoSetor: finalCode,
                 name: finalName,
                 address: colab.EnderecoBase || 'Residência do Colaborador',
@@ -542,7 +629,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         }
 
         return null;
-    }, [simulacaoData, sellersList, selectedSeller, currentSellerClients]);
+    }, [simulacaoData, sellersList, selectedSeller, currentSellerClients, getColabForCurrentSeller, teamType]);
 
     // Filtragem por Semana e Dia
     const filteredVisits = useMemo(() => {
