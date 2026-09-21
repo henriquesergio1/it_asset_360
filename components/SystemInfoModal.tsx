@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.197.0',
+    date: 'Hoje',
+    title: 'Fuel360: Resumo de Atenção e Otimização Rota Individual por Vendedor',
+    changes: [
+      'Resumo Imediato de Pontos de Atenção no Card: O cabeçalho de cada vendedor agora exibe badges informativos diretos com qualquer dia em sobrecarga, atenção de jornada (+minutos) ou fora da jornada, sem necessidade de expandir a sanfona um a um.',
+      'Abertura Rápida com 1 Clique: Clicar no badge de atenção do card abre automaticamente a sanfona do vendedor e o dia correspondente para visualização imediata.',
+      'Botão de Otimizar Rota Individual: Cada vendedor agora conta com seu próprio botão "Otimizar Rota" em seu card, permitindo ao gestor disparar a roteirização individualmente e analisar o impacto passo a passo.'
+    ]
+  },
+  {
     version: '3.196.0',
     date: 'Hoje',
     title: 'Fuel360: Visão Sanfona por Vendedor e Balanceamento com Cotas Rígidas',

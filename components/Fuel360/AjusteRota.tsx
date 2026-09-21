@@ -4986,6 +4986,41 @@ export const AjusteRota: React.FC = () => {
         }
     };
 
+    const handleOptimizeSingleSeller = async (targetSellerId: number, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (adjustedRoutes.length === 0) {
+            alert("Nenhum dado de rota carregado para otimização.");
+            return;
+        }
+
+        const sellerVisits = adjustedRoutes.filter(r => r.Cod_Vend === targetSellerId);
+        if (sellerVisits.length === 0) {
+            alert(`Nenhuma rota encontrada para o vendedor ID ${targetSellerId}.`);
+            return;
+        }
+
+        // Pré-checagem de viabilidade de capacidade / jornada para o vendedor
+        const feasibility = checkCapacityFeasibility([targetSellerId], adjustedRoutes);
+        if (feasibility.hasOverflow && feasibility.overflowData) {
+            setCapacityOverflowData(feasibility.overflowData);
+            setShowCapacityModal(true);
+            return;
+        }
+
+        const sellerColab = getColabBySectorOrName(targetSellerId, sellerVisits[0]?.Nome_Vendedor);
+        const sellerNameDesc = sellerColab?.Nome || sellerVisits[0]?.Nome_Vendedor || `Vendedor ${targetSellerId}`;
+
+        const result = await runOptimizationForSellers([targetSellerId], adjustedRoutes, true, {
+            title: `Otimização de ${sellerNameDesc} Concluída`,
+            escopoDesc: `Escopo: Vendedor ${sellerNameDesc} (ID ${targetSellerId})`,
+            mode: 'simulate'
+        });
+        if (result && result.length === 0) {
+            alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
+            return;
+        }
+    };
+
     // SIMULAÇÃO DE EXTINÇÃO E REDISTRIBUIÇÃO DE SETORES COM BALANCEAMENTO EQUILIBRADO
     const handleExtinguishAndDistributeSector = async () => {
         if (!sourceSectorToExtinguish) {
@@ -8749,8 +8784,69 @@ export const AjusteRota: React.FC = () => {
                                                     const sellerDisplayName = formatSellerDisplayName(Number(sellerId), sellerColab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`));
                                                     const sellerColor = promoterColorMap.get(String(sellerId)) || '#4f46e5';
                                                     const isSellerOpen = Boolean(openSellersMap[sellerId]);
-                                                    const hasOverloadedDay = visibleDays.some(d => operationalSummary.sellerDayMap?.[`${sellerId}-${d}`]?.isOverloaded);
                                                     const sellerTotalKm = visibleDays.reduce((sum, d) => sum + (operationalSummary.sellerDayMap?.[`${sellerId}-${d}`]?.totalKm || 0), 0);
+
+                                                    // Resumo de Pontos de Atenção do Vendedor
+                                                    const activeDaysSet = new Set(optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
+                                                    const sellerAttentionItems: Array<{
+                                                        day: string;
+                                                        shortDay: string;
+                                                        excessText: string;
+                                                        isSevere: boolean;
+                                                        isInactiveDay: boolean;
+                                                        pdvsCount: number;
+                                                    }> = [];
+
+                                                    const sellerUnallocatedVisits = sellerVisits.filter(r => r.Dia_Semana === 'SEM ATENDIMENTO');
+
+                                                    visibleDays.forEach(day => {
+                                                        if (day === 'SEM ATENDIMENTO') return;
+                                                        const dayMetrics = operationalSummary.sellerDayMap?.[`${sellerId}-${day}`];
+                                                        const dayVisits = sellerVisits.filter(r => r.Dia_Semana === day);
+                                                        const isInactiveDay = !activeDaysSet.has(day);
+                                                        const maxDayTime = dayMetrics ? Math.max(dayMetrics.time13, dayMetrics.time24) : 0;
+                                                        const dayClientsCount = dayVisits.length;
+
+                                                        const shortDay = day === 'SEGUNDA-FEIRA' ? 'Seg' :
+                                                                         day === 'TERÇA-FEIRA' ? 'Ter' :
+                                                                         day === 'QUARTA-FEIRA' ? 'Qua' :
+                                                                         day === 'QUINTA-FEIRA' ? 'Qui' :
+                                                                         day === 'SEXTA-FEIRA' ? 'Sex' :
+                                                                         day === 'SÁBADO' ? 'Sáb' : day.slice(0, 3);
+
+                                                        if (isInactiveDay) {
+                                                            if (dayClientsCount > 0 || maxDayTime > 0) {
+                                                                sellerAttentionItems.push({
+                                                                    day,
+                                                                    shortDay,
+                                                                    excessText: `${dayClientsCount} PDVs fora da jornada`,
+                                                                    isSevere: true,
+                                                                    isInactiveDay: true,
+                                                                    pdvsCount: dayClientsCount
+                                                                });
+                                                            }
+                                                            return;
+                                                        }
+
+                                                        if (optLimitHours && dayMetrics) {
+                                                            const dayLimitHours = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
+                                                            const dayLimitMin = dayLimitHours * 60;
+                                                            const excessMin = maxDayTime - dayLimitMin;
+                                                            if (excessMin > 0) {
+                                                                const excessH = Math.floor(excessMin / 60);
+                                                                const remM = Math.round(excessMin % 60);
+                                                                const excessText = excessH > 0 ? `+${excessH}h${remM > 0 ? ` ${remM}m` : ''}` : `+${remM}m`;
+                                                                sellerAttentionItems.push({
+                                                                    day,
+                                                                    shortDay,
+                                                                    excessText,
+                                                                    isSevere: excessMin >= 60,
+                                                                    isInactiveDay: false,
+                                                                    pdvsCount: dayClientsCount
+                                                                });
+                                                            }
+                                                        }
+                                                    });
 
                                                     return (
                                                         <div 
@@ -8791,19 +8887,79 @@ export const AjusteRota: React.FC = () => {
                                                                     </div>
                                                                 </div>
 
-                                                                {/* Métricas do Vendedor */}
-                                                                <div className="flex items-center gap-2 text-[10px]">
+                                                                {/* Métricas e Ações do Vendedor */}
+                                                                <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                                                                    {/* Resumo de Pontos de Atenção */}
+                                                                    {sellerAttentionItems.length > 0 || sellerUnallocatedVisits.length > 0 ? (
+                                                                        <div className="flex flex-wrap items-center gap-1.5">
+                                                                            {sellerAttentionItems.map((item, idx) => (
+                                                                                <span
+                                                                                    key={idx}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        setOpenSellersMap(prev => ({ ...prev, [sellerId]: true }));
+                                                                                        setOpenDaysMap(prev => ({ ...prev, [`${sellerId}-${item.day}`]: true }));
+                                                                                    }}
+                                                                                    className={`font-black px-2 py-0.5 rounded-lg border flex items-center gap-1 transition hover:scale-105 active:scale-95 cursor-pointer shadow-2xs select-none ${
+                                                                                        item.isSevere
+                                                                                            ? 'bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900/90 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-800 animate-pulse'
+                                                                                            : 'bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900/90 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-800'
+                                                                                    }`}
+                                                                                    title={item.isInactiveDay 
+                                                                                        ? `${item.day}: Colaborador não trabalha neste dia (${item.pdvsCount} PDVs alocados). Clique para abrir e visualizar o dia.`
+                                                                                        : `${item.day}: Jornada diária excede o limite estipulado em ${item.excessText}. Clique para abrir e visualizar o dia.`
+                                                                                    }
+                                                                                >
+                                                                                    <span>{item.isSevere ? '🚨' : '⚠️'}</span>
+                                                                                    <span>{item.shortDay}: {item.excessText}</span>
+                                                                                </span>
+                                                                            ))}
+                                                                            {sellerUnallocatedVisits.length > 0 && (
+                                                                                <span
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        setOpenSellersMap(prev => ({ ...prev, [sellerId]: true }));
+                                                                                        setOpenDaysMap(prev => ({ ...prev, [`${sellerId}-SEM ATENDIMENTO`]: true }));
+                                                                                    }}
+                                                                                    className="bg-red-100 hover:bg-red-200 dark:bg-red-950/80 dark:hover:bg-red-900/90 text-red-800 dark:text-red-200 border border-red-300 dark:border-red-800 font-black px-2 py-0.5 rounded-lg flex items-center gap-1 cursor-pointer transition hover:scale-105 active:scale-95 shadow-2xs select-none"
+                                                                                    title={`${sellerUnallocatedVisits.length} clientes na pasta SEM ATENDIMENTO. Clique para visualizar.`}
+                                                                                >
+                                                                                    <span>⚠️</span>
+                                                                                    <span>{sellerUnallocatedVisits.length} sem atend.</span>
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span 
+                                                                            className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-lg border border-emerald-200/80 dark:border-emerald-800/60 flex items-center gap-1 select-none"
+                                                                            title="Todas as rotas do vendedor estão dentro do limite diário de jornada e sem pendências."
+                                                                        >
+                                                                            <span>✓</span>
+                                                                            <span>Jornada OK</span>
+                                                                        </span>
+                                                                    )}
+
+                                                                    {/* KM Total */}
                                                                     <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold px-2.5 py-1 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
                                                                         🛣️ {Math.round(sellerTotalKm * 10) / 10} KM total
                                                                     </span>
+
+                                                                    {/* Total de PDVs */}
                                                                     <span className="bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-black px-2.5 py-1 rounded-xl border border-indigo-200/60 dark:border-indigo-800/60">
                                                                         📍 {sellerVisits.length} PDVs
                                                                     </span>
-                                                                    {hasOverloadedDay && (
-                                                                        <span className="bg-red-100 dark:bg-red-950/70 text-red-700 dark:text-red-300 font-black px-2 py-1 rounded-xl border border-red-300 dark:border-red-800 animate-pulse">
-                                                                            🚨 Sobrecarga
-                                                                        </span>
-                                                                    )}
+
+                                                                    {/* BOTÃO OTIMIZAR VENDEDOR INDIVIDUAL */}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => handleOptimizeSingleSeller(Number(sellerId), e)}
+                                                                        disabled={loading || sellerVisits.length === 0}
+                                                                        className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black px-2.5 py-1 rounded-xl shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer border border-indigo-500/50"
+                                                                        title={`Executar algoritmo de otimização de rotas e balanceamento exclusivamente para o Vendedor ${sellerDisplayName} (${sellerVisits.length} PDVs)`}
+                                                                    >
+                                                                        <RefreshIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                                                                        <span>Otimizar Rota</span>
+                                                                    </button>
                                                                 </div>
                                                             </div>
 

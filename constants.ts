@@ -1,4 +1,5 @@
-export const SYSTEM_VERSION = '3.196.0';
+export const SYSTEM_VERSION = '3.197.0';
+export const SYSTEM_CODENAME = 'Eagle Eye';
 export const APP_VERSION = SYSTEM_VERSION;
 
 // Estilos sistêmicos para padronização (UI Pattern 100% Tailwind CSS v4)
