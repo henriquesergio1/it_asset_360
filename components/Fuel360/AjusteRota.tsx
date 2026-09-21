@@ -1366,6 +1366,7 @@ export const AjusteRota: React.FC = () => {
     const [showCompareModal, setShowCompareModal] = useState(false);
     const [compareOnlyChanged, setCompareOnlyChanged] = useState(true);
     const [compareSearchFilter, setCompareSearchFilter] = useState('');
+    const [compareSellerFilter, setCompareSellerFilter] = useState<string>('ALL');
 
     // Itinerário Operacional Passo a Passo com Google Maps e Waze
     const [showItineraryModal, setShowItineraryModal] = useState(false);
@@ -1943,6 +1944,7 @@ export const AjusteRota: React.FC = () => {
 
     // Resumo Operacional de Rotas (KM e Tempo)
     const [showSummaryModal, setShowSummaryModal] = useState(false);
+    const [summarySellerFilter, setSummarySellerFilter] = useState<string>('ALL');
 
     // Simulação de Extinção e Redistribuição de Setores
     const [showExtinguishModal, setShowExtinguishModal] = useState(false);
@@ -2630,11 +2632,8 @@ export const AjusteRota: React.FC = () => {
         setOpenDaysMap({});
     };
 
-    // Resumo Operacional Consolidado de KM, Tempo e Balanceamento Quinzena a Quinzena
-    const operationalSummary = useMemo(() => {
-        // Escopo efetivo de rotas (respeitando filtro de vendedores/colaboradores selecionados)
-        const routesToAnalyze = effectiveScopedRoutes;
-
+    // Função auxiliar para calcular o Resumo Operacional de um conjunto de visitas (KM, Tempo e Balanceamento)
+    const calcOperationalSummaryForRoutes = useCallback((routesToAnalyze: VisitaPrevista[]) => {
         const uniqueClients = deduplicateVisitasPrevistas(routesToAnalyze);
         let semanalCount = 0;
         let quinzenal13Count = 0;
@@ -2910,7 +2909,19 @@ export const AjusteRota: React.FC = () => {
             isBalanced: imbalancePct <= 15,
             unallocatedCount
         };
-    }, [effectiveScopedRoutes, colaboradores, getClientServiceTime, optLimitHours, optMaxHours, optSatHalfPeriod, optEndAtLastClient]);
+    }, [colaboradores, getClientServiceTime, optLimitHours, optMaxHours, optSatHalfPeriod, optEndAtLastClient]);
+
+    // Resumo Operacional Consolidado de KM, Tempo e Balanceamento Quinzena a Quinzena (Escopo Ativo)
+    const operationalSummary = useMemo(() => {
+        return calcOperationalSummaryForRoutes(effectiveScopedRoutes);
+    }, [calcOperationalSummaryForRoutes, effectiveScopedRoutes]);
+
+    // Resumo Operacional específico do Modal (suporte a análise vendedor a vendedor)
+    const modalOperationalSummary = useMemo(() => {
+        if (summarySellerFilter === 'ALL') return operationalSummary;
+        const sellerRoutes = effectiveScopedRoutes.filter(r => String(r.Cod_Vend) === summarySellerFilter);
+        return calcOperationalSummaryForRoutes(sellerRoutes);
+    }, [summarySellerFilter, operationalSummary, effectiveScopedRoutes, calcOperationalSummaryForRoutes]);
 
     // Auto-dismiss do toast de reequilíbrio
     useEffect(() => {
@@ -5345,8 +5356,8 @@ export const AjusteRota: React.FC = () => {
         return map;
     }, [scopedAdjustedRoutes, colaboradores, optSequenceStrategy, clienteRestricoesMap, optEndAtLastClient]);
 
-    // Calcular KPIs de Comparação com Métricas Reais de Circuito Fechado (KM e Tempo de Deslocamento)
-    const kpis = useMemo(() => {
+    // Função auxiliar para calcular KPIs de um par de rotas (originais vs ajustadas)
+    const calcKpisForRoutes = useCallback((origVisits: VisitaPrevista[], adjVisits: VisitaPrevista[]) => {
         const getKpisForSet = (visits: VisitaPrevista[]) => {
             let totalKm = 0;
             let totalTravelMinutes = 0;
@@ -5454,8 +5465,8 @@ export const AjusteRota: React.FC = () => {
             };
         };
 
-        const orig = getKpisForSet(scopedOriginalRoutes);
-        const adj = getKpisForSet(scopedAdjustedRoutes);
+        const orig = getKpisForSet(origVisits);
+        const adj = getKpisForSet(adjVisits);
 
         const kmSaved = Math.round((orig.totalKm - adj.totalKm) * 10) / 10;
         const percentSaved = orig.totalKm ? Math.round((kmSaved / orig.totalKm) * 100) : 0;
@@ -5471,7 +5482,91 @@ export const AjusteRota: React.FC = () => {
             timeSavedMinutes,
             percentTimeSaved
         };
-    }, [scopedOriginalRoutes, scopedAdjustedRoutes, selectedPromoter, colaboradores, optMaxKm, optLimitKm, optMaxHours, optLimitHours, getClientServiceTime, channelServiceTimes, optEndAtLastClient]);
+    }, [colaboradores, optEndAtLastClient, optLimitKm, optMaxKm, optLimitHours, optMaxHours, optSatHalfPeriod, getClientServiceTime]);
+
+    // Calcular KPIs de Comparação com Métricas Reais de Circuito Fechado (KM e Tempo de Deslocamento)
+    const kpis = useMemo(() => {
+        return calcKpisForRoutes(scopedOriginalRoutes, scopedAdjustedRoutes);
+    }, [calcKpisForRoutes, scopedOriginalRoutes, scopedAdjustedRoutes]);
+
+    // KPIs do modal de comparativo (suporte a filtro individual de colaborador)
+    const compareKpis = useMemo(() => {
+        if (compareSellerFilter === 'ALL') return kpis;
+        const filteredOrig = scopedOriginalRoutes.filter(r => String(r.Cod_Vend) === compareSellerFilter);
+        const filteredAdj = scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === compareSellerFilter);
+        return calcKpisForRoutes(filteredOrig, filteredAdj);
+    }, [compareSellerFilter, kpis, scopedOriginalRoutes, scopedAdjustedRoutes, calcKpisForRoutes]);
+
+    // Resumo de visitas distribuídas por dia da semana no modal de comparativo
+    const compareVisitsByDay = useMemo(() => {
+        if (compareSellerFilter === 'ALL') return visitsByDay;
+        const routes = scopedAdjustedRoutes.filter(v => {
+            if (String(v.Cod_Vend) !== compareSellerFilter) return false;
+            if (selectedQuinzenaFilter === '1_3') {
+                const p = parsePeriodicidade(v.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
+            }
+            if (selectedQuinzenaFilter === '2_4') {
+                const p = parsePeriodicidade(v.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
+            }
+            return true;
+        });
+        const counts: Record<string, number> = {};
+        WEEKDAYS.forEach(day => { counts[day] = 0; });
+        routes.forEach(v => {
+            if (counts[v.Dia_Semana] !== undefined) {
+                counts[v.Dia_Semana]++;
+            }
+        });
+        return counts;
+    }, [compareSellerFilter, visitsByDay, scopedAdjustedRoutes, selectedQuinzenaFilter]);
+
+    // Resumo de visitas distribuídas por dia da semana no modal de comparativo (Rota Original)
+    const compareOriginalVisitsByDay = useMemo(() => {
+        if (compareSellerFilter === 'ALL') return originalVisitsByDay;
+        const routes = scopedOriginalRoutes.filter(v => {
+            if (String(v.Cod_Vend) !== compareSellerFilter) return false;
+            if (selectedQuinzenaFilter === '1_3') {
+                const p = parsePeriodicidade(v.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
+            }
+            if (selectedQuinzenaFilter === '2_4') {
+                const p = parsePeriodicidade(v.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
+            }
+            return true;
+        });
+        const counts: Record<string, number> = {};
+        WEEKDAYS.forEach(day => { counts[day] = 0; });
+        routes.forEach(v => {
+            if (counts[v.Dia_Semana] !== undefined) {
+                counts[v.Dia_Semana]++;
+            }
+        });
+        return counts;
+    }, [compareSellerFilter, originalVisitsByDay, scopedOriginalRoutes, selectedQuinzenaFilter]);
+
+    // Comparativo detalhado de clientes filtrado no modal
+    const compareRouteComparisonDiff = useMemo(() => {
+        if (compareSellerFilter === 'ALL') return routeComparisonDiff;
+        const filteredItems = routeComparisonDiff.items.filter(i => String(i.codVend) === compareSellerFilter);
+        const totalClients = filteredItems.length;
+        const totalChanged = filteredItems.filter(i => i.isChanged).length;
+        const totalUnchanged = totalClients - totalChanged;
+        return {
+            items: filteredItems,
+            totalClients,
+            totalChanged,
+            totalUnchanged
+        };
+    }, [compareSellerFilter, routeComparisonDiff]);
+
+    // Contagem de desbalanço quinzenal para o vendedor selecionado no modal
+    const compareImbalancedSellersCount = useMemo(() => {
+        if (compareSellerFilter === 'ALL') return imbalancedSellersCount;
+        return getSellerQuinzenaStats(Number(compareSellerFilter), scopedAdjustedRoutes).isImbalanced ? 1 : 0;
+    }, [compareSellerFilter, imbalancedSellersCount, scopedAdjustedRoutes]);
 
     // Reatribuir vendedor, dia de visita ou quinzena manualmente
     const handleManualReassign = (clientCode: number, targetSellerId: number, targetDay: string, targetPeriodicidade?: string) => {
@@ -5810,6 +5905,34 @@ export const AjusteRota: React.FC = () => {
 
         const tag = scopeMode === 'equipe' ? `_Equipe_${selectedSupervisor}` : (scopeMode === 'vendedor' ? `_Vend_${selectedSeller}` : '_Geral_Abas');
         XLSX.writeFile(wb, `Ajuste_Rota_${teamType}${tag}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
+
+    // Abrir Modal de Resumo Operacional com filtro inicial coerente
+    const handleOpenSummaryModal = () => {
+        if (focusedMapSellerId) {
+            setSummarySellerFilter(String(focusedMapSellerId));
+        } else if (selectedPromoter !== 'ALL') {
+            setSummarySellerFilter(selectedPromoter);
+        } else if (effectiveSellersList.length === 1) {
+            setSummarySellerFilter(effectiveSellersList[0]);
+        } else {
+            setSummarySellerFilter('ALL');
+        }
+        setShowSummaryModal(true);
+    };
+
+    // Abrir Modal de Comparativo Antes x Depois com filtro inicial coerente
+    const handleOpenCompareModal = () => {
+        if (focusedMapSellerId) {
+            setCompareSellerFilter(String(focusedMapSellerId));
+        } else if (selectedPromoter !== 'ALL') {
+            setCompareSellerFilter(selectedPromoter);
+        } else if (effectiveSellersList.length === 1) {
+            setCompareSellerFilter(effectiveSellersList[0]);
+        } else {
+            setCompareSellerFilter('ALL');
+        }
+        setShowCompareModal(true);
     };
 
     // Abrir Modal para Salvar Rota com Nome Personalizado
@@ -8255,7 +8378,7 @@ export const AjusteRota: React.FC = () => {
                                     {/* BOTÕES DE AÇÃO COM WRAP SUAVE E ALINHAMENTO IMPECÁVEL */}
                                     <div className="flex flex-wrap items-center gap-2">
                                         <button
-                                            onClick={() => setShowSummaryModal(true)}
+                                            onClick={handleOpenSummaryModal}
                                             disabled={scopedAdjustedRoutes.length === 0}
                                             className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center border border-blue-200 dark:border-blue-800 shadow-2xs transition h-[32px] disabled:opacity-50 cursor-pointer"
                                             title="Visualizar o resumo operacional consolidado de KM, tempo em trânsito e balanceamento diário e quinzenal"
@@ -8273,7 +8396,7 @@ export const AjusteRota: React.FC = () => {
                                             Itinerário do Dia
                                         </button>
                                         <button
-                                            onClick={() => setShowCompareModal(true)}
+                                            onClick={handleOpenCompareModal}
                                             className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 dark:text-indigo-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center border border-indigo-200 dark:border-indigo-800 shadow-2xs transition h-[32px]"
                                             title="Comparar a rota original com a rota ajustada antes de salvar"
                                         >
@@ -9863,12 +9986,33 @@ export const AjusteRota: React.FC = () => {
                                     </p>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setShowCompareModal(false)}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                            >
-                                ✕
-                            </button>
+                            <div className="flex items-center space-x-3">
+                                {availableTeamSellers.length > 1 && (
+                                    <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl shadow-2xs">
+                                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Colaborador:</span>
+                                        <select
+                                            value={compareSellerFilter}
+                                            onChange={e => setCompareSellerFilter(e.target.value)}
+                                            className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
+                                        >
+                                            <option value="ALL" className="text-slate-800 dark:text-slate-900 font-bold">
+                                                Todos os Colaboradores ({availableTeamSellers.length})
+                                            </option>
+                                            {availableTeamSellers.map(s => (
+                                                <option key={s.id} value={s.id} className="text-slate-800 dark:text-slate-900 font-medium">
+                                                    {s.name} ({s.count} PDVs)
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={() => setShowCompareModal(false)}
+                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                                >
+                                    ✕
+                                </button>
+                            </div>
                         </div>
 
                         {/* Corpo com Scroll */}
@@ -9879,11 +10023,11 @@ export const AjusteRota: React.FC = () => {
                                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
                                     <span className="text-[10px] font-black uppercase text-slate-400">Distância Total</span>
                                     <div className="mt-1 flex items-baseline space-x-2">
-                                        <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{kpis.adjusted.totalKm} KM</span>
-                                        <span className="text-xs text-slate-400 line-through">{kpis.original.totalKm} KM</span>
+                                        <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{compareKpis.adjusted.totalKm} KM</span>
+                                        <span className="text-xs text-slate-400 line-through">{compareKpis.original.totalKm} KM</span>
                                     </div>
-                                    <span className={`text-[10px] font-bold mt-1 ${kpis.kmSaved >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                        {kpis.kmSaved >= 0 ? `▼ ${kpis.kmSaved} KM (-${kpis.percentSaved}%)` : `▲ ${Math.abs(kpis.kmSaved)} KM`}
+                                    <span className={`text-[10px] font-bold mt-1 ${compareKpis.kmSaved >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                        {compareKpis.kmSaved >= 0 ? `▼ ${compareKpis.kmSaved} KM (-${compareKpis.percentSaved}%)` : `▲ ${Math.abs(compareKpis.kmSaved)} KM`}
                                     </span>
                                 </div>
 
@@ -9891,11 +10035,11 @@ export const AjusteRota: React.FC = () => {
                                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
                                     <span className="text-[10px] font-black uppercase text-slate-400">Tempo em Trânsito</span>
                                     <div className="mt-1 flex items-baseline space-x-2">
-                                        <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{formatDuration(kpis.adjusted.totalTravelMinutes)}</span>
-                                        <span className="text-xs text-slate-400 line-through">{formatDuration(kpis.original.totalTravelMinutes)}</span>
+                                        <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{formatDuration(compareKpis.adjusted.totalTravelMinutes)}</span>
+                                        <span className="text-xs text-slate-400 line-through">{formatDuration(compareKpis.original.totalTravelMinutes)}</span>
                                     </div>
-                                    <span className={`text-[10px] font-bold mt-1 ${kpis.timeSavedMinutes >= 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
-                                        {kpis.timeSavedMinutes > 0 ? `⚡ -${formatDuration(kpis.timeSavedMinutes)} (-${kpis.percentTimeSaved}%)` : 'Otimizado em circuito'}
+                                    <span className={`text-[10px] font-bold mt-1 ${compareKpis.timeSavedMinutes >= 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                        {compareKpis.timeSavedMinutes > 0 ? `⚡ -${formatDuration(compareKpis.timeSavedMinutes)} (-${compareKpis.percentTimeSaved}%)` : 'Otimizado em circuito'}
                                     </span>
                                 </div>
 
@@ -9903,11 +10047,11 @@ export const AjusteRota: React.FC = () => {
                                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
                                     <span className="text-[10px] font-black uppercase text-slate-400">Média KM / Colab</span>
                                     <div className="mt-1 flex items-baseline space-x-2">
-                                        <span className="text-lg font-black text-slate-800 dark:text-white">{kpis.adjusted.avgKmPerSeller} KM</span>
-                                        <span className="text-xs text-slate-400 line-through">{kpis.original.avgKmPerSeller} KM</span>
+                                        <span className="text-lg font-black text-slate-800 dark:text-white">{compareKpis.adjusted.avgKmPerSeller} KM</span>
+                                        <span className="text-xs text-slate-400 line-through">{compareKpis.original.avgKmPerSeller} KM</span>
                                     </div>
                                     <span className="text-[10px] font-medium text-slate-400">
-                                        {kpis.adjusted.sellerCount} colaboradores
+                                        {compareKpis.adjusted.sellerCount} {compareKpis.adjusted.sellerCount === 1 ? 'colaborador' : 'colaboradores'}
                                     </span>
                                 </div>
 
@@ -9916,12 +10060,12 @@ export const AjusteRota: React.FC = () => {
                                     <span className="text-[10px] font-black uppercase text-slate-400">Clientes Reordenados</span>
                                     <div className="mt-1 flex items-baseline space-x-2">
                                         <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">
-                                            {routeComparisonDiff.totalChanged}
+                                            {compareRouteComparisonDiff.totalChanged}
                                         </span>
-                                        <span className="text-xs text-slate-400">de {routeComparisonDiff.totalClients} PDVs</span>
+                                        <span className="text-xs text-slate-400">de {compareRouteComparisonDiff.totalClients} PDVs</span>
                                     </div>
                                     <span className="text-[10px] font-bold text-slate-500">
-                                        {routeComparisonDiff.totalUnchanged} clientes mantidos
+                                        {compareRouteComparisonDiff.totalUnchanged} clientes mantidos
                                     </span>
                                 </div>
 
@@ -9929,12 +10073,12 @@ export const AjusteRota: React.FC = () => {
                                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
                                     <span className="text-[10px] font-black uppercase text-slate-400">Desbalanço Quinzenal (&gt;30%)</span>
                                     <div className="mt-1 flex items-baseline space-x-2">
-                                        <span className={`text-lg font-black ${imbalancedSellersCount === 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                            {imbalancedSellersCount} colab(s)
+                                        <span className={`text-lg font-black ${compareImbalancedSellersCount === 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                            {compareImbalancedSellersCount} colab(s)
                                         </span>
                                     </div>
                                     <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                                        {imbalancedSellersCount === 0 ? '✓ Equilíbrio 100% atingido' : 'Requer atenção'}
+                                        {compareImbalancedSellersCount === 0 ? '✓ Equilíbrio 100% atingido' : 'Requer atenção'}
                                     </span>
                                 </div>
                             </div>
@@ -9946,8 +10090,8 @@ export const AjusteRota: React.FC = () => {
                                 </h4>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
                                     {WEEKDAYS.map(day => {
-                                        const countBefore = originalVisitsByDay[day] || 0;
-                                        const countAfter = visitsByDay[day] || 0;
+                                        const countBefore = compareOriginalVisitsByDay[day] || 0;
+                                        const countAfter = compareVisitsByDay[day] || 0;
                                         const diffDay = countAfter - countBefore;
                                         return (
                                             <div key={day} className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-700 text-center shadow-2xs">
@@ -9974,7 +10118,7 @@ export const AjusteRota: React.FC = () => {
                                             Clientes e Roteiros Detalhados
                                         </h4>
                                         <span className="text-[11px] font-bold text-slate-400">
-                                            ({routeComparisonDiff.items.filter(i => (!compareOnlyChanged || i.isChanged) && (!compareSearchFilter || i.razaoSocial.toLowerCase().includes(compareSearchFilter.toLowerCase()) || String(i.codCliente).includes(compareSearchFilter) || i.nomeVendedor.toLowerCase().includes(compareSearchFilter.toLowerCase()))).length} listados)
+                                            ({compareRouteComparisonDiff.items.filter(i => (!compareOnlyChanged || i.isChanged) && (!compareSearchFilter || i.razaoSocial.toLowerCase().includes(compareSearchFilter.toLowerCase()) || String(i.codCliente).includes(compareSearchFilter) || i.nomeVendedor.toLowerCase().includes(compareSearchFilter.toLowerCase()))).length} listados)
                                         </span>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
@@ -9992,7 +10136,7 @@ export const AjusteRota: React.FC = () => {
                                                 onChange={e => setCompareOnlyChanged(e.target.checked)}
                                                 className="rounded text-indigo-600 focus:ring-indigo-500"
                                             />
-                                            <span>Apenas Alterados ({routeComparisonDiff.totalChanged})</span>
+                                            <span>Apenas Alterados ({compareRouteComparisonDiff.totalChanged})</span>
                                         </label>
                                     </div>
                                 </div>
@@ -10010,7 +10154,7 @@ export const AjusteRota: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                            {routeComparisonDiff.items
+                                            {compareRouteComparisonDiff.items
                                                 .filter(i => {
                                                     if (compareOnlyChanged && !i.isChanged) return false;
                                                     if (compareSearchFilter) {
@@ -10083,8 +10227,8 @@ export const AjusteRota: React.FC = () => {
                         {/* Footer de Ações do Modal */}
                         <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70">
                             <span className="text-xs text-slate-500 dark:text-slate-400">
-                                {routeComparisonDiff.totalChanged > 0 
-                                    ? `Total de ${routeComparisonDiff.totalChanged} clientes com novos roteiros prontos para aprovação.` 
+                                {compareRouteComparisonDiff.totalChanged > 0 
+                                    ? `Total de ${compareRouteComparisonDiff.totalChanged} clientes com novos roteiros prontos para aprovação.` 
                                     : 'Nenhuma alteração detectada em relação à rota original.'}
                             </span>
                             <div className="flex items-center space-x-2">
@@ -10425,12 +10569,33 @@ export const AjusteRota: React.FC = () => {
                                     </p>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setShowSummaryModal(false)}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                            >
-                                ✕
-                            </button>
+                            <div className="flex items-center space-x-3">
+                                {availableTeamSellers.length > 1 && (
+                                    <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl shadow-2xs">
+                                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Colaborador:</span>
+                                        <select
+                                            value={summarySellerFilter}
+                                            onChange={e => setSummarySellerFilter(e.target.value)}
+                                            className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
+                                        >
+                                            <option value="ALL" className="text-slate-800 dark:text-slate-900 font-bold">
+                                                Todos os Colaboradores ({availableTeamSellers.length})
+                                            </option>
+                                            {availableTeamSellers.map(s => (
+                                                <option key={s.id} value={s.id} className="text-slate-800 dark:text-slate-900 font-medium">
+                                                    {s.name} ({s.count} PDVs)
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={() => setShowSummaryModal(false)}
+                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </div>
                         </div>
 
                         {/* KPIs Rápidos */}
@@ -10438,10 +10603,10 @@ export const AjusteRota: React.FC = () => {
                             <div className="bg-white dark:bg-slate-800/90 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs">
                                 <span className="text-[10px] font-bold uppercase text-slate-400">Carteira Ativa</span>
                                 <div className="text-lg font-black text-slate-800 dark:text-white mt-0.5">
-                                    {operationalSummary.uniqueClientsCount} <span className="text-xs font-normal text-slate-500">PDVs</span>
+                                    {modalOperationalSummary.uniqueClientsCount} <span className="text-xs font-normal text-slate-500">PDVs</span>
                                 </div>
                                 <span className="text-[9px] text-slate-500">
-                                    {operationalSummary.semanalCount} Sem. • {operationalSummary.quinzenal13Count + operationalSummary.quinzenal24Count} Quinz. • ~{operationalSummary.totalVisitsMonth} vis/mês
+                                    {modalOperationalSummary.semanalCount} Sem. • {modalOperationalSummary.quinzenal13Count + modalOperationalSummary.quinzenal24Count} Quinz. • ~{modalOperationalSummary.totalVisitsMonth} vis/mês
                                 </span>
                             </div>
 
@@ -10451,12 +10616,12 @@ export const AjusteRota: React.FC = () => {
                                     <span className="text-[9px] font-black bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-1 rounded">1/3</span>
                                 </div>
                                 <div className="text-lg font-black text-slate-800 dark:text-white mt-0.5">
-                                    {operationalSummary.totalPdvs13} <span className="text-xs font-normal text-slate-500">visitas</span>
+                                    {modalOperationalSummary.totalPdvs13} <span className="text-xs font-normal text-slate-500">visitas</span>
                                 </div>
                                 <div className="text-[9px] font-bold text-slate-500 flex flex-col gap-0.5 mt-0.5">
-                                    <span>~{operationalSummary.totalKm13} km • ⏱️ {Math.floor(operationalSummary.totalTime13 / 60)}h {operationalSummary.totalTime13 % 60}m Total</span>
+                                    <span>~{modalOperationalSummary.totalKm13} km • ⏱️ {Math.floor(modalOperationalSummary.totalTime13 / 60)}h {modalOperationalSummary.totalTime13 % 60}m Total</span>
                                     <span className="text-[8.5px] font-normal text-slate-400">
-                                        🚗 {Math.floor(operationalSummary.totalTravelTime13 / 60)}h {operationalSummary.totalTravelTime13 % 60}m • 🏢 {Math.floor(operationalSummary.totalServiceTime13 / 60)}h {operationalSummary.totalServiceTime13 % 60}m
+                                        🚗 {Math.floor(modalOperationalSummary.totalTravelTime13 / 60)}h {modalOperationalSummary.totalTravelTime13 % 60}m • 🏢 {Math.floor(modalOperationalSummary.totalServiceTime13 / 60)}h {modalOperationalSummary.totalServiceTime13 % 60}m
                                     </span>
                                 </div>
                             </div>
@@ -10467,12 +10632,12 @@ export const AjusteRota: React.FC = () => {
                                     <span className="text-[9px] font-black bg-fuchsia-100 dark:bg-fuchsia-950 text-fuchsia-800 dark:text-fuchsia-300 px-1 rounded">2/4</span>
                                 </div>
                                 <div className="text-lg font-black text-slate-800 dark:text-white mt-0.5">
-                                    {operationalSummary.totalPdvs24} <span className="text-xs font-normal text-slate-500">visitas</span>
+                                    {modalOperationalSummary.totalPdvs24} <span className="text-xs font-normal text-slate-500">visitas</span>
                                 </div>
                                 <div className="text-[9px] font-bold text-slate-500 flex flex-col gap-0.5 mt-0.5">
-                                    <span>~{operationalSummary.totalKm24} km • ⏱️ {Math.floor(operationalSummary.totalTime24 / 60)}h {operationalSummary.totalTime24 % 60}m Total</span>
+                                    <span>~{modalOperationalSummary.totalKm24} km • ⏱️ {Math.floor(modalOperationalSummary.totalTime24 / 60)}h {modalOperationalSummary.totalTime24 % 60}m Total</span>
                                     <span className="text-[8.5px] font-normal text-slate-400">
-                                        🚗 {Math.floor(operationalSummary.totalTravelTime24 / 60)}h {operationalSummary.totalTravelTime24 % 60}m • 🏢 {Math.floor(operationalSummary.totalServiceTime24 / 60)}h {operationalSummary.totalServiceTime24 % 60}m
+                                        🚗 {Math.floor(modalOperationalSummary.totalTravelTime24 / 60)}h {modalOperationalSummary.totalTravelTime24 % 60}m • 🏢 {Math.floor(modalOperationalSummary.totalServiceTime24 / 60)}h {modalOperationalSummary.totalServiceTime24 % 60}m
                                     </span>
                                 </div>
                             </div>
@@ -10480,13 +10645,13 @@ export const AjusteRota: React.FC = () => {
                             <div className="bg-white dark:bg-slate-800/90 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs">
                                 <span className="text-[10px] font-bold uppercase text-slate-400">Balanceamento</span>
                                 <div className="flex items-center space-x-1 mt-0.5">
-                                    <span className={`text-lg font-black ${operationalSummary.isBalanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                                        {operationalSummary.imbalancePct}%
+                                    <span className={`text-lg font-black ${modalOperationalSummary.isBalanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                        {modalOperationalSummary.imbalancePct}%
                                     </span>
                                     <span className="text-xs font-bold text-slate-400">var.</span>
                                 </div>
                                 <span className="text-[9px] font-bold text-slate-500">
-                                    {operationalSummary.isBalanced ? '✅ Carga Equalizada' : '⚠️ Variação acima de 15%'}
+                                    {modalOperationalSummary.isBalanced ? '✅ Carga Equalizada' : '⚠️ Variação acima de 15%'}
                                 </span>
                             </div>
                         </div>
@@ -10507,7 +10672,7 @@ export const AjusteRota: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {operationalSummary.daysMetrics.map(item => {
+                                    {modalOperationalSummary.daysMetrics.map(item => {
                                         const cfg = DAY_COLORS[item.day] || { hex: '#4f46e5', label: item.day, bg: 'bg-indigo-600' };
                                         return (
                                             <tr key={item.day} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
@@ -10562,35 +10727,35 @@ export const AjusteRota: React.FC = () => {
                                     <tr className="border-t-2 border-slate-300 dark:border-slate-700 font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/80">
                                         <td className="py-3 uppercase text-[11px] tracking-wider">Total Consolidado</td>
                                         <td className="py-3 text-center text-amber-700 dark:text-amber-400 bg-amber-100/50 dark:bg-amber-950/40">
-                                            {operationalSummary.totalPdvs13} PDVs
+                                            {modalOperationalSummary.totalPdvs13} PDVs
                                         </td>
                                         <td className="py-3 text-center text-amber-700 dark:text-amber-400 bg-amber-100/50 dark:bg-amber-950/40">
-                                            {operationalSummary.totalKm13} km
+                                            {modalOperationalSummary.totalKm13} km
                                         </td>
                                         <td className="py-3 text-center text-amber-700 dark:text-amber-400 bg-amber-100/50 dark:bg-amber-950/40">
                                             <div className="flex flex-col items-center leading-tight">
-                                                <span>{Math.floor(operationalSummary.totalTime13 / 60)}h {operationalSummary.totalTime13 % 60}m</span>
+                                                <span>{Math.floor(modalOperationalSummary.totalTime13 / 60)}h {modalOperationalSummary.totalTime13 % 60}m</span>
                                                 <span className="text-[9px] font-normal text-amber-800/80 dark:text-amber-300/80 mt-0.5">
-                                                    🚗 {Math.floor(operationalSummary.totalTravelTime13 / 60)}h {operationalSummary.totalTravelTime13 % 60}m • 🏢 {Math.floor(operationalSummary.totalServiceTime13 / 60)}h {operationalSummary.totalServiceTime13 % 60}m
+                                                    🚗 {Math.floor(modalOperationalSummary.totalTravelTime13 / 60)}h {modalOperationalSummary.totalTravelTime13 % 60}m • 🏢 {Math.floor(modalOperationalSummary.totalServiceTime13 / 60)}h {modalOperationalSummary.totalServiceTime13 % 60}m
                                                 </span>
                                             </div>
                                         </td>
                                         <td className="py-3 text-center text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-100/50 dark:bg-fuchsia-950/40">
-                                            {operationalSummary.totalPdvs24} PDVs
+                                            {modalOperationalSummary.totalPdvs24} PDVs
                                         </td>
                                         <td className="py-3 text-center text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-100/50 dark:bg-fuchsia-950/40">
-                                            {operationalSummary.totalKm24} km
+                                            {modalOperationalSummary.totalKm24} km
                                         </td>
                                         <td className="py-3 text-center text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-100/50 dark:bg-fuchsia-950/40">
                                             <div className="flex flex-col items-center leading-tight">
-                                                <span>{Math.floor(operationalSummary.totalTime24 / 60)}h {operationalSummary.totalTime24 % 60}m</span>
+                                                <span>{Math.floor(modalOperationalSummary.totalTime24 / 60)}h {modalOperationalSummary.totalTime24 % 60}m</span>
                                                 <span className="text-[9px] font-normal text-fuchsia-800/80 dark:text-fuchsia-300/80 mt-0.5">
-                                                    🚗 {Math.floor(operationalSummary.totalTravelTime24 / 60)}h {operationalSummary.totalTravelTime24 % 60}m • 🏢 {Math.floor(operationalSummary.totalServiceTime24 / 60)}h {operationalSummary.totalServiceTime24 % 60}m
+                                                    🚗 {Math.floor(modalOperationalSummary.totalTravelTime24 / 60)}h {modalOperationalSummary.totalTravelTime24 % 60}m • 🏢 {Math.floor(modalOperationalSummary.totalServiceTime24 / 60)}h {modalOperationalSummary.totalServiceTime24 % 60}m
                                                 </span>
                                             </div>
                                         </td>
                                         <td className="py-3 text-center text-indigo-600 dark:text-indigo-400 font-black">
-                                            {Math.round(((operationalSummary.totalPdvs13 + operationalSummary.totalPdvs24) / 2) * 10) / 10} / sem
+                                            {Math.round(((modalOperationalSummary.totalPdvs13 + modalOperationalSummary.totalPdvs24) / 2) * 10) / 10} / sem
                                         </td>
                                     </tr>
                                 </tfoot>

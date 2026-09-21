@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.200.0',
+    date: 'Hoje',
+    title: 'Fuel360: Separação por Vendedor nos Resumos Operacionais e Comparativo Antes x Depois',
+    changes: [
+      'Filtro por Vendedor no Comparativo Antes x Depois: Inclusão de seletor no cabeçalho do modal que recalcula instantaneamente as métricas de KM economizado, tempo em trânsito, distribuição semanal e lista de PDVs para o colaborador selecionado.',
+      'Filtro por Vendedor no Resumo Operacional: Seletor dedicado no modal de consolidação de KM e tempo, permitindo auditar individualmente os circuitos, itinerários diários e balanceamento quinzenal de cada vendedor ou da equipe inteira.',
+      'Análise Vendedor a Vendedor: Preservação total da visão consolidada com capacidade de aprofundamento individual sem interferir na visualização de fundo.'
+    ]
+  },
+  {
     version: '3.199.0',
     date: 'Hoje',
     title: 'Fuel360: Filtro e Foco Individual de Vendedor no Mapa',
