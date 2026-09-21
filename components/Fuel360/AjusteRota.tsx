@@ -1961,7 +1961,18 @@ export const AjusteRota: React.FC = () => {
     } | null>(null);
 
     // Map polylines
-    const [originalPolylines, setOriginalPolylines] = useState<{ id: string, color: string, points: [number, number][] }[]>([]);
+    const [originalPolylines, setOriginalPolylines] = useState<{ 
+        id: string; 
+        color: string; 
+        points: [number, number][];
+        day?: string;
+        quinzena?: string;
+        sellerId?: number;
+        sellerName?: string;
+        stopsCount?: number;
+        distKm?: number;
+        durationMin?: number;
+    }[]>([]);
     const [adjustedPolylines, setAdjustedPolylines] = useState<{ 
         id: string; 
         color: string; 
@@ -2273,14 +2284,18 @@ export const AjusteRota: React.FC = () => {
         return sellerIds.filter(id => getSellerQuinzenaStats(id, scopedAdjustedRoutes).isImbalanced).length;
     }, [scopedAdjustedRoutes]);
 
+    // Estado para foco isolado de um vendedor no mapa
+    const [focusedMapSellerId, setFocusedMapSellerId] = useState<number | null>(null);
+
     // Identificar se a visão atual está focada em um vendedor individual (para ativar distinção de dias/quinzenas)
     const isSingleSellerView = useMemo(() => {
+        if (focusedMapSellerId !== null) return true;
         if (scopeMode === 'vendedor' && selectedSeller) return true;
         if (selectedPromoter !== 'ALL') return true;
         if (selectedTeamSellers.size === 1) return true;
         const uniqueSellersInScope = new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend));
         return uniqueSellersInScope.size === 1;
-    }, [scopeMode, selectedSeller, selectedPromoter, selectedTeamSellers, scopedAdjustedRoutes]);
+    }, [focusedMapSellerId, scopeMode, selectedSeller, selectedPromoter, selectedTeamSellers, scopedAdjustedRoutes]);
 
     // Mapeamento de cores dos colaboradores
     const promoterColorMap = useMemo(() => {
@@ -2354,9 +2369,6 @@ export const AjusteRota: React.FC = () => {
 
     const isSingleSeller = effectiveSellersList.length === 1;
     const isMultipleSellers = effectiveSellersList.length > 1;
-
-    // Estado para foco isolado de um vendedor no mapa
-    const [focusedMapSellerId, setFocusedMapSellerId] = useState<number | null>(null);
 
     // Rotas ajustadas com os filtros interativos aplicados (vendedores da equipe, dias da semana e quinzenas)
     const filteredRoutes = useMemo(() => {
@@ -7666,79 +7678,85 @@ export const AjusteRota: React.FC = () => {
                                 })}
 
                                 {/* Polilinhas das rotas originais (Tracejado claro se houver comparação) */}
-                                {(focusedMapSellerId ? originalPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : originalPolylines).map((line, idx) => (
-                                    <Polyline 
-                                        key={`orig-poly-${line.id || idx}`} 
-                                        positions={line.points} 
-                                        color={line.color} 
-                                        weight={showHeatmap ? 2 : 3} 
-                                        dashArray="5, 10" 
-                                        opacity={showHeatmap ? 0.15 : 0.3} 
-                                        pathOptions={{
-                                            className: 'transition-all duration-500 ease-in-out'
-                                        }}
-                                    />
-                                ))}
+                                {(focusedMapSellerId ? originalPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : originalPolylines).map((line, idx) => {
+                                    const polyColor = ((isSingleSellerView || focusedMapSellerId !== null) && line.day && DAY_COLORS[line.day]) ? DAY_COLORS[line.day].hex : line.color;
+                                    return (
+                                        <Polyline 
+                                            key={`orig-poly-${line.id || idx}`} 
+                                            positions={line.points} 
+                                            color={polyColor} 
+                                            weight={showHeatmap ? 2 : 3} 
+                                            dashArray="5, 10" 
+                                            opacity={showHeatmap ? 0.15 : 0.3} 
+                                            pathOptions={{
+                                                className: 'transition-all duration-500 ease-in-out'
+                                            }}
+                                        />
+                                    );
+                                })}
 
                                 {/* Polilinhas das rotas otimizadas com transição visual animada e Popup Interativo */}
-                                {(focusedMapSellerId ? adjustedPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : adjustedPolylines).map((line: any, idx) => (
-                                    <Polyline 
-                                        key={`adj-poly-${line.id || idx}`} 
-                                        positions={line.points} 
-                                        color={line.color} 
-                                        weight={showHeatmap ? 2.5 : 5} 
-                                        opacity={showHeatmap ? 0.35 : 0.85} 
-                                        pathOptions={{
-                                            className: 'transition-all duration-500 ease-in-out cursor-pointer'
-                                        }}
-                                    >
-                                        <Popup>
-                                            <div className="p-2 min-w-[210px] text-xs font-sans">
-                                                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-2">
-                                                    <span 
-                                                        className="px-2 py-0.5 rounded text-[10px] font-black text-white" 
-                                                        style={{ backgroundColor: line.color }}
-                                                    >
-                                                        {line.day || 'ROTA'}
-                                                    </span>
-                                                    <span className="text-[10px] font-bold text-slate-500">
-                                                        {selectedQuinzenaFilter === 'ALL' ? 'Todas as Semanas' : (selectedQuinzenaFilter === '1_3' ? 'Sem 1 e 3' : 'Sem 2 e 4')}
-                                                    </span>
-                                                </div>
-                                                <div className="text-slate-800 font-bold mb-2 truncate">
-                                                    {line.sellerName}
-                                                </div>
-                                                <div className="grid grid-cols-3 gap-1 bg-slate-50 p-2 rounded-lg text-center mb-2">
-                                                    <div>
-                                                        <div className="text-[9px] text-slate-400 font-bold uppercase">PDVs</div>
-                                                        <div className="font-black text-indigo-600 text-xs">{line.stopsCount || 0}</div>
+                                {(focusedMapSellerId ? adjustedPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : adjustedPolylines).map((line: any, idx) => {
+                                    const polyColor = ((isSingleSellerView || focusedMapSellerId !== null) && line.day && DAY_COLORS[line.day]) ? DAY_COLORS[line.day].hex : line.color;
+                                    return (
+                                        <Polyline 
+                                            key={`adj-poly-${line.id || idx}`} 
+                                            positions={line.points} 
+                                            color={polyColor} 
+                                            weight={showHeatmap ? 2.5 : 5} 
+                                            opacity={showHeatmap ? 0.35 : 0.85} 
+                                            pathOptions={{
+                                                className: 'transition-all duration-500 ease-in-out cursor-pointer'
+                                            }}
+                                        >
+                                            <Popup>
+                                                <div className="p-2 min-w-[210px] text-xs font-sans">
+                                                    <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-2">
+                                                        <span 
+                                                            className="px-2 py-0.5 rounded text-[10px] font-black text-white" 
+                                                            style={{ backgroundColor: polyColor }}
+                                                        >
+                                                            {line.day || 'ROTA'}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-slate-500">
+                                                            {selectedQuinzenaFilter === 'ALL' ? 'Todas as Semanas' : (selectedQuinzenaFilter === '1_3' ? 'Sem 1 e 3' : 'Sem 2 e 4')}
+                                                        </span>
                                                     </div>
-                                                    <div>
-                                                        <div className="text-[9px] text-slate-400 font-bold uppercase">Distância</div>
-                                                        <div className="font-black text-slate-700 text-xs">{line.distKm || 0} km</div>
+                                                    <div className="text-slate-800 font-bold mb-2 truncate">
+                                                        {line.sellerName}
                                                     </div>
-                                                    <div>
-                                                        <div className="text-[9px] text-slate-400 font-bold uppercase">Tempo</div>
-                                                        <div className="font-black text-slate-700 text-xs">
-                                                            {Math.floor((line.durationMin || 0) / 60)}h {(line.durationMin || 0) % 60}m
+                                                    <div className="grid grid-cols-3 gap-1 bg-slate-50 p-2 rounded-lg text-center mb-2">
+                                                        <div>
+                                                            <div className="text-[9px] text-slate-400 font-bold uppercase">PDVs</div>
+                                                            <div className="font-black text-indigo-600 text-xs">{line.stopsCount || 0}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[9px] text-slate-400 font-bold uppercase">Distância</div>
+                                                            <div className="font-black text-slate-700 text-xs">{line.distKm || 0} km</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[9px] text-slate-400 font-bold uppercase">Tempo</div>
+                                                            <div className="font-black text-slate-700 text-xs">
+                                                                {Math.floor((line.durationMin || 0) / 60)}h {(line.durationMin || 0) % 60}m
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (line.day) setItineraryDay(line.day);
+                                                            if (line.sellerId) setItinerarySeller(String(line.sellerId));
+                                                            setShowItineraryModal(true);
+                                                        }}
+                                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] flex items-center justify-center transition cursor-pointer"
+                                                    >
+                                                        <ClipboardListIcon className="w-3.5 h-3.5 mr-1" /> Ver Itinerário Detalhado
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (line.day) setItineraryDay(line.day);
-                                                        if (line.sellerId) setItinerarySeller(String(line.sellerId));
-                                                        setShowItineraryModal(true);
-                                                    }}
-                                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] flex items-center justify-center transition cursor-pointer"
-                                                >
-                                                    <ClipboardListIcon className="w-3.5 h-3.5 mr-1" /> Ver Itinerário Detalhado
-                                                </button>
-                                            </div>
-                                        </Popup>
-                                    </Polyline>
-                                ))}
+                                            </Popup>
+                                        </Polyline>
+                                    );
+                                })}
 
                                 {/* Clientes Marcados (com distinção cromática por dia da semana e quinzena) */}
                                 {(focusedMapSellerId ? filteredRoutes.filter(v => v.Cod_Vend === focusedMapSellerId) : filteredRoutes).filter(v => v.Lat && v.Long).map((v, idx) => {
@@ -7746,7 +7764,8 @@ export const AjusteRota: React.FC = () => {
                                     const dayCfg = DAY_COLORS[v.Dia_Semana] || { hex: '#4f46e5', label: 'DIA' };
                                     const dayColor = dayCfg.hex;
                                     const sellerColor = promoterColorMap.get(String(v.Cod_Vend)) || '#4f46e5';
-                                    const mainColor = isSingleSellerView ? dayColor : sellerColor;
+                                    const isSingleView = isSingleSellerView || focusedMapSellerId !== null;
+                                    const mainColor = isSingleView ? dayColor : sellerColor;
 
                                     // Distinção visual no mapa:
                                     // Semanal: sólido com borda branca clássica (radius: 7, weight: 2)
@@ -7757,7 +7776,7 @@ export const AjusteRota: React.FC = () => {
                                     let radius = 7;
                                     let dashArray: string | undefined = undefined;
 
-                                    if (isSingleSellerView) {
+                                    if (isSingleView) {
                                         if (pType === 'QUINZENAL_1_3') {
                                             borderColor = '#f59e0b';
                                             borderWidth = 3.5;

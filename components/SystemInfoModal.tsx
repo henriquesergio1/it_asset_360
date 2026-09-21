@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.200.1',
+    date: 'Hoje',
+    title: 'Fuel360: Cores Oficiais dos Dias da Semana ao Focar Vendedor no Mapa',
+    changes: [
+      'Cores dos Dias da Semana no Foco do Mapa: Ao selecionar um vendedor individual no mapa, o traçado das rotas e os pontos dos clientes assumem instantaneamente a cor oficial de cada dia da semana (Segunda = Azul, Terça = Roxo, Quarta = Verde, Quinta = Âmbar, Sexta = Rosa, Sábado = Ciano).',
+      'Distinção Cromática e Quinzenal: Marcadores com anéis diferenciados para Semanas 1/3 (dourado) e Semanas 2/4 (fúcsia tracejado) agora se ativam automaticamente também ao selecionar o vendedor pelo dropdown ou card.'
+    ]
+  },
+  {
     version: '3.200.0',
     date: 'Hoje',
     title: 'Fuel360: Separação por Vendedor nos Resumos Operacionais e Comparativo Antes x Depois',
