@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.197.1',
+    date: 'Hoje',
+    title: 'Fuel360: Tag Visual de Rota Otimizada no Card do Vendedor',
+    changes: [
+      'Tag de Rota Otimizada por Vendedor: Exibição de badge destacado "✨ Rota Otimizada" no card de cada vendedor cuja rota foi processada pelo algoritmo, facilitando o acompanhamento visual do progresso de otimização individual.',
+      'Rastreamento de Processamento: O supervisor agora identifica de imediato quais colaboradores já foram otimizados e quais ainda estão pendentes de análise na lista.'
+    ]
+  },
+  {
     version: '3.197.0',
     date: 'Hoje',
     title: 'Fuel360: Resumo de Atenção e Otimização Rota Individual por Vendedor',

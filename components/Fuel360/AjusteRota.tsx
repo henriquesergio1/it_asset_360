@@ -1581,6 +1581,7 @@ export const AjusteRota: React.FC = () => {
     const [tableViewMode, setTableViewMode] = useState<'accordion' | 'flat'>('accordion');
     const [openDaysMap, setOpenDaysMap] = useState<Record<string, boolean>>({});
     const [openSellersMap, setOpenSellersMap] = useState<Record<string, boolean>>({});
+    const [optimizedSellersSet, setOptimizedSellersSet] = useState<Set<number>>(new Set());
 
     // Seleção Múltipla e Transferência em Massa de Clientes Sem Atendimento
     const [selectedUnallocatedClients, setSelectedUnallocatedClients] = useState<Set<number>>(new Set());
@@ -3484,6 +3485,7 @@ export const AjusteRota: React.FC = () => {
         setAdjustedRoutes([]);
         setOriginalPolylines([]);
         setAdjustedPolylines([]);
+        setOptimizedSellersSet(new Set());
         setScopeMode('geral');
         setSelectedSupervisor('');
         setSelectedSeller('');
@@ -4984,6 +4986,13 @@ export const AjusteRota: React.FC = () => {
             alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
             return;
         }
+        if (result && result.length > 0) {
+            setOptimizedSellersSet(prev => {
+                const next = new Set(prev);
+                sellers.forEach(s => next.add(s));
+                return next;
+            });
+        }
     };
 
     const handleOptimizeSingleSeller = async (targetSellerId: number, e?: React.MouseEvent) => {
@@ -5018,6 +5027,9 @@ export const AjusteRota: React.FC = () => {
         if (result && result.length === 0) {
             alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
             return;
+        }
+        if (result && result.length > 0) {
+            setOptimizedSellersSet(prev => new Set(prev).add(targetSellerId));
         }
     };
 
@@ -8784,6 +8796,7 @@ export const AjusteRota: React.FC = () => {
                                                     const sellerDisplayName = formatSellerDisplayName(Number(sellerId), sellerColab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`));
                                                     const sellerColor = promoterColorMap.get(String(sellerId)) || '#4f46e5';
                                                     const isSellerOpen = Boolean(openSellersMap[sellerId]);
+                                                    const isSellerOptimized = optimizedSellersSet.has(Number(sellerId));
                                                     const sellerTotalKm = visibleDays.reduce((sum, d) => sum + (operationalSummary.sellerDayMap?.[`${sellerId}-${d}`]?.totalKm || 0), 0);
 
                                                     // Resumo de Pontos de Atenção do Vendedor
@@ -8889,6 +8902,17 @@ export const AjusteRota: React.FC = () => {
 
                                                                 {/* Métricas e Ações do Vendedor */}
                                                                 <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                                                                    {/* TAG DE ROTA OTIMIZADA */}
+                                                                    {isSellerOptimized && (
+                                                                        <span 
+                                                                            className="bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900/90 text-emerald-800 dark:text-emerald-200 font-black px-2 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-700 flex items-center gap-1 shadow-2xs select-none"
+                                                                            title="Este vendedor já teve sua rota otimizada e balanceada pelo algoritmo nesta sessão."
+                                                                        >
+                                                                            <span>✨</span>
+                                                                            <span>Rota Otimizada</span>
+                                                                        </span>
+                                                                    )}
+
                                                                     {/* Resumo de Pontos de Atenção */}
                                                                     {sellerAttentionItems.length > 0 || sellerUnallocatedVisits.length > 0 ? (
                                                                         <div className="flex flex-wrap items-center gap-1.5">
@@ -8954,11 +8978,18 @@ export const AjusteRota: React.FC = () => {
                                                                         type="button"
                                                                         onClick={(e) => handleOptimizeSingleSeller(Number(sellerId), e)}
                                                                         disabled={loading || sellerVisits.length === 0}
-                                                                        className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black px-2.5 py-1 rounded-xl shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer border border-indigo-500/50"
-                                                                        title={`Executar algoritmo de otimização de rotas e balanceamento exclusivamente para o Vendedor ${sellerDisplayName} (${sellerVisits.length} PDVs)`}
+                                                                        className={`disabled:opacity-50 text-white font-black px-2.5 py-1 rounded-xl shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer border ${
+                                                                            isSellerOptimized
+                                                                                ? 'bg-slate-700 hover:bg-slate-800 border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700'
+                                                                                : 'bg-indigo-600 hover:bg-indigo-700 border-indigo-500/50'
+                                                                        }`}
+                                                                        title={isSellerOptimized
+                                                                            ? `Reotimizar e recalcular rotas para o Vendedor ${sellerDisplayName}`
+                                                                            : `Executar algoritmo de otimização de rotas e balanceamento exclusivamente para o Vendedor ${sellerDisplayName} (${sellerVisits.length} PDVs)`
+                                                                        }
                                                                     >
                                                                         <RefreshIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                                                                        <span>Otimizar Rota</span>
+                                                                        <span>{isSellerOptimized ? 'Reotimizar' : 'Otimizar Rota'}</span>
                                                                     </button>
                                                                 </div>
                                                             </div>
