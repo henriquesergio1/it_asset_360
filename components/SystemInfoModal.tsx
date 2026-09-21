@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.207.1',
+    date: 'Hoje',
+    title: 'Fuel360: Desvinculação de Vendedor Inativo em Setores Vagos',
+    changes: [
+      'Exibição Padronizada de Setor Vago: Ao carregar a rota atual, os setores sem colaborador ativo vinculado são identificados puramente como "Setor Vago", desvinculando por completo o nome de colaboradores anteriores que já foram desligados da empresa.',
+      'Formatação Consistente: Nos filtros, mapas, sanfonas e tabelas, setores vagos não exibem mais o nome de colaboradores inativos, preservando apenas identificações manuais explicitamente inseridas pelo gestor.'
+    ]
+  },
+  {
     version: '3.207.0',
     date: 'Hoje',
     title: 'Fuel360: Roteirização por Centroide e Gestão de Setores Vagos',

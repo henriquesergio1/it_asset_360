@@ -2303,6 +2303,11 @@ export const AjusteRota: React.FC = () => {
         const sId = Number(sellerId);
         const sNameNorm = sellerName ? sellerName.trim().toUpperCase() : '';
 
+        // Se o setor for vago, não possui titular ativo: não deve retornar colaborador inativo desligado
+        if (sId && isSectorVacant(sId)) {
+            return undefined;
+        }
+
         // 1. Filtrar lista estrita da equipe ativa (vendedores ou promotores)
         const teamPool = colaboradores.filter(c => {
             const g = String(c.Grupo || '').trim().toUpperCase();
@@ -2346,7 +2351,7 @@ export const AjusteRota: React.FC = () => {
         const inTeamColabs = teamColaboradores.find(c => Number(c.CodigoSetor) === sId);
         if (inTeamColabs) return inTeamColabs;
 
-        // 4. Último recurso
+        // 4. Último recurso (apenas se não for setor vago)
         return colaboradores.find(c => Number(c.CodigoSetor) === sId);
     };
 
@@ -2355,29 +2360,46 @@ export const AjusteRota: React.FC = () => {
         const sId = sellerId !== undefined && sellerId !== null ? Number(sellerId) : null;
         let name = (sellerName || '').trim();
         const isVacant = sId ? isSectorVacant(sId) : false;
+
+        if (isVacant && sId) {
+            // Se o setor for vago, verificar se o nome fornecido pertence a um colaborador inativo
+            const inactiveColab = colaboradores.find(c => Number(c.CodigoSetor) === sId && !c.Ativo);
+            const isInactiveColabName = inactiveColab && (
+                name.toUpperCase() === inactiveColab.Nome.trim().toUpperCase() || 
+                name.toUpperCase().includes(inactiveColab.Nome.trim().toUpperCase())
+            );
+
+            // Se não tem nome, ou se é o nome do colaborador inativo, ou se é genérico "Setor Vago"
+            if (!name || isInactiveColabName || name.toUpperCase().startsWith('SETOR VAGO') || name.toUpperCase() === 'VAGO') {
+                return `${sId} - Setor Vago`;
+            }
+
+            // Se for um nome manual customizado atribuído pelo gestor (ex: "A Contratar")
+            const cleanCustomName = name.replace(/\s*\[VAGO\]/gi, '').trim();
+            if (/^\d+\s*-\s*/.test(cleanCustomName)) {
+                return `${cleanCustomName} [VAGO]`;
+            }
+            return `${sId} - ${cleanCustomName} [VAGO]`;
+        }
+
         if (!name && sId) {
             const col = getColabBySectorOrName(sId);
-            name = col?.Nome || (isVacant ? `Setor Vago ${sId}` : `Colaborador ${sId}`);
+            name = col?.Nome || `Colaborador ${sId}`;
         }
-        if (!name) return isVacant ? 'Setor Vago' : 'Colaborador';
-        // Se já possui o prefixo "101 - ...", retorna direto com sufixo [VAGO] se aplicável
+        if (!name) return 'Colaborador';
+        // Se já possui o prefixo "101 - ...", retorna direto
         if (/^\d+\s*-\s*/.test(name)) {
-            if (isVacant && !name.toUpperCase().includes('VAGO')) {
-                return `${name} [VAGO]`;
-            }
             return name;
         }
         if (sId && !isNaN(sId) && sId > 0) {
-            const base = `${sId} - ${name}`;
-            return isVacant && !base.toUpperCase().includes('VAGO') ? `${base} [VAGO]` : base;
+            return `${sId} - ${name}`;
         }
         // Tenta buscar o código do setor caso sId não tenha sido fornecido
         const col = getColabBySectorOrName(0, name);
         if (col?.CodigoSetor) {
-            const base = `${col.CodigoSetor} - ${name}`;
-            return isVacant && !base.toUpperCase().includes('VAGO') ? `${base} [VAGO]` : base;
+            return `${col.CodigoSetor} - ${name}`;
         }
-        return isVacant && !name.toUpperCase().includes('VAGO') ? `${name} [VAGO]` : name;
+        return name;
     };
 
     const formatSupervisorDisplayName = (supId?: string | number, supName?: string): string => {
@@ -3882,7 +3904,7 @@ export const AjusteRota: React.FC = () => {
                 const cleanName = (v.Nome_Vendedor || '').trim();
                 const nomeFinal = colab 
                     ? (colab.Nome || cleanName)
-                    : (cleanName && !cleanName.toUpperCase().includes('VAGO') ? `${cleanName} [VAGO]` : (cleanName || `Setor Vago ${sId}`));
+                    : 'Setor Vago';
 
                 return {
                     ...v,
@@ -10142,8 +10164,9 @@ export const AjusteRota: React.FC = () => {
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
                                                                                     const sellerVisits = adjustedRoutes.filter(r => Number(r.Cod_Vend) === Number(sellerId));
-                                                                                    const currentName = sellerVisits[0]?.Nome_Vendedor || '';
-                                                                                    setManualVacantSellerName(currentName);
+                                                                                    const rawName = (sellerVisits[0]?.Nome_Vendedor || '').trim();
+                                                                                    const isGenericOrInactive = !rawName || rawName.toUpperCase().includes('SETOR VAGO') || colaboradores.some(c => !c.Ativo && Number(c.CodigoSetor) === Number(sellerId) && rawName.toUpperCase().includes(c.Nome.trim().toUpperCase()));
+                                                                                    setManualVacantSellerName(isGenericOrInactive ? '' : rawName);
                                                                                     setAssigningVacantSector(Number(sellerId));
                                                                                 }}
                                                                                 className="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black px-2.5 py-1 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border border-amber-600 select-none text-[10px]"
