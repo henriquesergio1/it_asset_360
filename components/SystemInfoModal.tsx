@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.195.0',
+    date: 'Hoje',
+    title: 'Fuel360: Encerramento no Último Cliente e Balanceamento de Carga Horária',
+    changes: [
+      'Opção de Encerramento no Último Cliente: Novo parâmetro com checkbox no otimizador que permite não calcular o retorno à base/residência ao final do dia, reduzindo quilometragem e tempo em trânsito para equipes que encerram expediente no último atendimento.',
+      'Nivelamento de Carga Horária Total (Workload Balancing): O algoritmo agora harmoniza a jornada diária (deslocamento viário + tempo de atendimento), impedindo que dias fiquem sobrecarregados enquanto dias adjacentes permanecem com folga expressiva.',
+      'Persistência Centralizada de Parâmetros: O novo parâmetro de encerramento no último cliente é sincronizado tanto no localStorage quanto gravado no SQL Server corporativo.',
+      'Itinerários e Navegação Atualizados: O traçado das rotas no mapa, a lista passo a passo do itinerário e os links de navegação para Google Maps refletem fielmente a opção de não retorno.'
+    ]
+  },
+  {
     version: '3.194.0',
     date: 'Hoje',
     title: 'Fuel360: Exclusão em Cascata e Limpeza de Críticas Órfãs',

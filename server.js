@@ -2418,12 +2418,18 @@ async function ensureFuelTablesExist(pool) {
                     OptBalanceWorkload BIT NOT NULL DEFAULT 1,
                     OptAvoidFridayDistant BIT NOT NULL DEFAULT 1,
                     OptSequenceStrategy NVARCHAR(50) NOT NULL DEFAULT 'FAR_TO_NEAR',
+                    OptEndAtLastClient BIT NOT NULL DEFAULT 0,
                     DataAtualizacao DATETIME DEFAULT GETDATE(),
                     UsuarioAtualizacao NVARCHAR(255) NULL
                 );
-                INSERT INTO FuelParametrosOtimizacao (Chave, OptLimitClients, OptMaxClients, OptLimitKm, OptMaxKm, OptLimitHours, OptMaxHours, OptDays, OptSatHalfPeriod, OptBalanceWorkload, OptAvoidFridayDistant, OptSequenceStrategy, UsuarioAtualizacao)
-                VALUES ('GLOBAL', 0, 15, 0, 60, 1, 8, 'SEGUNDA-FEIRA,TERÇA-FEIRA,QUARTA-FEIRA,QUINTA-FEIRA,SEXTA-FEIRA', 1, 1, 1, 'FAR_TO_NEAR', 'Sistema');
+                INSERT INTO FuelParametrosOtimizacao (Chave, OptLimitClients, OptMaxClients, OptLimitKm, OptMaxKm, OptLimitHours, OptMaxHours, OptDays, OptSatHalfPeriod, OptBalanceWorkload, OptAvoidFridayDistant, OptSequenceStrategy, OptEndAtLastClient, UsuarioAtualizacao)
+                VALUES ('GLOBAL', 0, 15, 0, 60, 1, 8, 'SEGUNDA-FEIRA,TERÇA-FEIRA,QUARTA-FEIRA,QUINTA-FEIRA,SEXTA-FEIRA', 1, 1, 1, 'FAR_TO_NEAR', 0, 'Sistema');
             `);
+        } else {
+            const checkCol = await pool.request().query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelParametrosOtimizacao' AND COLUMN_NAME = 'OptEndAtLastClient'");
+            if (checkCol.recordset.length === 0) {
+                await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD OptEndAtLastClient BIT NOT NULL DEFAULT 0;");
+            }
         }
     } catch (err) {
         console.error('AVISO ao verificar/criar tabelas Fuel360:', err.message);
@@ -3151,6 +3157,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
         const optBalanceWorkload = b.optBalanceWorkload ? 1 : 0;
         const optAvoidFridayDistant = b.optAvoidFridayDistant ? 1 : 0;
         const optSequenceStrategy = b.optSequenceStrategy || 'FAR_TO_NEAR';
+        const optEndAtLastClient = b.optEndAtLastClient ? 1 : 0;
         const userName = b.usuario || req.user?.Nome || req.user?.Usuario || 'Operador Fuel';
 
         await pool.request()
@@ -3166,6 +3173,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
             .input('OptBalanceWorkload', sql.Bit, optBalanceWorkload)
             .input('OptAvoidFridayDistant', sql.Bit, optAvoidFridayDistant)
             .input('OptSequenceStrategy', sql.NVarChar(50), optSequenceStrategy)
+            .input('OptEndAtLastClient', sql.Bit, optEndAtLastClient)
             .input('UsuarioAtualizacao', sql.NVarChar(255), userName)
             .query(`
                 IF EXISTS (SELECT 1 FROM FuelParametrosOtimizacao WHERE Chave = @Chave)
@@ -3182,6 +3190,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         OptBalanceWorkload = @OptBalanceWorkload,
                         OptAvoidFridayDistant = @OptAvoidFridayDistant,
                         OptSequenceStrategy = @OptSequenceStrategy,
+                        OptEndAtLastClient = @OptEndAtLastClient,
                         DataAtualizacao = GETDATE(),
                         UsuarioAtualizacao = @UsuarioAtualizacao
                     WHERE Chave = @Chave;
@@ -3192,13 +3201,13 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         Chave, OptLimitClients, OptMaxClients, OptLimitKm, OptMaxKm,
                         OptLimitHours, OptMaxHours, OptDays, OptSatHalfPeriod,
                         OptBalanceWorkload, OptAvoidFridayDistant, OptSequenceStrategy,
-                        DataAtualizacao, UsuarioAtualizacao
+                        OptEndAtLastClient, DataAtualizacao, UsuarioAtualizacao
                     )
                     VALUES (
                         @Chave, @OptLimitClients, @OptMaxClients, @OptLimitKm, @OptMaxKm,
                         @OptLimitHours, @OptMaxHours, @OptDays, @OptSatHalfPeriod,
                         @OptBalanceWorkload, @OptAvoidFridayDistant, @OptSequenceStrategy,
-                        GETDATE(), @UsuarioAtualizacao
+                        @OptEndAtLastClient, GETDATE(), @UsuarioAtualizacao
                     );
                 END
             `);

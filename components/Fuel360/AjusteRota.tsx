@@ -507,16 +507,20 @@ interface CircuitMetrics {
     travelMinutes: number;
 }
 
-const calcCircuitMetrics = (base: { lat: number; lng: number }, stops: { lat: number; lng: number }[]): CircuitMetrics => {
+const calcCircuitMetrics = (
+    base: { lat: number; lng: number }, 
+    stops: { lat: number; lng: number }[],
+    endAtLastClient: boolean = false
+): CircuitMetrics => {
     if (stops.length === 0) return { totalKm: 0, travelMinutes: 0 };
     
-    // Pontos do circuito diário fechado: Base -> Paradas -> Base
+    // Pontos do circuito diário: Base -> Paradas (-> Base se endAtLastClient for false)
     const points: { lat: number; lng: number }[] = [];
     if (base.lat && base.lng) points.push(base);
     stops.forEach(s => {
         if (s.lat && s.lng) points.push(s);
     });
-    if (base.lat && base.lng && points.length > 1) {
+    if (!endAtLastClient && base.lat && base.lng && points.length > 1) {
         points.push(base);
     }
 
@@ -556,10 +560,11 @@ const formatDuration = (minutes: number): string => {
     return `${h}h ${m}m`;
 };
 
-// Heurística de Roteirização TSP Circuito Fechado (Base -> Clientes -> Base) com 2-Opt Local Search
+// Heurística de Roteirização TSP (Base -> Clientes -> opcional Base) com 2-Opt Local Search
 function optimizeDayCircuit2Opt<T extends { lat: number; lng: number }>(
     base: { lat: number; lng: number },
-    clients: T[]
+    clients: T[],
+    endAtLastClient: boolean = false
 ): T[] {
     if (clients.length <= 2) return clients;
 
@@ -585,12 +590,12 @@ function optimizeDayCircuit2Opt<T extends { lat: number; lng: number }>(
         curLng = next.lng;
     }
 
-    // 2. Fase de Melhoria: Heurística 2-Opt em Circuito Fechado
-    // Tour fechado: [Base, ...orderedStops, Base]
+    // 2. Fase de Melhoria: Heurística 2-Opt
+    // Tour: [Base, ...orderedStops, ...(endAtLastClient ? [] : [Base])]
     const fullTour: { lat: number; lng: number; isBase: boolean; item?: T }[] = [
         { lat: base.lat, lng: base.lng, isBase: true },
         ...orderedStops.map(item => ({ lat: item.lat, lng: item.lng, isBase: false, item })),
-        { lat: base.lat, lng: base.lng, isBase: true }
+        ...(!endAtLastClient ? [{ lat: base.lat, lng: base.lng, isBase: true }] : [])
     ];
 
     let improved = true;
@@ -622,7 +627,7 @@ function optimizeDayCircuit2Opt<T extends { lat: number; lng: number }>(
         }
     }
 
-    return fullTour.slice(1, -1).map(stop => stop.item!);
+    return fullTour.filter(stop => !stop.isBase).map(stop => stop.item!);
 }
 
 const getStopCodCliente = (item: any): number => {
@@ -638,7 +643,8 @@ function sequenceDayStops<T extends { lat: number; lng: number }>(
     base: { lat: number; lng: number },
     clients: T[],
     strategy: SequenceStrategy = 'FAR_TO_NEAR',
-    restricoesMap?: Map<number, ClienteRestricao>
+    restricoesMap?: Map<number, ClienteRestricao>,
+    endAtLastClient: boolean = false
 ): T[] {
     if (clients.length <= 1) return clients;
 
@@ -661,11 +667,11 @@ function sequenceDayStops<T extends { lat: number; lng: number }>(
         });
 
         if (manha.length > 0 || tarde.length > 0) {
-            const seqManha = manha.length > 1 ? sequenceDayStops(base, manha, strategy) : manha;
+            const seqManha = manha.length > 1 ? sequenceDayStops(base, manha, strategy, restricoesMap, false) : manha;
             const refBaseForLivre = seqManha.length > 0 ? seqManha[seqManha.length - 1] : base;
-            const seqLivre = livre.length > 1 ? sequenceDayStops(refBaseForLivre, livre, strategy) : livre;
+            const seqLivre = livre.length > 1 ? sequenceDayStops(refBaseForLivre, livre, strategy, restricoesMap, false) : livre;
             const refBaseForTarde = seqLivre.length > 0 ? seqLivre[seqLivre.length - 1] : (seqManha.length > 0 ? seqManha[seqManha.length - 1] : base);
-            const seqTarde = tarde.length > 1 ? sequenceDayStops(refBaseForTarde, tarde, strategy) : tarde;
+            const seqTarde = tarde.length > 1 ? sequenceDayStops(refBaseForTarde, tarde, strategy, restricoesMap, endAtLastClient) : tarde;
 
             return [...seqManha, ...seqLivre, ...seqTarde];
         }
@@ -710,11 +716,11 @@ function sequenceDayStops<T extends { lat: number; lng: number }>(
         }
 
         const rotated = [...withPolar.slice(cutIdx), ...withPolar.slice(0, cutIdx)].map(p => p.client);
-        return optimizeDayCircuit2Opt(base, rotated);
+        return optimizeDayCircuit2Opt(base, rotated, endAtLastClient);
     }
 
     // Para FAR_TO_NEAR, NEAR_TO_FAR e CIRCUIT_TSP:
-    const closedTour = optimizeDayCircuit2Opt(base, clients);
+    const closedTour = optimizeDayCircuit2Opt(base, clients, endAtLastClient);
     if (closedTour.length <= 2 || strategy === 'CIRCUIT_TSP') {
         return closedTour;
     }
@@ -783,15 +789,16 @@ function sequenceDayStops<T extends { lat: number; lng: number }>(
     return closedTour;
 }
 
-// Heurística Avançada de Roteirização TSP Circuito Fechado (Base -> Clientes -> Base)
+// Heurística Avançada de Roteirização TSP
 // Combina Inserção Mais Econômica (Cheapest Insertion) com Busca Local Híbrida 2-Opt + Or-Opt e Matriz Viária Real OSRM
 async function optimizeDayCircuitWithOSRM<T extends { lat: number; lng: number }>(
     base: { lat: number; lng: number },
     clients: T[],
     strategy: SequenceStrategy = 'FAR_TO_NEAR',
-    restricoesMap?: Map<number, ClienteRestricao>
+    restricoesMap?: Map<number, ClienteRestricao>,
+    endAtLastClient: boolean = false
 ): Promise<T[]> {
-    if (clients.length <= 2) return sequenceDayStops(base, clients, strategy, restricoesMap);
+    if (clients.length <= 2) return sequenceDayStops(base, clients, strategy, restricoesMap, endAtLastClient);
 
     // Monta todos os pontos do dia incluindo a base no índice 0
     const allPoints = [{ lat: base.lat, lng: base.lng }, ...clients.map(c => ({ lat: c.lat, lng: c.lng }))];
@@ -961,7 +968,7 @@ async function optimizeDayCircuitWithOSRM<T extends { lat: number; lng: number }
         }
     }
 
-    return sequenceDayStops(base, fullTour.slice(1, -1).map(stop => stop.item!), strategy, restricoesMap);
+    return sequenceDayStops(base, fullTour.slice(1, -1).map(stop => stop.item!), strategy, restricoesMap, endAtLastClient);
 }
 
 const WEEKDAYS = ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'];
@@ -1431,6 +1438,15 @@ export const AjusteRota: React.FC = () => {
         localStorage.setItem('fuel_opt_sequence_strategy', optSequenceStrategy);
     }, [optSequenceStrategy]);
 
+    const [optEndAtLastClient, setOptEndAtLastClient] = useState<boolean>(() => {
+        const saved = localStorage.getItem('fuel_opt_end_at_last_client');
+        return saved !== null ? saved === 'true' : false;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_end_at_last_client', String(optEndAtLastClient));
+    }, [optEndAtLastClient]);
+
     // Persistência corporativa dos Parâmetros do Otimizador no SQL Server
     const [savingParamsToDb, setSavingParamsToDb] = useState(false);
     const [paramsSaveFeedback, setParamsSaveFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -1455,6 +1471,7 @@ export const AjusteRota: React.FC = () => {
                 if (p.OptBalanceWorkload !== undefined && p.OptBalanceWorkload !== null) setOptBalanceWorkload(Boolean(p.OptBalanceWorkload));
                 if (p.OptAvoidFridayDistant !== undefined && p.OptAvoidFridayDistant !== null) setOptAvoidFridayDistant(Boolean(p.OptAvoidFridayDistant));
                 if (p.OptSequenceStrategy) setOptSequenceStrategy(p.OptSequenceStrategy as SequenceStrategy);
+                if (p.OptEndAtLastClient !== undefined && p.OptEndAtLastClient !== null) setOptEndAtLastClient(Boolean(p.OptEndAtLastClient));
             }
         } catch (e) {
             console.warn('[Fuel360] Falha ao carregar parâmetros do otimizador do banco:', e);
@@ -1482,6 +1499,7 @@ export const AjusteRota: React.FC = () => {
                 optBalanceWorkload,
                 optAvoidFridayDistant,
                 optSequenceStrategy,
+                optEndAtLastClient,
                 usuario: currentUser
             };
 
@@ -2707,9 +2725,9 @@ export const AjusteRota: React.FC = () => {
                 const stops13 = v13.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long, seq: v.Sequencia_13 }));
                 const orderedStops13 = stops13.some(s => s.seq !== undefined && s.seq > 0)
                     ? [...stops13].sort((a, b) => (a.seq || 0) - (b.seq || 0))
-                    : optimizeDayCircuit2Opt(baseCoord, stops13);
+                    : optimizeDayCircuit2Opt(baseCoord, stops13, optEndAtLastClient);
 
-                const metrics13 = orderedStops13.length > 0 ? calcCircuitMetrics(baseCoord, orderedStops13) : { totalKm: 0, travelMinutes: 0 };
+                const metrics13 = orderedStops13.length > 0 ? calcCircuitMetrics(baseCoord, orderedStops13, optEndAtLastClient) : { totalKm: 0, travelMinutes: 0 };
                 dayKm13 += metrics13.totalKm;
                 dayTravelTime13 += metrics13.travelMinutes;
 
@@ -2728,9 +2746,9 @@ export const AjusteRota: React.FC = () => {
                 const stops24 = v24.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long, seq: v.Sequencia_24 }));
                 const orderedStops24 = stops24.some(s => s.seq !== undefined && s.seq > 0)
                     ? [...stops24].sort((a, b) => (a.seq || 0) - (b.seq || 0))
-                    : optimizeDayCircuit2Opt(baseCoord, stops24);
+                    : optimizeDayCircuit2Opt(baseCoord, stops24, optEndAtLastClient);
 
-                const metrics24 = orderedStops24.length > 0 ? calcCircuitMetrics(baseCoord, orderedStops24) : { totalKm: 0, travelMinutes: 0 };
+                const metrics24 = orderedStops24.length > 0 ? calcCircuitMetrics(baseCoord, orderedStops24, optEndAtLastClient) : { totalKm: 0, travelMinutes: 0 };
                 dayKm24 += metrics24.totalKm;
                 dayTravelTime24 += metrics24.travelMinutes;
 
@@ -2832,7 +2850,7 @@ export const AjusteRota: React.FC = () => {
             isBalanced: imbalancePct <= 15,
             unallocatedCount
         };
-    }, [effectiveScopedRoutes, colaboradores, getClientServiceTime, optLimitHours, optMaxHours, optSatHalfPeriod]);
+    }, [effectiveScopedRoutes, colaboradores, getClientServiceTime, optLimitHours, optMaxHours, optSatHalfPeriod, optEndAtLastClient]);
 
     // Auto-dismiss do toast de reequilíbrio
     useEffect(() => {
@@ -4371,6 +4389,123 @@ export const AjusteRota: React.FC = () => {
                 }
             }
 
+            // 2.5.4. Nivelamento de Carga Horária e Jornada Diária (Workload Balancing)
+            // Harmoniza a jornada total (Trânsito + Atendimento) entre os dias ativos,
+            // impedindo disparidades extremas (ex: dias com 10h+ ao lado de dias com 5h).
+            if (K > 1 && optBalanceWorkload) {
+                const isDayAllowedForClient = (client: typeof uniqueClients[0], dayName: string) => {
+                    const restr = clienteRestricoesMap.get(client.sampleVisit.Cod_Cliente);
+                    if (!restr || !restr.DiasPermitidos || !restr.DiasPermitidos.trim()) return true;
+                    const allowed = restr.DiasPermitidos.split(',').map(item => normalizeDiaSemana(item.trim()));
+                    return allowed.includes(dayName);
+                };
+
+                const isCitySatellite = (client: typeof uniqueClients[0]) => {
+                    const cCity = (client.sampleVisit.Cidade || '').trim().toUpperCase();
+                    return clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
+                };
+
+                const getEstimatedDayWorkload = (cList: typeof uniqueClients) => {
+                    const coords = cList.filter(c => c.lat && c.lng).map(c => ({ lat: c.lat, lng: c.lng }));
+                    const travelMins = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, coords, optEndAtLastClient).travelMinutes;
+                    const serviceMins = cList.reduce((sum, c) => {
+                        const srv = getClientServiceTime(c.sampleVisit);
+                        return sum + (c.tipo === 'SEMANAL' ? srv : srv * 0.5);
+                    }, 0);
+                    return travelMins + serviceMins;
+                };
+
+                for (let wlIter = 0; wlIter < 6; wlIter++) {
+                    const dayWorkloads = dayAssignedClients.map(cList => getEstimatedDayWorkload(cList));
+                    let maxDayIdx = 0;
+                    let minDayIdx = 0;
+                    for (let d = 1; d < K; d++) {
+                        if (dayWorkloads[d] > dayWorkloads[maxDayIdx]) maxDayIdx = d;
+                        if (dayWorkloads[d] < dayWorkloads[minDayIdx]) minDayIdx = d;
+                    }
+
+                    const workloadGap = dayWorkloads[maxDayIdx] - dayWorkloads[minDayIdx];
+                    if (workloadGap <= 60 || dayAssignedClients[maxDayIdx].length <= 2) break;
+
+                    const clientsHigh = dayAssignedClients[maxDayIdx];
+                    const clientsLow = dayAssignedClients[minDayIdx];
+                    const dayNameLow = activeDays[minDayIdx];
+                    const dayNameHigh = activeDays[maxDayIdx];
+
+                    // Centróides para não permitir dispersão geográfica absurda
+                    const lowCoords = clientsLow.filter(c => c.lat && c.lng);
+                    const centerLowLat = lowCoords.length > 0 ? lowCoords.reduce((s, c) => s + c.lat, 0) / lowCoords.length : baseLat;
+                    const centerLowLng = lowCoords.length > 0 ? lowCoords.reduce((s, c) => s + c.lng, 0) / lowCoords.length : baseLng;
+
+                    let bestSwap: { idxHigh: number; idxLow: number; improvement: number } | null = null;
+                    let bestMove: { idxHigh: number; improvement: number } | null = null;
+
+                    // 1. Tentar transferência direta (se o dia de alta tiver mais clientes que o de baixa)
+                    if (clientsHigh.length > clientsLow.length) {
+                        for (let iH = clientsHigh.length - 1; iH >= 0; iH--) {
+                            const cH = clientsHigh[iH];
+                            if (!isDayAllowedForClient(cH, dayNameLow) || isCitySatellite(cH)) continue;
+
+                            // Verificar se o cliente não fica excessivamente isolado do dia de destino (máximo 25 km ou próximo ao centro)
+                            const distToCenterLow = calcDist(cH.lat, cH.lng, centerLowLat, centerLowLng);
+                            if (distToCenterLow > 25 && lowCoords.length > 0) continue;
+
+                            const cHTime = cH.tipo === 'SEMANAL' ? getClientServiceTime(cH.sampleVisit) : getClientServiceTime(cH.sampleVisit) * 0.5;
+                            const newHighTime = dayWorkloads[maxDayIdx] - cHTime;
+                            const newLowTime = dayWorkloads[minDayIdx] + cHTime;
+                            const newGap = Math.abs(newHighTime - newLowTime);
+
+                            if (newGap < workloadGap - 15) {
+                                const improvement = workloadGap - newGap;
+                                if (!bestMove || improvement > bestMove.improvement) {
+                                    bestMove = { idxHigh: iH, improvement };
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. Tentar permuta (swap) de clientes entre os dias para nivelar tempo
+                    for (let iH = 0; iH < clientsHigh.length; iH++) {
+                        const cH = clientsHigh[iH];
+                        if (!isDayAllowedForClient(cH, dayNameLow) || isCitySatellite(cH)) continue;
+                        const srvH = cH.tipo === 'SEMANAL' ? getClientServiceTime(cH.sampleVisit) : getClientServiceTime(cH.sampleVisit) * 0.5;
+
+                        for (let iL = 0; iL < clientsLow.length; iL++) {
+                            const cL = clientsLow[iL];
+                            if (cL.tipo !== cH.tipo) continue;
+                            if (!isDayAllowedForClient(cL, dayNameHigh) || isCitySatellite(cL)) continue;
+                            const srvL = cL.tipo === 'SEMANAL' ? getClientServiceTime(cL.sampleVisit) : getClientServiceTime(cL.sampleVisit) * 0.5;
+
+                            if (srvH > srvL) {
+                                const diffSrv = srvH - srvL;
+                                const newHighTime = dayWorkloads[maxDayIdx] - diffSrv;
+                                const newLowTime = dayWorkloads[minDayIdx] + diffSrv;
+                                const newGap = Math.abs(newHighTime - newLowTime);
+
+                                if (newGap < workloadGap - 15) {
+                                    const improvement = workloadGap - newGap;
+                                    if (!bestSwap || improvement > bestSwap.improvement) {
+                                        bestSwap = { idxHigh: iH, idxLow: iL, improvement };
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (bestSwap && (!bestMove || bestSwap.improvement >= bestMove.improvement)) {
+                        const [movedH] = clientsHigh.splice(bestSwap.idxHigh, 1);
+                        const [movedL] = clientsLow.splice(bestSwap.idxLow, 1);
+                        clientsHigh.push(movedL);
+                        clientsLow.push(movedH);
+                    } else if (bestMove) {
+                        const [movedH] = clientsHigh.splice(bestMove.idxHigh, 1);
+                        clientsLow.push(movedH);
+                    } else {
+                        break;
+                    }
+                }
+            }
+
             // 2.6. Distribuição Interna e Equalização Quinzenal Homogênea
             for (let d = 0; d < K; d++) {
                 const bucket = dayBuckets[d];
@@ -4565,10 +4700,10 @@ export const AjusteRota: React.FC = () => {
 
             for (const bucket of dayBuckets) {
                 let rawClients13 = [...bucket.semanais, ...bucket.quinzenais13];
-                let optimizedClients13 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients13, optSequenceStrategy, clienteRestricoesMap);
+                let optimizedClients13 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients13, optSequenceStrategy, clienteRestricoesMap, optEndAtLastClient);
 
                 let rawClients24 = [...bucket.semanais, ...bucket.quinzenais24];
-                let optimizedClients24 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients24, optSequenceStrategy, clienteRestricoesMap);
+                let optimizedClients24 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients24, optSequenceStrategy, clienteRestricoesMap, optEndAtLastClient);
 
                 // Salvaguarda Estrita de Horas: Em modo não flexibilizado com limite de horas,
                 // se a rota viária real + serviços exceder a jornada configurada,
@@ -4579,7 +4714,7 @@ export const AjusteRota: React.FC = () => {
 
                     while (optimizedClients13.length > 1) {
                         const coords = optimizedClients13.filter(c => c.lat && c.lng).map(c => ({ lat: c.lat, lng: c.lng }));
-                        const metrics = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, coords);
+                        const metrics = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, coords, optEndAtLastClient);
                         const serviceMins = optimizedClients13.reduce((acc, c) => acc + getClientServiceTime(c.sampleVisit), 0);
                         if (metrics.travelMinutes + serviceMins <= maxMins) break;
                         const removed = optimizedClients13.pop();
@@ -4588,7 +4723,7 @@ export const AjusteRota: React.FC = () => {
 
                     while (optimizedClients24.length > 1) {
                         const coords = optimizedClients24.filter(c => c.lat && c.lng).map(c => ({ lat: c.lat, lng: c.lng }));
-                        const metrics = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, coords);
+                        const metrics = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, coords, optEndAtLastClient);
                         const serviceMins = optimizedClients24.reduce((acc, c) => acc + getClientServiceTime(c.sampleVisit), 0);
                         if (metrics.travelMinutes + serviceMins <= maxMins) break;
                         const removed = optimizedClients24.pop();
@@ -4983,14 +5118,14 @@ export const AjusteRota: React.FC = () => {
                     sortedVisits.forEach(v => {
                         if (v.Lat && v.Long) pointsObj.push({ Lat: v.Lat, Long: v.Long });
                     });
-                    if (colab?.LatitudeBase && colab?.LongitudeBase && pointsObj.length > 1) {
+                    if (!optEndAtLastClient && colab?.LatitudeBase && colab?.LongitudeBase && pointsObj.length > 1) {
                         pointsObj.push({ Lat: colab.LatitudeBase, Long: colab.LongitudeBase });
                     }
 
                     if (pointsObj.length > 1) {
                         const hashKey = pointsObj.map(p => `${p.Lat},${p.Long}`).join('|');
                         const stopsCoords = sortedVisits.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long }));
-                        const circuit = calcCircuitMetrics({ lat: colab?.LatitudeBase || 0, lng: colab?.LongitudeBase || 0 }, stopsCoords);
+                        const circuit = calcCircuitMetrics({ lat: colab?.LatitudeBase || 0, lng: colab?.LongitudeBase || 0 }, stopsCoords, optEndAtLastClient);
                         const lineMeta = {
                             id: `${sellerId}-${day}`,
                             color: lineColor,
@@ -5060,7 +5195,7 @@ export const AjusteRota: React.FC = () => {
         updateLines();
         
         return () => { isMounted = false; };
-    }, [filteredRoutes, scopedOriginalRoutes, selectedDaysFilter, selectedQuinzenaFilter, selectedPromoter, promoterColorMap, colaboradores, isSingleSellerView]);
+    }, [filteredRoutes, scopedOriginalRoutes, selectedDaysFilter, selectedQuinzenaFilter, selectedPromoter, promoterColorMap, colaboradores, isSingleSellerView, optEndAtLastClient]);
 
     // Mapa da ordem/sequência de atendimento diário de cada cliente por Quinzena 1/3 e 2/4
     const visitOrderMap = useMemo(() => {
@@ -5096,7 +5231,7 @@ export const AjusteRota: React.FC = () => {
                 return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
             });
             const stops13 = visits13.map(v => ({ lat: v.Lat || 0, lng: v.Long || 0, visit: v }));
-            const sequenced13 = sequenceDayStops(base, stops13, optSequenceStrategy, clienteRestricoesMap);
+            const sequenced13 = sequenceDayStops(base, stops13, optSequenceStrategy, clienteRestricoesMap, optEndAtLastClient);
 
             // Ciclo 2/4 (Semanais + Quinzenais 2/4)
             const visits24 = visits.filter(r => {
@@ -5104,7 +5239,7 @@ export const AjusteRota: React.FC = () => {
                 return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
             });
             const stops24 = visits24.map(v => ({ lat: v.Lat || 0, lng: v.Long || 0, visit: v }));
-            const sequenced24 = sequenceDayStops(base, stops24, optSequenceStrategy, clienteRestricoesMap);
+            const sequenced24 = sequenceDayStops(base, stops24, optSequenceStrategy, clienteRestricoesMap, optEndAtLastClient);
 
             const map13 = new Map<number, number>();
             sequenced13.forEach((s, idx) => map13.set(s.visit.Cod_Cliente, idx + 1));
@@ -5133,7 +5268,7 @@ export const AjusteRota: React.FC = () => {
         });
 
         return map;
-    }, [scopedAdjustedRoutes, colaboradores, optSequenceStrategy, clienteRestricoesMap]);
+    }, [scopedAdjustedRoutes, colaboradores, optSequenceStrategy, clienteRestricoesMap, optEndAtLastClient]);
 
     // Calcular KPIs de Comparação com Métricas Reais de Circuito Fechado (KM e Tempo de Deslocamento)
     const kpis = useMemo(() => {
@@ -5183,14 +5318,14 @@ export const AjusteRota: React.FC = () => {
 
                     const orderedStops13 = stops13.some(s => s.seq !== undefined && s.seq > 0)
                         ? [...stops13].sort((a, b) => (a.seq || 0) - (b.seq || 0))
-                        : optimizeDayCircuit2Opt(base, stops13);
+                        : optimizeDayCircuit2Opt(base, stops13, optEndAtLastClient);
 
                     const orderedStops24 = stops24.some(s => s.seq !== undefined && s.seq > 0)
                         ? [...stops24].sort((a, b) => (a.seq || 0) - (b.seq || 0))
-                        : optimizeDayCircuit2Opt(base, stops24);
+                        : optimizeDayCircuit2Opt(base, stops24, optEndAtLastClient);
 
-                    const circuit13 = calcCircuitMetrics(base, orderedStops13);
-                    const circuit24 = calcCircuitMetrics(base, orderedStops24);
+                    const circuit13 = calcCircuitMetrics(base, orderedStops13, optEndAtLastClient);
+                    const circuit24 = calcCircuitMetrics(base, orderedStops24, optEndAtLastClient);
 
                     // Média semanal típica de percurso do dia (duas semanas no ciclo 1/3 e duas no ciclo 2/4)
                     const dayAvgKm = (circuit13.totalKm + circuit24.totalKm) / 2;
@@ -5231,7 +5366,7 @@ export const AjusteRota: React.FC = () => {
             const maxClientsOnSingleDay = Math.max(...Array.from(countsPerSellerAndDay.values()), 0);
 
             return {
-                totalKm: Math.round(totalKm),
+                totalKm: Math.round(totalKm * 10) / 10,
                 totalTravelMinutes: Math.round(totalTravelMinutes),
                 avgKmPerSeller: sellers.length ? Math.round(totalKm / sellers.length) : 0,
                 avgMinutesPerSeller: sellers.length ? Math.round(totalTravelMinutes / sellers.length) : 0,
@@ -5239,21 +5374,15 @@ export const AjusteRota: React.FC = () => {
                 exceededKmCount,
                 exceededHoursCount,
                 sellerCount: sellers.length,
-                clientCount: visits.length
+                clientCount: visits.length,
+                countsPerSellerAndDay
             };
         };
 
-        const targetOriginalRoutes = selectedPromoter !== 'ALL'
-            ? scopedOriginalRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter)
-            : scopedOriginalRoutes;
-        const targetAdjustedRoutes = selectedPromoter !== 'ALL'
-            ? scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter)
-            : scopedAdjustedRoutes;
+        const orig = getKpisForSet(scopedOriginalRoutes);
+        const adj = getKpisForSet(scopedAdjustedRoutes);
 
-        const orig = getKpisForSet(targetOriginalRoutes);
-        const adj = getKpisForSet(targetAdjustedRoutes);
-
-        const kmSaved = orig.totalKm - adj.totalKm;
+        const kmSaved = Math.round((orig.totalKm - adj.totalKm) * 10) / 10;
         const percentSaved = orig.totalKm ? Math.round((kmSaved / orig.totalKm) * 100) : 0;
 
         const timeSavedMinutes = orig.totalTravelMinutes - adj.totalTravelMinutes;
@@ -5267,7 +5396,7 @@ export const AjusteRota: React.FC = () => {
             timeSavedMinutes,
             percentTimeSaved
         };
-    }, [scopedOriginalRoutes, scopedAdjustedRoutes, selectedPromoter, colaboradores, optMaxKm, optLimitKm, optMaxHours, optLimitHours, getClientServiceTime, channelServiceTimes]);
+    }, [scopedOriginalRoutes, scopedAdjustedRoutes, selectedPromoter, colaboradores, optMaxKm, optLimitKm, optMaxHours, optLimitHours, getClientServiceTime, channelServiceTimes, optEndAtLastClient]);
 
     // Reatribuir vendedor, dia de visita ou quinzena manualmente
     const handleManualReassign = (clientCode: number, targetSellerId: number, targetDay: string, targetPeriodicidade?: string) => {
@@ -6116,10 +6245,10 @@ export const AjusteRota: React.FC = () => {
             };
         });
 
-        const returnLegKm = (prevLat && prevLng && baseLat && baseLng && dayVisits.length > 0)
+        const returnLegKm = (!optEndAtLastClient && prevLat && prevLng && baseLat && baseLng && dayVisits.length > 0)
             ? Math.round(calcDist(prevLat, prevLng, baseLat, baseLng) * 1.18 * 10) / 10
             : 0;
-        const returnTravelTime = calcLegMinutes(returnLegKm);
+        const returnTravelTime = !optEndAtLastClient ? calcLegMinutes(returnLegKm) : 0;
         totalKm += returnLegKm;
         totalTravelMinutes += returnTravelTime;
 
@@ -6141,7 +6270,7 @@ export const AjusteRota: React.FC = () => {
             totalServiceMinutes: Math.round(totalServiceMinutes),
             totalDurationMinutes: Math.round(totalTravelMinutes + totalServiceMinutes)
         };
-    }, [showItineraryModal, scopedAdjustedRoutes, itinerarySeller, itineraryDay, itineraryQuinzena, availableSellers, colaboradores, getClientServiceTime]);
+    }, [showItineraryModal, scopedAdjustedRoutes, itinerarySeller, itineraryDay, itineraryQuinzena, availableSellers, colaboradores, getClientServiceTime, optEndAtLastClient]);
 
     // Disparo para o Google Maps
     const handleOpenGoogleMaps = () => {
@@ -6157,7 +6286,7 @@ export const AjusteRota: React.FC = () => {
         }
 
         const origin = (baseLat && baseLng) ? `${baseLat},${baseLng}` : `${validStops[0].Lat},${validStops[0].Long}`;
-        const destination = (baseLat && baseLng) ? `${baseLat},${baseLng}` : `${validStops[validStops.length - 1].Lat},${validStops[validStops.length - 1].Long}`;
+        const destination = (!optEndAtLastClient && baseLat && baseLng) ? `${baseLat},${baseLng}` : `${validStops[validStops.length - 1].Lat},${validStops[validStops.length - 1].Long}`;
         const waypoints = validStops.slice(0, 8).map(s => `${s.Lat},${s.Long}`).join('|');
 
         const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${encodeURIComponent(waypoints)}&travelmode=driving`;
@@ -6194,7 +6323,9 @@ export const AjusteRota: React.FC = () => {
             text += `   🚗 Trânsito: +${s.legKm} KM (~${s.legTravelTime} min) | 🏢 Atendimento: ${s.serviceTime} min\n\n`;
         });
 
-        text += `🏁 *Retorno:* ${baseAddress} (+${returnLegKm} KM ~${currentItineraryData.returnTravelTime} min)\n`;
+        text += optEndAtLastClient 
+            ? `🏁 *Encerramento:* No último cliente (#${totalStops}) sem retorno à base\n`
+            : `🏁 *Retorno:* ${baseAddress} (+${returnLegKm} KM ~${currentItineraryData.returnTravelTime} min)\n`;
         text += `----------------------------------------\n`;
         text += `Gerado automaticamente pelo Fuel360`;
 
@@ -8875,6 +9006,26 @@ export const AjusteRota: React.FC = () => {
                                     {optSequenceStrategy === 'NEAR_TO_FAR' && 'Inicia pelos clientes vizinhos à base e afasta-se até o ponto final.'}
                                 </p>
                             </div>
+
+                            {/* GRUPO 4: ENCERRAMENTO DA JORNADA DIÁRIA */}
+                            <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 space-y-2">
+                                <label className="flex items-center justify-between cursor-pointer">
+                                    <div className="space-y-0.5 pr-4">
+                                        <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                                            <span>🏁</span> Encerrar Rota no Último Cliente
+                                        </span>
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            Não calcula o trecho de retorno da última visita até a residência/base do colaborador. Ideal para equipes de vendas cujo expediente encerra no último atendimento, reduzindo quilometragem e tempo em trânsito.
+                                        </p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={optEndAtLastClient}
+                                        onChange={(e) => setOptEndAtLastClient(e.target.checked)}
+                                        className="rounded text-indigo-600 focus:ring-indigo-500 w-5 h-5 cursor-pointer shrink-0"
+                                    />
+                                </label>
+                            </div>
                         </div>
 
                         {/* Rodapé com Ações */}
@@ -9715,7 +9866,7 @@ export const AjusteRota: React.FC = () => {
                                         </div>
                                     ))}
 
-                                    {/* PONTO FINAL: RETORNO À BASE */}
+                                    {/* PONTO FINAL: RETORNO À BASE OU ENCERRAMENTO NO ÚLTIMO CLIENTE */}
                                     <div className="relative">
                                         <div className="absolute -left-[33px] top-0 w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-black shadow-md">
                                             🏁
@@ -9723,22 +9874,30 @@ export const AjusteRota: React.FC = () => {
                                         <div className="bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
-                                                    Retorno à Origem
+                                                    {optEndAtLastClient ? 'Término da Rota' : 'Retorno à Origem'}
                                                 </span>
                                                 <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
-                                                    +{currentItineraryData.returnLegKm} KM (~{currentItineraryData.returnTravelTime} min) • Total: {currentItineraryData.totalKm} KM
+                                                    {optEndAtLastClient 
+                                                        ? `Último Cliente • Total: ${currentItineraryData.totalKm} KM`
+                                                        : `+${currentItineraryData.returnLegKm} KM (~${currentItineraryData.returnTravelTime} min) • Total: ${currentItineraryData.totalKm} KM`}
                                                 </span>
                                             </div>
                                             <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5">
-                                                Retorno à Base / Residência
+                                                {optEndAtLastClient 
+                                                    ? 'Encerramento no Último Cliente (Sem Retorno à Base)' 
+                                                    : 'Retorno à Base / Residência'}
                                             </h4>
                                             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                                {currentItineraryData.baseAddress}
+                                                {optEndAtLastClient 
+                                                    ? 'Expediente concluído na última visita da sequência.' 
+                                                    : currentItineraryData.baseAddress}
                                             </p>
                                             <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400">
                                                 <span>🏁 Encerramento da jornada diária</span>
                                                 <span className="font-bold">
-                                                    Deslocamento final: ~{currentItineraryData.returnTravelTime} min viário
+                                                    {optEndAtLastClient 
+                                                        ? 'Sem deslocamento de retorno' 
+                                                        : `Deslocamento final: ~${currentItineraryData.returnTravelTime} min viário`}
                                                 </span>
                                             </div>
                                         </div>
