@@ -1657,7 +1657,7 @@ export const AjusteRota: React.FC = () => {
 
     // Gestão de Setores Vagos / Desligados
     const [assigningVacantSector, setAssigningVacantSector] = useState<number | null>(null);
-    const [selectedNewColabForSector, setSelectedNewColabForSector] = useState<number | ''>('');
+    const [manualVacantSellerName, setManualVacantSellerName] = useState<string>('');
 
     // Persistência corporativa dos Parâmetros do Otimizador no SQL Server
     const [savingParamsToDb, setSavingParamsToDb] = useState(false);
@@ -3521,33 +3521,25 @@ export const AjusteRota: React.FC = () => {
         setIsLassoActive(false);
     };
 
-    // Atribuir um colaborador titular a um setor vago / desligado
-    const handleAssignColabToSector = (sectorId: number, targetColabId: number) => {
-        const targetColab = colaboradores.find(c => c.ID_Colaborador === targetColabId || Number(c.CodigoSetor) === targetColabId);
-        if (!targetColab) {
-            alert("Colaborador selecionado não encontrado.");
-            return;
+    // Gestão de Setor Vago: Manter Setor (atualizando opcionalmente a identificação digitada manualmente)
+    const handleKeepVacantSector = (sectorId: number, manualName?: string) => {
+        const trimmedName = (manualName || '').trim();
+        if (trimmedName) {
+            setAdjustedRoutes(prev => prev.map(r => {
+                if (Number(r.Cod_Vend) === Number(sectorId)) {
+                    return {
+                        ...r,
+                        Nome_Vendedor: trimmedName
+                    };
+                }
+                return r;
+            }));
+            setCriticaToast(`Setor ${sectorId} mantido na equipe como "${trimmedName}". A roteirização utilizará o centroide dos clientes.`);
+        } else {
+            setCriticaToast(`Setor ${sectorId} mantido na equipe como setor vago. A roteirização utilizará o centroide dos clientes.`);
         }
-
-        const newSellerName = targetColab.Nome;
-        const newSellerCode = targetColab.CodigoSetor ? Number(targetColab.CodigoSetor) : sectorId;
-
-        let affectedCount = 0;
-        setAdjustedRoutes(prev => prev.map(r => {
-            if (Number(r.Cod_Vend) === Number(sectorId)) {
-                affectedCount++;
-                return {
-                    ...r,
-                    Cod_Vend: newSellerCode,
-                    Nome_Vendedor: newSellerName
-                };
-            }
-            return r;
-        }));
-
         setAssigningVacantSector(null);
-        setSelectedNewColabForSector('');
-        setCriticaToast(`Sucesso! ${affectedCount} clientes do Setor ${sectorId} foram atribuídos ao titular ${newSellerName}.`);
+        setManualVacantSellerName('');
     };
 
     // Navegação sob demanda do Mapa para a Grade de Ajuste Fino (acionado pelo botão 'Ver na Tabela' do Popup)
@@ -5746,10 +5738,7 @@ export const AjusteRota: React.FC = () => {
             return;
         }
 
-        if (isSectorVacant(targetSellerId)) {
-            alert(`O Setor ${targetSellerId} está vago e não possui vendedor com base residencial cadastrada.\n\nAtribua um colaborador titular ao setor ou redistribua sua carteira antes de otimizar individualmente.`);
-            return;
-        }
+        // Setores vagos são permitidos: o otimizador utilizará o centroide geográfico dos clientes como partida e retorno.
 
         // Pré-checagem de viabilidade de capacidade / jornada para o vendedor
         const feasibility = checkCapacityFeasibility([targetSellerId], adjustedRoutes);
@@ -10152,14 +10141,16 @@ export const AjusteRota: React.FC = () => {
                                                                                 type="button"
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
+                                                                                    const sellerVisits = adjustedRoutes.filter(r => Number(r.Cod_Vend) === Number(sellerId));
+                                                                                    const currentName = sellerVisits[0]?.Nome_Vendedor || '';
+                                                                                    setManualVacantSellerName(currentName);
                                                                                     setAssigningVacantSector(Number(sellerId));
-                                                                                    setSelectedNewColabForSector('');
                                                                                 }}
                                                                                 className="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black px-2.5 py-1 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border border-amber-600 select-none text-[10px]"
-                                                                                title="Atribuir um colaborador titular para assumir a carteira deste setor."
+                                                                                title="Gerenciar setor vago: manter setor com roteirização por centroide ou extinguir setor redistribuindo a carteira."
                                                                             >
-                                                                                <span>👤</span>
-                                                                                <span>Atribuir Titular</span>
+                                                                                <span>⚙️</span>
+                                                                                <span>Gerenciar Vaga</span>
                                                                             </button>
                                                                             <button
                                                                                 type="button"
@@ -10172,7 +10163,7 @@ export const AjusteRota: React.FC = () => {
                                                                                 title="Redistribuir os clientes deste setor vago entre os outros vendedores da equipe."
                                                                             >
                                                                                 <span>🔄</span>
-                                                                                <span>Redistribuir / Extinguir</span>
+                                                                                <span>Extinguir Setor</span>
                                                                             </button>
                                                                         </>
                                                                     )}
@@ -11999,81 +11990,134 @@ export const AjusteRota: React.FC = () => {
                 </div>
             )}
 
-            {/* MODAL DE ATRIBUIÇÃO DE TITULAR A SETOR VAGO */}
+            {/* MODAL DE GESTÃO DE SETOR VAGO / DESLIGADO */}
             {assigningVacantSector !== null && (
                 <div className="fixed inset-0 z-[9999] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-amber-50/50 dark:bg-amber-950/30">
+                    <div className="bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col">
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-amber-50/60 dark:bg-amber-950/40">
                             <div className="flex items-center space-x-3">
                                 <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 flex items-center justify-center text-xl font-bold">
-                                    👤
+                                    ⚙️
                                 </div>
                                 <div>
                                     <h3 className="text-base font-black text-slate-900 dark:text-white">
-                                        Atribuir Titular ao Setor {assigningVacantSector}
+                                        Gestão do Setor Vago {assigningVacantSector}
                                     </h3>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        Preencher vaga vinculando um colaborador à carteira
+                                        Defina o tratamento deste setor no planejamento de rotas
                                     </p>
                                 </div>
                             </div>
                             <button
-                                onClick={() => setAssigningVacantSector(null)}
+                                onClick={() => {
+                                    setAssigningVacantSector(null);
+                                    setManualVacantSellerName('');
+                                }}
                                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                             >
                                 ✕
                             </button>
                         </div>
 
-                        <div className="p-5 space-y-4">
+                        <div className="p-5 space-y-4 overflow-y-auto max-h-[75vh]">
                             <div className="bg-amber-50 dark:bg-amber-950/40 p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 space-y-1">
                                 <p className="font-bold flex items-center gap-1.5">
                                     <span>⚠️</span> Setor Vago / Sem Vendedor Ativo Vinculado
                                 </p>
                                 <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
-                                    Este setor possui <strong>{adjustedRoutes.filter(r => Number(r.Cod_Vend) === assigningVacantSector).length} clientes</strong> na carteira atual. Selecione abaixo o colaborador ativo que assumirá a titularidade das rotas deste setor:
+                                    Este setor possui <strong>{adjustedRoutes.filter(r => Number(r.Cod_Vend) === assigningVacantSector).length} clientes</strong> na carteira. Selecione abaixo como deseja proceder com esta carteira:
                                 </p>
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-black uppercase text-slate-600 dark:text-slate-400">
-                                    Colaborador Titular:
-                                </label>
-                                <select
-                                    value={selectedNewColabForSector}
-                                    onChange={(e) => setSelectedNewColabForSector(Number(e.target.value))}
-                                    className="w-full text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl p-3 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500 outline-hidden cursor-pointer"
-                                >
-                                    <option value="">Selecione o colaborador...</option>
-                                    {colaboradores
-                                        .filter(c => c.Ativo && (String(c.Grupo || '').toUpperCase().includes('VEND') || String(c.Grupo || '').toUpperCase().includes('PROM')))
-                                        .sort((a, b) => a.Nome.localeCompare(b.Nome))
-                                        .map(col => (
-                                            <option key={col.ID_Colaborador} value={col.ID_Colaborador}>
-                                                {col.CodigoSetor ? `${col.CodigoSetor} - ` : ''}{col.Nome} {col.Grupo ? `(${col.Grupo})` : ''}
-                                            </option>
-                                        ))
-                                    }
-                                </select>
+                            {/* OPÇÃO 1: MANTER SETOR (ROTEIRIZAR POR CENTROIDE) */}
+                            <div className="p-4 rounded-2xl border-2 border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 space-y-3">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-base shrink-0">
+                                        📍
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="text-xs font-black text-indigo-900 dark:text-indigo-200 uppercase tracking-wide">
+                                            Opção 1: Manter Setor (Roteirizar por Centroide)
+                                        </h4>
+                                        <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed mt-0.5">
+                                            O setor continuará existindo como rota independente na equipe. As visitas serão sequenciadas normalmente (TSP/VRPTW). Como não há residência de vendedor cadastrada, o <strong>ponto de partida e retorno será o centroide geográfico</strong> dos clientes.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5 pt-1">
+                                    <label className="block text-[11px] font-black uppercase text-slate-600 dark:text-slate-400">
+                                        Nome do Vendedor / Identificação (Opcional):
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={manualVacantSellerName}
+                                        onChange={(e) => setManualVacantSellerName(e.target.value)}
+                                        placeholder="Ex: A Contratar / Novo Vendedor (ou deixe como está)"
+                                        className="w-full text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl p-2.5 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-hidden"
+                                    />
+                                    <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                                        Se houver um novo vendedor que irá assumir, digite o nome acima. Caso contrário, mantenha como está.
+                                    </p>
+                                </div>
+
+                                <div className="pt-2 flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleKeepVacantSector(assigningVacantSector, manualVacantSellerName)}
+                                        className="px-4 py-2 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                                    >
+                                        <span>📍</span>
+                                        <span>Salvar e Manter Setor</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* OPÇÃO 2: EXTINGUIR SETOR (REDISTRIBUIR CARTEIRA) */}
+                            <div className="p-4 rounded-2xl border-2 border-rose-200 dark:border-rose-900/60 bg-rose-50/30 dark:bg-rose-950/20 space-y-3">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 flex items-center justify-center text-base shrink-0">
+                                        🔄
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="text-xs font-black text-rose-900 dark:text-rose-200 uppercase tracking-wide">
+                                            Opção 2: Extinguir Setor (Redistribuir Clientes)
+                                        </h4>
+                                        <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed mt-0.5">
+                                            Descontinua este setor vago e transfere todos os seus clientes para os outros vendedores já existentes na equipe através da ferramenta de fusão e redistribuição territorial.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="pt-1 flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const sec = assigningVacantSector;
+                                            setAssigningVacantSector(null);
+                                            setManualVacantSellerName('');
+                                            setSourceSectorToExtinguish(String(sec));
+                                            setShowExtinguishModal(true);
+                                        }}
+                                        className="px-4 py-2 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                                    >
+                                        <span>🔄</span>
+                                        <span>Redistribuir e Extinguir Setor</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-end gap-2.5">
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-end">
                             <button
                                 type="button"
-                                onClick={() => setAssigningVacantSector(null)}
+                                onClick={() => {
+                                    setAssigningVacantSector(null);
+                                    setManualVacantSellerName('');
+                                }}
                                 className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
                             >
-                                Cancelar
-                            </button>
-                            <button
-                                type="button"
-                                disabled={!selectedNewColabForSector}
-                                onClick={() => handleAssignColabToSector(assigningVacantSector, Number(selectedNewColabForSector))}
-                                className="px-5 py-2 text-xs font-black text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
-                            >
-                                <span>✓</span>
-                                <span>Confirmar Atribuição</span>
+                                Fechar
                             </button>
                         </div>
                     </div>

@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.207.0',
+    date: 'Hoje',
+    title: 'Fuel360: Roteirização por Centroide e Gestão de Setores Vagos',
+    changes: [
+      'Roteirização por Centroide para Setores Vagos: Setores sem vendedor titular ativo agora podem ser roteirizados normalmente. Na ausência de residência cadastrada, o ponto de partida e retorno é calculado automaticamente com base no centroide geográfico dos seus clientes.',
+      'Gestão de Setores Vagos (Manter ou Extinguir): Modal de decisão oferece as opções de Manter Setor (com identificação personalizada opcional digitada manualmente para futuros contratados) ou Extinguir Setor (redistribuindo seus clientes entre os vendedores já existentes).',
+      'Proteção de Titularidade: Bloqueada a seleção de colaboradores ativos existentes para assumir vagas, prevenindo conflitos de carteira e respeitando a titularidade individual de cada vendedor.'
+    ]
+  },
+  {
     version: '3.206.0',
     date: 'Hoje',
     title: 'Fuel360: Gestão e Atribuição de Setores de Venda Vagos / Desligados',
