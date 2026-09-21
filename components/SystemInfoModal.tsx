@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.197.2',
+    date: 'Hoje',
+    title: 'Fuel360: Ordenação Numérica Estável dos Vendedores na Sanfona',
+    changes: [
+      'Ordenação Numérica Estável de Vendedores: A lista de sanfonas de vendedores permanece fixada em ordem crescente de código (ex: 203, 204, 205...), mesmo após otimizar e recalcular rotas de qualquer colaborador individualmente.',
+      'Fim da Troca de Posição dos Cards: Garante previsibilidade visual completa ao operador durante a análise sequencial da equipe.'
+    ]
+  },
+  {
     version: '3.197.1',
     date: 'Hoje',
     title: 'Fuel360: Tag Visual de Rota Otimizada no Card do Vendedor',

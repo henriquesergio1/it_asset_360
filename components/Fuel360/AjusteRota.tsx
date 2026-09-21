@@ -2346,7 +2346,8 @@ export const AjusteRota: React.FC = () => {
     }, [scopedAdjustedRoutes, selectedTeamSellers, selectedPromoter]);
 
     const effectiveSellersList = useMemo(() => {
-        return Array.from(new Set(effectiveScopedRoutes.map(r => String(r.Cod_Vend))));
+        return Array.from(new Set(effectiveScopedRoutes.map(r => String(r.Cod_Vend))))
+            .sort((a, b) => Number(a) - Number(b));
     }, [effectiveScopedRoutes]);
 
     const isSingleSeller = effectiveSellersList.length === 1;
