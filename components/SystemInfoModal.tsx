@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.199.0',
+    date: 'Hoje',
+    title: 'Fuel360: Filtro e Foco Individual de Vendedor no Mapa',
+    changes: [
+      'Seletor Dropdown no Mapa: Adicionado dropdown flutuante na barra superior do mapa que permite alternar entre visualizar todos os colaboradores ou isolar um vendedor específico.',
+      'Botão de Foco no Card da Sanfona: Inclusão do botão "Ver no Mapa" / "Focado" no cabeçalho de cada vendedor na lista em sanfona, com transição e centralização automática no mapa.',
+      'Visualização Isolada de Rotas: Ao focar em um vendedor, o mapa renderiza exclusivamente seus clientes, polilinhas de rota e base residencial, com chip indicador e atalho para retorno à visualização completa.'
+    ]
+  },
+  {
     version: '3.198.0',
     date: 'Hoje',
     title: 'Fuel360: Motor Multi-Cenários e Nivelamento Inteligente de Carga Horária',
