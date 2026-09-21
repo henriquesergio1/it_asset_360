@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.205.0',
+    date: 'Hoje',
+    title: 'Fuel360: VRPTW com Janelas de Horário, Simulador What-If e Laço no Mapa',
+    changes: [
+      'Sequenciamento com Janelas de Horário (VRPTW): Ordenação diária inteligente que respeita turnos (Manhã/Tarde) e horários específicos de abertura/fechamento (HoraInicio/HoraFim) dos clientes.',
+      'Simulador de Cenários What-If: Permite ao supervisor fixar a quantidade desejada de vendedores na equipe para simular a operação, analisando média de horas diárias, impacto na quilometragem e ociosidade de veículos.',
+      'Ferramenta de Laço no Mapa (Lasso Tool): Seleção poligonal de múltiplos clientes diretamente no mapa Leaflet para aplicação de alterações em lote (dia, quinzena e vendedor).'
+    ]
+  },
+  {
     version: '3.204.0',
     date: 'Hoje',
     title: 'Fuel360: Minimização de Vendedores e Dimensionamento de Equipe na Re-setorização',

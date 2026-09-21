@@ -648,7 +648,7 @@ function sequenceDayStops<T extends { lat: number; lng: number }>(
 ): T[] {
     if (clients.length <= 1) return clients;
 
-    // Se temos restrições de turno (MANHA / TARDE), prioriza janelas operacionais
+    // Se temos restrições de turno (MANHA / TARDE) ou horários específicos, prioriza janelas operacionais VRPTW
     if (restricoesMap && restricoesMap.size > 0) {
         const manha: T[] = [];
         const livre: T[] = [];
@@ -657,9 +657,11 @@ function sequenceDayStops<T extends { lat: number; lng: number }>(
         clients.forEach(c => {
             const cod = getStopCodCliente(c);
             const r = cod ? restricoesMap.get(cod) : null;
-            if (r && r.TurnoPermitido === 'MANHA') {
+            const isManha = Boolean(r && (r.TurnoPermitido === 'MANHA' || (r.HoraFim && r.HoraFim <= '12:30')));
+            const isTarde = Boolean(r && (r.TurnoPermitido === 'TARDE' || (r.HoraInicio && r.HoraInicio >= '12:30')));
+            if (isManha) {
                 manha.push(c);
-            } else if (r && r.TurnoPermitido === 'TARDE') {
+            } else if (isTarde) {
                 tarde.push(c);
             } else {
                 livre.push(c);
@@ -667,11 +669,24 @@ function sequenceDayStops<T extends { lat: number; lng: number }>(
         });
 
         if (manha.length > 0 || tarde.length > 0) {
-            const seqManha = manha.length > 1 ? sequenceDayStops(base, manha, strategy, restricoesMap, false) : manha;
+            const sortByTime = (items: T[]) => {
+                return items.sort((a, b) => {
+                    const rA = restricoesMap.get(getStopCodCliente(a));
+                    const rB = restricoesMap.get(getStopCodCliente(b));
+                    const hA = rA?.HoraInicio || rA?.HoraFim || '99:99';
+                    const hB = rB?.HoraInicio || rB?.HoraFim || '99:99';
+                    return hA.localeCompare(hB);
+                });
+            };
+
+            const sortedManha = sortByTime([...manha]);
+            const sortedTarde = sortByTime([...tarde]);
+
+            const seqManha = sortedManha.length > 1 ? sequenceDayStops(base, sortedManha, strategy, undefined, false) : sortedManha;
             const refBaseForLivre = seqManha.length > 0 ? seqManha[seqManha.length - 1] : base;
-            const seqLivre = livre.length > 1 ? sequenceDayStops(refBaseForLivre, livre, strategy, restricoesMap, false) : livre;
+            const seqLivre = livre.length > 1 ? sequenceDayStops(refBaseForLivre, livre, strategy, undefined, false) : livre;
             const refBaseForTarde = seqLivre.length > 0 ? seqLivre[seqLivre.length - 1] : (seqManha.length > 0 ? seqManha[seqManha.length - 1] : base);
-            const seqTarde = tarde.length > 1 ? sequenceDayStops(refBaseForTarde, tarde, strategy, restricoesMap, endAtLastClient) : tarde;
+            const seqTarde = sortedTarde.length > 1 ? sequenceDayStops(refBaseForTarde, sortedTarde, strategy, undefined, endAtLastClient) : sortedTarde;
 
             return [...seqManha, ...seqLivre, ...seqTarde];
         }
@@ -799,6 +814,37 @@ async function optimizeDayCircuitWithOSRM<T extends { lat: number; lng: number }
     endAtLastClient: boolean = false
 ): Promise<T[]> {
     if (clients.length <= 2) return sequenceDayStops(base, clients, strategy, restricoesMap, endAtLastClient);
+
+    // Se temos restrições de turno ou horários (VRPTW), particiona as paradas antes do OSRM para garantir que a janela matutina seja atendida primeiro
+    if (restricoesMap && restricoesMap.size > 0) {
+        const manha: T[] = [];
+        const livre: T[] = [];
+        const tarde: T[] = [];
+
+        clients.forEach(c => {
+            const cod = getStopCodCliente(c);
+            const r = cod ? restricoesMap.get(cod) : null;
+            const isManha = Boolean(r && (r.TurnoPermitido === 'MANHA' || (r.HoraFim && r.HoraFim <= '12:30')));
+            const isTarde = Boolean(r && (r.TurnoPermitido === 'TARDE' || (r.HoraInicio && r.HoraInicio >= '12:30')));
+            if (isManha) {
+                manha.push(c);
+            } else if (isTarde) {
+                tarde.push(c);
+            } else {
+                livre.push(c);
+            }
+        });
+
+        if (manha.length > 0 || tarde.length > 0) {
+            const optManha = manha.length > 1 ? await optimizeDayCircuitWithOSRM(base, manha, strategy, undefined, true) : manha;
+            const refLivre = optManha.length > 0 ? optManha[optManha.length - 1] : base;
+            const optLivre = livre.length > 1 ? await optimizeDayCircuitWithOSRM(refLivre, livre, strategy, undefined, true) : livre;
+            const refTarde = optLivre.length > 0 ? optLivre[optLivre.length - 1] : refLivre;
+            const optTarde = tarde.length > 1 ? await optimizeDayCircuitWithOSRM(refTarde, tarde, strategy, undefined, endAtLastClient) : tarde;
+
+            return [...optManha, ...optLivre, ...optTarde];
+        }
+    }
 
     // Monta todos os pontos do dia incluindo a base no índice 0
     const allPoints = [{ lat: base.lat, lng: base.lng }, ...clients.map(c => ({ lat: c.lat, lng: c.lng }))];
@@ -1327,6 +1373,105 @@ const SearchableSellerSelect: React.FC<{
     );
 };
 
+function isPointInPolygon(point: [number, number], vs: L.LatLng[]): boolean {
+    const x = point[0], y = point[1];
+    let inside = false;
+    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        const xi = vs[i].lat, yi = vs[i].lng;
+        const xj = vs[j].lat, yj = vs[j].lng;
+        const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+const LassoSelectionHandler: React.FC<{
+    isActive: boolean;
+    clients: Array<{ Cod_Cliente: number; Lat?: number; Long?: number }>;
+    onSelectClients: (clientCodes: number[]) => void;
+}> = ({ isActive, clients, onSelectClients }) => {
+    const map = useMap();
+    const isDrawingRef = useRef(false);
+    const pointsRef = useRef<L.LatLng[]>([]);
+    const polygonRef = useRef<L.Polygon | null>(null);
+
+    useEffect(() => {
+        if (!map) return;
+
+        if (isActive) {
+            map.dragging.disable();
+            const container = map.getContainer();
+            container.style.cursor = 'crosshair';
+
+            const onMouseDown = (e: L.LeafletMouseEvent) => {
+                isDrawingRef.current = true;
+                pointsRef.current = [e.latlng];
+                if (polygonRef.current) {
+                    map.removeLayer(polygonRef.current);
+                }
+                polygonRef.current = L.polygon([e.latlng], {
+                    color: '#6366f1',
+                    fillColor: '#818cf8',
+                    fillOpacity: 0.25,
+                    weight: 2,
+                    dashArray: '4, 4'
+                }).addTo(map);
+            };
+
+            const onMouseMove = (e: L.LeafletMouseEvent) => {
+                if (!isDrawingRef.current) return;
+                pointsRef.current.push(e.latlng);
+                if (polygonRef.current) {
+                    polygonRef.current.setLatLngs(pointsRef.current);
+                }
+            };
+
+            const onMouseUp = () => {
+                if (!isDrawingRef.current) return;
+                isDrawingRef.current = false;
+                const polygonPoints = pointsRef.current;
+
+                if (polygonPoints.length > 2) {
+                    const selectedCodes: number[] = [];
+                    clients.forEach(c => {
+                        if (c.Lat && c.Long && isPointInPolygon([c.Lat, c.Long], polygonPoints)) {
+                            selectedCodes.push(c.Cod_Cliente);
+                        }
+                    });
+                    onSelectClients(selectedCodes);
+                }
+
+                if (polygonRef.current) {
+                    map.removeLayer(polygonRef.current);
+                    polygonRef.current = null;
+                }
+                pointsRef.current = [];
+            };
+
+            map.on('mousedown', onMouseDown);
+            map.on('mousemove', onMouseMove);
+            map.on('mouseup', onMouseUp);
+
+            return () => {
+                map.dragging.enable();
+                container.style.cursor = '';
+                map.off('mousedown', onMouseDown);
+                map.off('mousemove', onMouseMove);
+                map.off('mouseup', onMouseUp);
+                if (polygonRef.current) {
+                    map.removeLayer(polygonRef.current);
+                    polygonRef.current = null;
+                }
+            };
+        } else {
+            map.dragging.enable();
+            map.getContainer().style.cursor = '';
+        }
+    }, [map, isActive, clients, onSelectClients]);
+
+    return null;
+};
+
 export const AjusteRota: React.FC = () => {
     const { colaboradores } = useContext(DataContext);
     const { user: authUser } = useAuth();
@@ -1359,6 +1504,7 @@ export const AjusteRota: React.FC = () => {
             activeSellersCount?: number;
             idleSellersCount?: number;
             idleSellerNames?: string[];
+            isWhatIf?: boolean;
         } | null;
     } | null>(null);
 
@@ -1487,6 +1633,27 @@ export const AjusteRota: React.FC = () => {
     useEffect(() => {
         localStorage.setItem('fuel_opt_resectorize_mode', optResectorizeMode);
     }, [optResectorizeMode]);
+
+    // Simulador What-If (E se?): Fixar número desejado de vendedores
+    const [optWhatIfActive, setOptWhatIfActive] = useState<boolean>(() => {
+        return localStorage.getItem('fuel_opt_whatif_active') === 'true';
+    });
+    const [optWhatIfSellersCount, setOptWhatIfSellersCount] = useState<number>(() => {
+        const saved = localStorage.getItem('fuel_opt_whatif_sellers_count');
+        return saved ? parseInt(saved, 10) : 0;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_whatif_active', String(optWhatIfActive));
+    }, [optWhatIfActive]);
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_whatif_sellers_count', String(optWhatIfSellersCount));
+    }, [optWhatIfSellersCount]);
+
+    // Ferramenta de Laço / Seleção Poligonal no Mapa
+    const [isLassoActive, setIsLassoActive] = useState<boolean>(false);
+    const [selectedLassoClients, setSelectedLassoClients] = useState<number[]>([]);
 
     // Persistência corporativa dos Parâmetros do Otimizador no SQL Server
     const [savingParamsToDb, setSavingParamsToDb] = useState(false);
@@ -1861,6 +2028,8 @@ export const AjusteRota: React.FC = () => {
     const [formDiasPermitidos, setFormDiasPermitidos] = useState<string[]>([]);
     const [formTurnoPermitido, setFormTurnoPermitido] = useState<'MANHA' | 'TARDE' | 'QUALQUER'>('QUALQUER');
     const [formQuinzenaPermitida, setFormQuinzenaPermitida] = useState<'1_3' | '2_4' | 'QUALQUER'>('QUALQUER');
+    const [formHoraInicio, setFormHoraInicio] = useState<string>('');
+    const [formHoraFim, setFormHoraFim] = useState<string>('');
     const [formObservacao, setFormObservacao] = useState<string>('');
     const [editingRestricaoId, setEditingRestricaoId] = useState<number | null>(null);
 
@@ -1903,6 +2072,8 @@ export const AjusteRota: React.FC = () => {
                 setFormRazaoSocial(existing.Razao_Social || client.Razao_Social || '');
                 setFormDiasPermitidos(existing.DiasPermitidos ? existing.DiasPermitidos.split(',').map(s => s.trim()) : []);
                 setFormTurnoPermitido((existing.TurnoPermitido as any) || 'QUALQUER');
+                setFormHoraInicio(existing.HoraInicio || '');
+                setFormHoraFim(existing.HoraFim || '');
                 setFormObservacao(existing.Observacao || '');
             } else {
                 setEditingRestricaoId(null);
@@ -1910,6 +2081,8 @@ export const AjusteRota: React.FC = () => {
                 setFormRazaoSocial(client.Razao_Social || '');
                 setFormDiasPermitidos([]);
                 setFormTurnoPermitido('QUALQUER');
+                setFormHoraInicio('');
+                setFormHoraFim('');
                 setFormObservacao('');
             }
         } else {
@@ -1919,6 +2092,8 @@ export const AjusteRota: React.FC = () => {
             setFormDiasPermitidos([]);
             setFormTurnoPermitido('QUALQUER');
             setFormQuinzenaPermitida('QUALQUER');
+            setFormHoraInicio('');
+            setFormHoraFim('');
             setFormObservacao('');
         }
         setShowRestricoesModal(true);
@@ -1940,6 +2115,8 @@ export const AjusteRota: React.FC = () => {
                 DiasPermitidos: formDiasPermitidos.length > 0 ? formDiasPermitidos.join(',') : undefined,
                 TurnoPermitido: formTurnoPermitido,
                 QuinzenaPermitida: formQuinzenaPermitida,
+                HoraInicio: formHoraInicio.trim() || undefined,
+                HoraFim: formHoraFim.trim() || undefined,
                 Observacao: formObservacao.trim() || undefined,
                 Ativo: true
             };
@@ -1955,6 +2132,8 @@ export const AjusteRota: React.FC = () => {
                 setFormDiasPermitidos([]);
                 setFormTurnoPermitido('QUALQUER');
                 setFormQuinzenaPermitida('QUALQUER');
+                setFormHoraInicio('');
+                setFormHoraFim('');
                 setFormObservacao('');
             } else {
                 setRestricaoSaveFeedback({ type: 'error', message: res?.message || 'Erro ao salvar no banco.' });
@@ -1982,6 +2161,8 @@ export const AjusteRota: React.FC = () => {
                     setFormDiasPermitidos([]);
                     setFormTurnoPermitido('QUALQUER');
                     setFormQuinzenaPermitida('QUALQUER');
+                    setFormHoraInicio('');
+                    setFormHoraFim('');
                     setFormObservacao('');
                 }
             }
@@ -3256,6 +3437,70 @@ export const AjusteRota: React.FC = () => {
         }, 4500);
     };
 
+    // Lista de vendedores presentes no escopo atual para transferência em lote
+    const teamSellersList = useMemo(() => {
+        const sellersMap = new Map<number, string>();
+        scopedAdjustedRoutes.forEach(r => {
+            if (r.Cod_Vend && !sellersMap.has(r.Cod_Vend)) {
+                sellersMap.set(r.Cod_Vend, r.Nome_Vendedor || `Vendedor ${r.Cod_Vend}`);
+            }
+        });
+        return Array.from(sellersMap.entries()).map(([id, name]) => ({ id, name }));
+    }, [scopedAdjustedRoutes]);
+
+    // Manipuladores de Ações em Lote para a Ferramenta de Laço (Lasso Tool)
+    const handleBatchChangeDay = (newDay: string) => {
+        if (selectedLassoClients.length === 0) return;
+        const clientCodes = new Set(selectedLassoClients);
+        setAdjustedRoutes(prev => prev.map(r => {
+            if (r.Cod_Cliente && clientCodes.has(r.Cod_Cliente)) {
+                return {
+                    ...r,
+                    Dia_Semana: newDay
+                };
+            }
+            return r;
+        }));
+        setSelectedLassoClients([]);
+        setIsLassoActive(false);
+    };
+
+    const handleBatchChangeQuinzena = (newQuinzenaType: string) => {
+        if (selectedLassoClients.length === 0) return;
+        const clientCodes = new Set(selectedLassoClients);
+        const periodicidadeStr = newQuinzenaType === 'QUINZENAL_1_3' ? '1 3' : (newQuinzenaType === 'QUINZENAL_2_4' ? '2 4' : 'SEMANAL');
+        setAdjustedRoutes(prev => prev.map(r => {
+            if (r.Cod_Cliente && clientCodes.has(r.Cod_Cliente)) {
+                return {
+                    ...r,
+                    Periodicidade: periodicidadeStr
+                };
+            }
+            return r;
+        }));
+        setSelectedLassoClients([]);
+        setIsLassoActive(false);
+    };
+
+    const handleBatchTransferSeller = (targetSellerId: number) => {
+        if (selectedLassoClients.length === 0) return;
+        const targetColab = getColabBySectorOrName(targetSellerId);
+        const targetName = targetColab?.Nome || `Vendedor ${targetSellerId}`;
+        const clientCodes = new Set(selectedLassoClients);
+        setAdjustedRoutes(prev => prev.map(r => {
+            if (r.Cod_Cliente && clientCodes.has(r.Cod_Cliente)) {
+                return {
+                    ...r,
+                    Cod_Vend: targetSellerId,
+                    Nome_Vendedor: targetName
+                };
+            }
+            return r;
+        }));
+        setSelectedLassoClients([]);
+        setIsLassoActive(false);
+    };
+
     // Navegação sob demanda do Mapa para a Grade de Ajuste Fino (acionado pelo botão 'Ver na Tabela' do Popup)
     const handleScrollToPdvInTable = (codCliente: number) => {
         const targetRoute = scopedAdjustedRoutes.find(r => r.Cod_Cliente === codCliente);
@@ -3890,6 +4135,7 @@ export const AjusteRota: React.FC = () => {
             activeSellersCount?: number;
             idleSellersCount?: number;
             idleSellerNames?: string[];
+            isWhatIf?: boolean;
         }
     ) => {
         if (sellers.length === 0) return [];
@@ -4987,7 +5233,8 @@ export const AjusteRota: React.FC = () => {
                     resectorizedCount: summaryMeta.resectorizedCount,
                     activeSellersCount: summaryMeta.activeSellersCount,
                     idleSellersCount: summaryMeta.idleSellersCount,
-                    idleSellerNames: summaryMeta.idleSellerNames
+                    idleSellerNames: summaryMeta.idleSellerNames,
+                    isWhatIf: summaryMeta.isWhatIf
                 }
             });
         } else {
@@ -5113,7 +5360,33 @@ export const AjusteRota: React.FC = () => {
 
         // 3. Cálculo da Capacidade Máxima por Vendedor
         // Considera dias ativos, optMaxHours, optMaxClients e menor tempo de deslocamento a partir da residência
-        if (optResectorizeMode === 'MINIMIZE_SELLERS') {
+        const isWhatIfActive = Boolean(optWhatIfActive && optWhatIfSellersCount > 0 && optWhatIfSellersCount < sellers.length);
+        const whatIfTargetCount = isWhatIfActive ? optWhatIfSellersCount : sellers.length;
+
+        if (isWhatIfActive) {
+            // Ordena os vendedores por densidade de clientes perto de casa
+            const sortedByDensity = [...sellerProfiles].sort((a, b) => {
+                const bLatA = a.baseLat || teamAvgLat;
+                const bLngA = a.baseLng || teamAvgLng;
+                const bLatB = b.baseLat || teamAvgLat;
+                const bLngB = b.baseLng || teamAvgLng;
+                const scoreA = allClients.reduce((sum, c) => sum + (1 / Math.max(1, calcDist(bLatA, bLngA, c.lat, c.lng))), 0);
+                const scoreB = allClients.reduce((sum, c) => sum + (1 / Math.max(1, calcDist(bLatB, bLngB, c.lat, c.lng))), 0);
+                return scoreB - scoreA;
+            });
+
+            const chosenIds = new Set(sortedByDensity.slice(0, whatIfTargetCount).map(s => s.id));
+            const targetClientsPerK = Math.ceil(allClients.length / whatIfTargetCount);
+            const maxCapK = Math.ceil(targetClientsPerK * 1.35);
+
+            sellerProfiles.forEach(sp => {
+                if (chosenIds.has(sp.id)) {
+                    sp.maxTarget = maxCapK;
+                } else {
+                    sp.maxTarget = 0; // Ocioso no What-If
+                }
+            });
+        } else if (optResectorizeMode === 'MINIMIZE_SELLERS') {
             let totalVisitsCapacityPerWeek = 0;
             activeDays.forEach(day => {
                 const dayHours = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
@@ -5183,8 +5456,10 @@ export const AjusteRota: React.FC = () => {
                 const cityLat = cList.reduce((s, c) => s + c.lat, 0) / cList.length;
                 const cityLng = cList.reduce((s, c) => s + c.lng, 0) / cList.length;
 
-                const sortedSellers = [...sellerProfiles].sort((a, b) => {
-                    if (optResectorizeMode === 'MINIMIZE_SELLERS') {
+                const candidateSellers = isWhatIfActive ? sellerProfiles.filter(s => s.maxTarget > 0) : sellerProfiles;
+
+                const sortedSellers = [...candidateSellers].sort((a, b) => {
+                    if (optResectorizeMode === 'MINIMIZE_SELLERS' || isWhatIfActive) {
                         const aHasClients = a.assignedClients.size > 0 ? 1 : 0;
                         const bHasClients = b.assignedClients.size > 0 ? 1 : 0;
                         if (aHasClients !== bHasClients) return bHasClients - aHasClients;
@@ -5207,9 +5482,10 @@ export const AjusteRota: React.FC = () => {
         // 5.3. Demais clientes individuais: alocação considerando endereço base do vendedor e menor tempo de deslocamento
         const unassignedClients = allClients.filter(c => !assignmentMap.has(c.cod));
 
-        if (optResectorizeMode === 'MINIMIZE_SELLERS') {
+        if (isWhatIfActive || optResectorizeMode === 'MINIMIZE_SELLERS') {
+            const candidateSellers = isWhatIfActive ? sellerProfiles.filter(s => s.maxTarget > 0) : sellerProfiles;
             // Ordena vendedores por densidade de clientes perto de casa (vendedores com melhores bases primeiro)
-            const orderedSellers = [...sellerProfiles].sort((a, b) => b.densityScore - a.densityScore);
+            const orderedSellers = [...candidateSellers].sort((a, b) => b.densityScore - a.densityScore);
 
             for (const sp of orderedSellers) {
                 if (unassignedClients.every(c => assignmentMap.has(c.cod))) break;
@@ -5360,14 +5636,17 @@ export const AjusteRota: React.FC = () => {
             }
         }
 
+        const isWhatIfSimulation = Boolean(optAutoResectorizeSellers && optWhatIfActive && optWhatIfSellersCount > 0 && optWhatIfSellersCount < sellers.length);
+
         const result = await runOptimizationForSellers(activeSellersToOptimize, baseRoutesForOptimization, true, {
-            title: isSingleSeller ? `Otimização de ${sellerNameDesc} Concluída` : 'Otimização e Roteirização Concluída',
+            title: isSingleSeller ? `Otimização de ${sellerNameDesc} Concluída` : (isWhatIfSimulation ? `Simulação What-If (${activeSellersToOptimize.length} Vendedores)` : 'Otimização e Roteirização Concluída'),
             escopoDesc: `Escopo: ${escopoDesc}${resectorizedCount > 0 ? ` (${resectorizedCount} PDVs re-setorizados)` : ''}`,
             mode: 'simulate',
             resectorizedCount,
             activeSellersCount: activeSellersToOptimize.length,
             idleSellersCount,
-            idleSellerNames
+            idleSellerNames,
+            isWhatIf: isWhatIfSimulation
         });
         if (result && result.length === 0) {
             alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
@@ -7974,7 +8253,7 @@ export const AjusteRota: React.FC = () => {
                                     <button
                                         type="button"
                                         onClick={() => setShowHeatmap(prev => !prev)}
-                                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 ${
+                                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 cursor-pointer ${
                                             showHeatmap 
                                                 ? 'bg-gradient-to-r from-orange-500 to-rose-600 text-white border-orange-400 shadow-orange-500/30 ring-2 ring-orange-400/40' 
                                                 : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800 hover:border-orange-400 hover:text-orange-600'
@@ -7983,6 +8262,26 @@ export const AjusteRota: React.FC = () => {
                                     >
                                         <span className="text-sm leading-none">🔥</span>
                                         <span>{showHeatmap ? 'Calor Ativo' : 'Mapa de Calor'}</span>
+                                    </button>
+
+                                    {/* Botão Ferramenta de Laço / Seleção no Mapa */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsLassoActive(prev => !prev);
+                                            if (isLassoActive) {
+                                                setSelectedLassoClients([]);
+                                            }
+                                        }}
+                                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 cursor-pointer ${
+                                            isLassoActive 
+                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-indigo-400 shadow-indigo-500/30 ring-2 ring-indigo-400/40' 
+                                                : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800 hover:border-indigo-400 hover:text-indigo-600'
+                                        }`}
+                                        title={isLassoActive ? "Desativar Laço de Seleção" : "Ativar Laço de Seleção Livre no Mapa"}
+                                    >
+                                        <span className="text-sm leading-none">🎯</span>
+                                        <span>{isLassoActive ? 'Laço Ativo' : 'Laço de Seleção'}</span>
                                     </button>
                                 </>
                             )}
@@ -8007,6 +8306,89 @@ export const AjusteRota: React.FC = () => {
                                 )}
                             </button>
                         </div>
+
+                        {/* Barra de Ações em Lote para Clientes Selecionados no Laço */}
+                        {selectedLassoClients.length > 0 && (
+                            <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[1001] bg-white/95 dark:bg-slate-900/95 backdrop-blur px-4 py-2 rounded-2xl border border-indigo-300 dark:border-indigo-700 shadow-2xl flex flex-wrap items-center gap-3 text-xs animate-in fade-in slide-in-from-top-2">
+                                <div className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300 font-black">
+                                    <span className="text-base">🎯</span>
+                                    <span>{selectedLassoClients.length} {selectedLassoClients.length === 1 ? 'cliente selecionado' : 'clientes selecionados'}</span>
+                                </div>
+
+                                <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+
+                                {/* Ação 1: Mudar Dia */}
+                                <div className="flex items-center gap-1">
+                                    <span className="text-[10px] uppercase font-bold text-slate-500">Dia:</span>
+                                    <select
+                                        onChange={(e) => {
+                                            if (e.target.value) {
+                                                handleBatchChangeDay(e.target.value);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                        defaultValue=""
+                                        className="text-[11px] font-bold py-1 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer"
+                                    >
+                                        <option value="" disabled>Alterar Dia...</option>
+                                        {WEEKDAYS.map(d => (
+                                            <option key={d} value={d}>{d}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Ação 2: Mudar Quinzena */}
+                                <div className="flex items-center gap-1">
+                                    <span className="text-[10px] uppercase font-bold text-slate-500">Ciclo:</span>
+                                    <select
+                                        onChange={(e) => {
+                                            if (e.target.value) {
+                                                handleBatchChangeQuinzena(e.target.value);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                        defaultValue=""
+                                        className="text-[11px] font-bold py-1 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer"
+                                    >
+                                        <option value="" disabled>Alterar Ciclo...</option>
+                                        <option value="SEMANAL">Semanal (Toda Semana)</option>
+                                        <option value="QUINZENAL_1_3">Semana 1 e 3 (Ímpares)</option>
+                                        <option value="QUINZENAL_2_4">Semana 2 e 4 (Pares)</option>
+                                    </select>
+                                </div>
+
+                                {/* Ação 3: Transferir Vendedor */}
+                                {teamSellersList.length > 1 && (
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] uppercase font-bold text-slate-500">Vendedor:</span>
+                                        <select
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    handleBatchTransferSeller(Number(e.target.value));
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                            defaultValue=""
+                                            className="text-[11px] font-bold py-1 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer max-w-[150px]"
+                                        >
+                                            <option value="" disabled>Transferir para...</option>
+                                            {teamSellersList.map(s => (
+                                                <option key={s.id} value={s.id}>{s.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedLassoClients([])}
+                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold px-1.5 py-1 rounded cursor-pointer"
+                                    title="Limpar seleção"
+                                >
+                                    ✕ Limpar
+                                </button>
+                            </div>
+                        )}
 
                         {/* Pill de status quando um vendedor específico está focado no mapa */}
                         {focusedMapSellerId !== null && (() => {
@@ -8044,6 +8426,13 @@ export const AjusteRota: React.FC = () => {
                             >
                                 <MapResizeHandler isFullscreen={isMapFullscreen} />
                                 <MapFlyToHandler target={mapFlyToTarget} markerRefs={markerRefs} />
+                                <LassoSelectionHandler 
+                                    isActive={isLassoActive}
+                                    clients={scopedAdjustedRoutes}
+                                    onSelectClients={(codes) => {
+                                        setSelectedLassoClients(codes);
+                                    }}
+                                />
                                 <TileLayer
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     attribution='&copy; OpenStreetMap contributors'
@@ -8220,6 +8609,7 @@ export const AjusteRota: React.FC = () => {
 
                                     const isPdvHighlighted = v.Cod_Cliente === highlightedClientCode;
                                     const isAnomalousPdv = anomaly.isAnomalous && anomaly.distKm > 80;
+                                    const isSelectedInLasso = selectedLassoClients.includes(v.Cod_Cliente);
 
                                     const restricaoCliente = clienteRestricoesMap.get(Number(v.Cod_Cliente));
                                     const hasParticularidade = Boolean(restricaoCliente && restricaoCliente.Ativo !== false);
@@ -8231,13 +8621,29 @@ export const AjusteRota: React.FC = () => {
                                     );
                                     const particularidadeColor = isSupervisorRestricao ? '#9333ea' : '#f59e0b';
 
-                                    const markerFillColor = isPdvHighlighted ? '#4f46e5' : (isAnomalousPdv ? '#ef4444' : mainColor);
-                                    const markerBorderColor = isPdvHighlighted ? '#ffffff' : (isAnomalousPdv ? '#991b1b' : (hasParticularidade ? particularidadeColor : borderColor));
-                                    const markerWeight = isPdvHighlighted ? 4 : (isAnomalousPdv ? 3.5 : (hasParticularidade ? 3 : (showHeatmap ? 1.5 : borderWidth)));
-                                    const markerRadius = showHeatmap ? Math.max(4, radius - 2) : (isPdvHighlighted ? radius + 3.5 : (isAnomalousPdv ? radius + 2 : radius));
+                                    const markerFillColor = isSelectedInLasso ? '#8b5cf6' : (isPdvHighlighted ? '#4f46e5' : (isAnomalousPdv ? '#ef4444' : mainColor));
+                                    const markerBorderColor = isSelectedInLasso ? '#facc15' : (isPdvHighlighted ? '#ffffff' : (isAnomalousPdv ? '#991b1b' : (hasParticularidade ? particularidadeColor : borderColor)));
+                                    const markerWeight = isSelectedInLasso ? 4 : (isPdvHighlighted ? 4 : (isAnomalousPdv ? 3.5 : (hasParticularidade ? 3 : (showHeatmap ? 1.5 : borderWidth))));
+                                    const markerRadius = isSelectedInLasso ? radius + 4 : (showHeatmap ? Math.max(4, radius - 2) : (isPdvHighlighted ? radius + 3.5 : (isAnomalousPdv ? radius + 2 : radius)));
 
                                     return (
                                         <React.Fragment key={`marker-fragment-${v.Cod_Cliente}-${idx}`}>
+                                            {/* Halo Orbital Concêntrico para clientes Selecionados no Laço */}
+                                            {isSelectedInLasso && (
+                                                <CircleMarker
+                                                    key={`lasso-halo-${v.Cod_Cliente}-${idx}`}
+                                                    center={[v.Lat, v.Long]}
+                                                    radius={markerRadius + 5}
+                                                    pathOptions={{
+                                                        color: '#8b5cf6',
+                                                        fillColor: '#c084fc',
+                                                        fillOpacity: 0.25,
+                                                        weight: 2,
+                                                        dashArray: '3, 3',
+                                                        interactive: false
+                                                    }}
+                                                />
+                                            )}
                                             {/* Halo Orbital Concêntrico para clientes com Particularidades / Restrições */}
                                             {hasParticularidade && (
                                                 <CircleMarker
@@ -8278,23 +8684,38 @@ export const AjusteRota: React.FC = () => {
                                                 }}
                                             >
                                                 {/* Tooltip flutuante com indicador de particularidade */}
-                                                {hasParticularidade && (
+                                                {(hasParticularidade || isSelectedInLasso) && (
                                                     <Tooltip direction="top" offset={[0, -markerRadius - 2]} opacity={0.95}>
                                                         <div className="text-[10px] font-bold flex items-center gap-1">
-                                                            <span>{isSupervisorRestricao ? '🛡️ [Supervisor]' : '⚡ [Particularidade]'}</span>
+                                                            <span>{isSelectedInLasso ? '🎯 [Selecionado no Laço]' : (isSupervisorRestricao ? '🛡️ [Supervisor]' : '⚡ [Particularidade]')}</span>
                                                             <span>{v.Cod_Cliente} - {v.Razao_Social}</span>
                                                         </div>
                                                         <div className="text-[9px] text-slate-500 font-medium">
                                                             {[
                                                                 restricaoCliente?.TurnoPermitido && restricaoCliente.TurnoPermitido !== 'QUALQUER' ? `Turno: ${restricaoCliente.TurnoPermitido}` : null,
+                                                                restricaoCliente?.HoraInicio ? `Janela: ${restricaoCliente.HoraInicio}${restricaoCliente.HoraFim ? ` às ${restricaoCliente.HoraFim}` : ''}` : null,
                                                                 restricaoCliente?.QuinzenaPermitida && restricaoCliente.QuinzenaPermitida !== 'QUALQUER' ? `Quinzena: ${restricaoCliente.QuinzenaPermitida.replace('_', ' ')}` : null,
                                                                 restricaoCliente?.DiasPermitidos ? `Dias: ${restricaoCliente.DiasPermitidos}` : null
-                                                            ].filter(Boolean).join(' • ') || 'Particularidade ativa'}
+                                                            ].filter(Boolean).join(' • ') || (isSelectedInLasso ? 'Selecionado para ação em lote' : 'Particularidade ativa')}
                                                         </div>
                                                     </Tooltip>
                                                 )}
                                                 <Popup>
                                                     <div className="text-xs space-y-2 p-1 font-sans">
+                                                        {isSelectedInLasso && (
+                                                            <div className="bg-purple-50 dark:bg-purple-950/70 border border-purple-300 dark:border-purple-800 rounded-lg p-1.5 flex items-center justify-between text-purple-900 dark:text-purple-200">
+                                                                <span className="font-bold text-[10px] flex items-center gap-1">
+                                                                    <span>🎯</span> Cliente Selecionado no Laço
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSelectedLassoClients(prev => prev.filter(c => c !== v.Cod_Cliente))}
+                                                                    className="text-[9px] font-bold text-red-600 hover:underline cursor-pointer"
+                                                                >
+                                                                    Remover do Laço
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                         {/* Banner de Alerta de Particularidade Cadastrada */}
                                                         {hasParticularidade && (
                                                             <div className={`border rounded-xl p-2 shadow-2xs space-y-1.5 ${
@@ -8321,6 +8742,11 @@ export const AjusteRota: React.FC = () => {
                                                                     {restricaoCliente?.TurnoPermitido && restricaoCliente.TurnoPermitido !== 'QUALQUER' && (
                                                                         <span className="bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800">
                                                                             Turno: {restricaoCliente.TurnoPermitido}
+                                                                        </span>
+                                                                    )}
+                                                                    {restricaoCliente?.HoraInicio && (
+                                                                        <span className="bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800">
+                                                                            ⏰ {restricaoCliente.HoraInicio}{restricaoCliente.HoraFim ? ` - ${restricaoCliente.HoraFim}` : ''}
                                                                         </span>
                                                                     )}
                                                                     {restricaoCliente?.QuinzenaPermitida && restricaoCliente.QuinzenaPermitida !== 'QUALQUER' && (
@@ -10140,6 +10566,60 @@ export const AjusteRota: React.FC = () => {
                                                 )}
                                             </span>
                                         </div>
+
+                                        {/* Simulador What-If (E se?) */}
+                                        <div className="mt-3 pt-3 border-t border-indigo-200/60 dark:border-indigo-800/60 space-y-2">
+                                            <label className="flex items-center justify-between cursor-pointer">
+                                                <div className="space-y-0.5">
+                                                    <span className="text-xs font-black text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                                                        <span>🔮</span> Simulador de Cenários &quot;What-If&quot; (E se?)
+                                                    </span>
+                                                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                                        Defina manualmente a quantidade desejada de vendedores para testar a viabilidade operacional da equipe.
+                                                    </p>
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={optWhatIfActive}
+                                                    onChange={(e) => setOptWhatIfActive(e.target.checked)}
+                                                    className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer shrink-0"
+                                                />
+                                            </label>
+
+                                            {optWhatIfActive && (
+                                                <div className="bg-indigo-50/70 dark:bg-slate-900/60 p-3 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                                                            Meta de Vendedores Ativos:
+                                                        </span>
+                                                        <span className="text-xs font-mono font-black text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-700">
+                                                            {optWhatIfSellersCount} {optWhatIfSellersCount === 1 ? 'Vendedor' : 'Vendedores'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="range"
+                                                            min={1}
+                                                            max={Math.max(1, teamSellersList.length || 10)}
+                                                            value={optWhatIfSellersCount}
+                                                            onChange={(e) => setOptWhatIfSellersCount(Number(e.target.value))}
+                                                            className="w-full accent-indigo-600 cursor-pointer"
+                                                        />
+                                                        <input
+                                                            type="number"
+                                                            min={1}
+                                                            max={Math.max(1, teamSellersList.length || 10)}
+                                                            value={optWhatIfSellersCount}
+                                                            onChange={(e) => setOptWhatIfSellersCount(Math.max(1, Number(e.target.value)))}
+                                                            className="w-16 text-center text-xs font-bold border border-slate-300 dark:border-slate-600 rounded-lg p-1 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                                                        />
+                                                    </div>
+                                                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 leading-tight">
+                                                        ℹ️ O sistema concentrará 100% dos clientes nos {optWhatIfSellersCount} vendedores com melhor posicionamento territorial e deixará {Math.max(0, (teamSellersList.length || 0) - optWhatIfSellersCount)} vendedores livres/sem clientes para reavaliação.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -10489,7 +10969,7 @@ export const AjusteRota: React.FC = () => {
                                         <div className="mt-2 pt-2 border-t border-emerald-200/60 dark:border-emerald-700/60 flex items-start space-x-2 text-emerald-800 dark:text-emerald-300 font-medium bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl text-left">
                                             <span className="shrink-0 text-sm">🎯</span>
                                             <div>
-                                                <strong>Dimensionamento de Equipe:</strong> Toda a carteira foi alocada em{' '}
+                                                <strong>{optimizeProgress.completedSummary.isWhatIf ? '🔮 Cenário What-If Concluído:' : 'Dimensionamento de Equipe:'}</strong> Toda a carteira foi alocada em{' '}
                                                 <strong>{optimizeProgress.completedSummary.activeSellersCount} vendedores</strong>.{' '}
                                                 <span className="text-emerald-700 dark:text-emerald-400 font-bold">
                                                     {optimizeProgress.completedSummary.idleSellersCount} vendedor(es) liberado(s)/excedente(s):
@@ -12122,6 +12602,38 @@ export const AjusteRota: React.FC = () => {
                                         </span>
                                     </div>
 
+                                    {/* Janela de Horário Específica (Hora Início e Hora Fim) */}
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                        <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                                            ⏰ Janela de Horário Específica (VRPTW):
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <span className="text-[9px] text-slate-400 font-bold block mb-0.5">Abertura / Início:</span>
+                                                <input
+                                                    type="time"
+                                                    value={formHoraInicio}
+                                                    onChange={(e) => setFormHoraInicio(e.target.value)}
+                                                    className="w-full text-xs font-bold px-2 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-hidden"
+                                                />
+                                            </div>
+                                            <div>
+                                                <span className="text-[9px] text-slate-400 font-bold block mb-0.5">Fechamento / Fim:</span>
+                                                <input
+                                                    type="time"
+                                                    value={formHoraFim}
+                                                    onChange={(e) => setFormHoraFim(e.target.value)}
+                                                    className="w-full text-xs font-bold px-2 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-hidden"
+                                                />
+                                            </div>
+                                        </div>
+                                        <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 block">
+                                            {formHoraInicio || formHoraFim
+                                                ? `Otimizador VRPTW prioriza visitas entre ${formHoraInicio || '08:00'} e ${formHoraFim || '18:00'}.`
+                                                : 'Opcional: deixe em branco para atender em qualquer horário do turno.'}
+                                        </span>
+                                    </div>
+
                                     {/* Quinzena Permitida / Trava Corporativa de Ciclo */}
                                     <div>
                                         <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
@@ -12164,28 +12676,28 @@ export const AjusteRota: React.FC = () => {
                                                 }`}
                                             >
                                                 <ClockIcon className="w-4 h-4" />
-                                                <span>🔄 Qualquer / Livre</span>
+                                                <span>🔄 Qualquer</span>
                                             </button>
                                         </div>
                                         <span className="text-[9.5px] text-slate-400 dark:text-slate-500 mt-1 block">
-                                            {formQuinzenaPermitida === '1_3' && 'Fixa o cliente nas Semanas 1 e 3. O algoritmo de balanceamento não poderá movê-lo.'}
-                                            {formQuinzenaPermitida === '2_4' && 'Fixa o cliente nas Semanas 2 e 4. O algoritmo de balanceamento não poderá movê-lo.'}
-                                            {formQuinzenaPermitida === 'QUALQUER' && 'Ciclo livre: o balanceador aloca dinamicamente entre 1/3 ou 2/4 para otimizar o peso diário.'}
+                                            {formQuinzenaPermitida === '1_3' && 'Fixa o atendimento estritamente na 1ª e 3ª semana do mês.'}
+                                            {formQuinzenaPermitida === '2_4' && 'Fixa o atendimento estritamente na 2ª e 4ª semana do mês.'}
+                                            {formQuinzenaPermitida === 'QUALQUER' && 'Otimizador define a melhor quinzena para balancear os ciclos.'}
                                         </span>
                                     </div>
                                 </div>
 
-                                {/* Observação Operacional */}
-                                <div>
+                                {/* Observação / Justificativa Corporativa */}
+                                <div className="pt-1">
                                     <label className="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
-                                        Observação / Restrição Operacional
+                                        Observação / Justificativa da Janela:
                                     </label>
                                     <input
                                         type="text"
+                                        placeholder="Ex: Recebe mercadoria apenas pela manhã às terças / Janela de descarregamento..."
                                         value={formObservacao}
                                         onChange={(e) => setFormObservacao(e.target.value)}
-                                        placeholder="Ex: Recebimento das 08h às 11h. Falar com o encarregado do depósito."
-                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl py-2 px-3 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-indigo-500"
                                     />
                                 </div>
 
@@ -12211,55 +12723,72 @@ export const AjusteRota: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Tabela de Particularidades Cadastradas */}
+                            {/* Tabela de Particularidades Cadastradas com Busca e Filtro de Turno */}
                             <div className="space-y-3">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                    <div className="flex items-center space-x-2">
-                                        <h4 className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider">
-                                            Particularidades Cadastradas
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                            Particularidades Ativas ({clienteRestricoes.length})
                                         </h4>
-                                        <span className="text-[11px] font-bold text-slate-400">
-                                            ({clienteRestricoes.length} total)
-                                        </span>
                                     </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <input
-                                            type="text"
-                                            placeholder="Filtrar por código ou cliente..."
-                                            value={restricaoSearch}
-                                            onChange={(e) => setRestricaoSearch(e.target.value)}
-                                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1 text-xs font-medium outline-none w-52 text-slate-800 dark:text-white"
-                                        />
+
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        {/* Filtro de Origem */}
+                                        <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl text-[10px] font-bold">
+                                            <button
+                                                type="button"
+                                                onClick={() => setRestricaoFilterOrigem('TODOS')}
+                                                className={`px-2 py-1 rounded-lg transition ${restricaoFilterOrigem === 'TODOS' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs' : 'text-slate-500'}`}
+                                            >
+                                                Todas
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setRestricaoFilterOrigem('SUPERVISOR')}
+                                                className={`px-2 py-1 rounded-lg transition flex items-center gap-1 ${restricaoFilterOrigem === 'SUPERVISOR' ? 'bg-purple-600 text-white shadow-2xs' : 'text-purple-600 dark:text-purple-400'}`}
+                                            >
+                                                <span>⚡</span> Supervisor
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setRestricaoFilterOrigem('MANUAL')}
+                                                className={`px-2 py-1 rounded-lg transition ${restricaoFilterOrigem === 'MANUAL' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs' : 'text-slate-500'}`}
+                                            >
+                                                Manuais
+                                            </button>
+                                        </div>
+
+                                        {/* Filtro de Turno */}
                                         <select
                                             value={restricaoFilterTurno}
                                             onChange={(e) => setRestricaoFilterTurno(e.target.value as any)}
-                                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none"
+                                            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl py-1 px-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none"
                                         >
                                             <option value="TODOS">Todos os Turnos</option>
-                                            <option value="MANHA">🌅 Manhã</option>
-                                            <option value="TARDE">🌇 Tarde</option>
-                                            <option value="QUALQUER">⏰ Qualquer</option>
+                                            <option value="MANHA">🌅 Apenas Manhã</option>
+                                            <option value="TARDE">🌇 Apenas Tarde</option>
+                                            <option value="QUALQUER">⏰ Sem Restrição</option>
                                         </select>
-                                        <select
-                                            value={restricaoFilterOrigem}
-                                            onChange={(e) => setRestricaoFilterOrigem(e.target.value as any)}
-                                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none"
-                                        >
-                                            <option value="TODOS">Todas as Origens</option>
-                                            <option value="SUPERVISOR">⚡ Críticas de Supervisores</option>
-                                            <option value="MANUAL">✏️ Inserções Manuais</option>
-                                        </select>
+
+                                        {/* Input de Busca */}
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar por código ou cliente..."
+                                            value={restricaoSearch}
+                                            onChange={(e) => setRestricaoSearch(e.target.value)}
+                                            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl py-1 px-2.5 text-xs font-bold text-slate-900 dark:text-white outline-none w-48 focus:w-60 transition-all placeholder:font-normal"
+                                        />
                                     </div>
                                 </div>
 
-                                <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
-                                    <table className="w-full text-left text-[11px] font-bold text-slate-700 dark:text-slate-200">
-                                        <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 uppercase text-[9px] border-b border-slate-200 dark:border-slate-700">
+                                <div className="max-h-64 overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+                                    <table className="w-full text-left text-xs border-collapse">
+                                        <thead className="bg-slate-50 dark:bg-slate-800 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
                                             <tr>
-                                                <th className="p-3">Código/SOLD</th>
-                                                <th className="p-3">Cliente / Razão Social</th>
+                                                <th className="p-3">Cliente</th>
+                                                <th className="p-3">Razão Social</th>
                                                 <th className="p-3 text-center">Dias Permitidos</th>
-                                                <th className="p-3 text-center">Turno</th>
+                                                <th className="p-3 text-center">Turno & Janela</th>
                                                 <th className="p-3 text-center">Quinzena</th>
                                                 <th className="p-3">Observação & Auditoria</th>
                                                 <th className="p-3 text-center">Ações</th>
@@ -12332,6 +12861,11 @@ export const AjusteRota: React.FC = () => {
                                                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                                                                         Qualquer
                                                                     </span>
+                                                                )}
+                                                                {r.HoraInicio && (
+                                                                    <div className="text-[9px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 font-bold">
+                                                                        ⏰ {r.HoraInicio}{r.HoraFim ? ` - ${r.HoraFim}` : ''}
+                                                                    </div>
                                                                 )}
                                                             </td>
                                                             <td className="p-3 text-center">
