@@ -1682,6 +1682,18 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
             return 'Vendedor';
         };
 
+        const getCollaboratorCategory = (groupName) => {
+            const gUpper = String(groupName || '').toUpperCase().trim();
+            if (gUpper.includes('PROM') || gUpper.includes('MERCHANDIS') || gUpper.includes('TRADE')) return 'PROMOTOR';
+            if (gUpper.includes('VEND') || gUpper.includes('COMERCIAL') || gUpper.includes('REPRESENTANTE')) return 'VENDEDOR';
+            if (gUpper.includes('SUPERV') || gUpper.includes('GEREN') || gUpper.includes('COORDEN') || gUpper.includes('DIRETOR')) return 'SUPERVISOR';
+            return 'OUTROS';
+        };
+
+        const isSameCategory = (g1, g2) => {
+            return getCollaboratorCategory(g1) === getCollaboratorCategory(g2);
+        };
+
         let nativeRes;
         try {
             nativeRes = await pool.request().query(`
@@ -1753,20 +1765,21 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
         const alterados = [];
         const iguais = [];
         const activePulsusIds = new Set();
-        const activeSectorCodes = new Set();
+        const activeSectorKeys = new Set();
 
         nativeItems.forEach(nItem => {
             const idPulsus = Number(nItem.id_pulsus);
             if (!idPulsus) return;
             const codigoSetorNum = Number(nItem.codigo_setor) || 0;
-            if (codigoSetorNum > 0) activeSectorCodes.add(codigoSetorNum);
+            const nCat = getCollaboratorCategory(nItem.grupo);
+            if (codigoSetorNum > 0) activeSectorKeys.add(`${nCat}_${codigoSetorNum}`);
 
             let existing = fuelMap.get(idPulsus);
             let isPulsusSwap = false;
 
-            // Se não encontrou pelo ID_Pulsus, tenta encontrar por Código de Setor ou CPF
+            // Se não encontrou pelo ID_Pulsus, tenta encontrar por Código de Setor (ESTRITAMENTE DENTRO DA MESMA CATEGORIA: Promotor vs Vendedor)
             if (!existing && codigoSetorNum > 0) {
-                const matchBySector = fuelItems.find(f => Number(f.CodigoSetor) === codigoSetorNum);
+                const matchBySector = fuelItems.find(f => Number(f.CodigoSetor) === codigoSetorNum && isSameCategory(f.Grupo, nItem.grupo));
                 if (matchBySector) {
                     existing = matchBySector;
                     isPulsusSwap = true;
@@ -1775,7 +1788,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
             if (!existing && nItem.cpf) {
                 const cleanNCpf = String(nItem.cpf).replace(/\D/g, '');
                 if (cleanNCpf) {
-                    const matchByCpf = fuelItems.find(f => f.CPF && String(f.CPF).replace(/\D/g, '') === cleanNCpf);
+                    const matchByCpf = fuelItems.find(f => f.CPF && String(f.CPF).replace(/\D/g, '') === cleanNCpf && isSameCategory(f.Grupo, nItem.grupo));
                     if (matchByCpf) {
                         existing = matchByCpf;
                         isPulsusSwap = true;
@@ -1858,7 +1871,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
         });
 
         const inativar = fuelItems
-            .filter(f => f.Ativo && !activePulsusIds.has(Number(f.ID_Pulsus)) && (!f.CodigoSetor || !activeSectorCodes.has(Number(f.CodigoSetor))))
+            .filter(f => f.Ativo && !activePulsusIds.has(Number(f.ID_Pulsus)) && (!f.CodigoSetor || !activeSectorKeys.has(`${getCollaboratorCategory(f.Grupo)}_${Number(f.CodigoSetor)}`)))
             .map(f => ({
                 id_pulsus: Number(f.ID_Pulsus),
                 nome: f.Nome,
@@ -1996,7 +2009,18 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
                     .input('LatitudeBase', sql.Float, latVal)
                     .input('LongitudeBase', sql.Float, lonVal)
                     .query(`
-                        IF EXISTS (SELECT 1 FROM FuelColaboradores WHERE CodigoSetor = @CodigoSetor AND @CodigoSetor > 0)
+                        -- 1. Verifica se já existe um colaborador da MESMA CATEGORIA (Promotor vs Vendedor vs Supervisor) com este CodigoSetor
+                        IF EXISTS (
+                            SELECT 1 FROM FuelColaboradores 
+                            WHERE CodigoSetor = @CodigoSetor 
+                              AND @CodigoSetor > 0
+                              AND (
+                                  (@Grupo LIKE '%PROM%' AND (Grupo LIKE '%PROM%' OR Grupo LIKE '%MERCH%')) OR
+                                  (@Grupo LIKE '%VEND%' AND (Grupo LIKE '%VEND%' OR Grupo LIKE '%COMERC%')) OR
+                                  (@Grupo LIKE '%SUPERV%' AND (Grupo LIKE '%SUPERV%' OR Grupo LIKE '%GEREN%' OR Grupo LIKE '%COORD%')) OR
+                                  (@Grupo NOT LIKE '%PROM%' AND @Grupo NOT LIKE '%VEND%' AND @Grupo NOT LIKE '%SUPERV%' AND Grupo = @Grupo)
+                              )
+                        )
                         BEGIN
                             UPDATE FuelColaboradores
                             SET ID_Pulsus = @ID_Pulsus,
@@ -2007,11 +2031,24 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
                                 LatitudeBase = COALESCE(@LatitudeBase, LatitudeBase),
                                 LongitudeBase = COALESCE(@LongitudeBase, LongitudeBase),
                                 Ativo = 1
-                            WHERE CodigoSetor = @CodigoSetor;
+                            WHERE CodigoSetor = @CodigoSetor
+                              AND (
+                                  (@Grupo LIKE '%PROM%' AND (Grupo LIKE '%PROM%' OR Grupo LIKE '%MERCH%')) OR
+                                  (@Grupo LIKE '%VEND%' AND (Grupo LIKE '%VEND%' OR Grupo LIKE '%COMERC%')) OR
+                                  (@Grupo LIKE '%SUPERV%' AND (Grupo LIKE '%SUPERV%' OR Grupo LIKE '%GEREN%' OR Grupo LIKE '%COORD%')) OR
+                                  (@Grupo NOT LIKE '%PROM%' AND @Grupo NOT LIKE '%VEND%' AND @Grupo NOT LIKE '%SUPERV%' AND Grupo = @Grupo)
+                              );
 
+                            -- Desativa apenas quem for da MESMA CATEGORIA com outro Pulsus
                             UPDATE FuelColaboradores
                             SET Ativo = 0
-                            WHERE ID_Pulsus = @ID_Pulsus AND CodigoSetor <> @CodigoSetor;
+                            WHERE ID_Pulsus = @ID_Pulsus AND CodigoSetor <> @CodigoSetor
+                              AND (
+                                  (@Grupo LIKE '%PROM%' AND (Grupo LIKE '%PROM%' OR Grupo LIKE '%MERCH%')) OR
+                                  (@Grupo LIKE '%VEND%' AND (Grupo LIKE '%VEND%' OR Grupo LIKE '%COMERC%')) OR
+                                  (@Grupo LIKE '%SUPERV%' AND (Grupo LIKE '%SUPERV%' OR Grupo LIKE '%GEREN%' OR Grupo LIKE '%COORD%')) OR
+                                  (@Grupo NOT LIKE '%PROM%' AND @Grupo NOT LIKE '%VEND%' AND @Grupo NOT LIKE '%SUPERV%' AND Grupo = @Grupo)
+                              );
                         END
                         ELSE IF EXISTS (SELECT 1 FROM FuelColaboradores WHERE ID_Pulsus = @ID_Pulsus)
                         BEGIN
@@ -2083,9 +2120,17 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
 
                         IF @CodigoSetor > 0
                         BEGIN
+                            -- Desativa apenas registros da MESMA CATEGORIA (Promotor vs Vendedor vs Supervisor)
                             UPDATE FuelColaboradores
                             SET Ativo = 0
-                            WHERE CodigoSetor = @CodigoSetor AND ID_Pulsus <> @ID_Pulsus;
+                            WHERE CodigoSetor = @CodigoSetor 
+                              AND ID_Pulsus <> @ID_Pulsus
+                              AND (
+                                  (@Grupo LIKE '%PROM%' AND (Grupo LIKE '%PROM%' OR Grupo LIKE '%MERCH%')) OR
+                                  (@Grupo LIKE '%VEND%' AND (Grupo LIKE '%VEND%' OR Grupo LIKE '%COMERC%')) OR
+                                  (@Grupo LIKE '%SUPERV%' AND (Grupo LIKE '%SUPERV%' OR Grupo LIKE '%GEREN%' OR Grupo LIKE '%COORD%')) OR
+                                  (@Grupo NOT LIKE '%PROM%' AND @Grupo NOT LIKE '%VEND%' AND @Grupo NOT LIKE '%SUPERV%' AND Grupo = @Grupo)
+                              );
                         END
                     `);
                 processedCount++;

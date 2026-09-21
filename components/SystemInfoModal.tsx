@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.207.2',
+    date: 'Hoje',
+    title: 'Fuel360: Isolamento Estrito entre Promotores e Vendedores na Sincronização',
+    changes: [
+      'Isolamento Total de Categorias: Setores com o mesmo código numérico pertencentes a funções distintas (ex.: Setor 10 de Vendas vs Setor 10 de Promotores) são tratados como entidades completamente independentes, eliminando qualquer risco de sobreposição, inativação cruzada ou corrupção de dados na sincronização.',
+      'Sincronização Blindada: As rotinas de prévia e atualização no banco de dados agora filtram estritamente a categoria funcional do colaborador, impedindo que um promotor sobrescreva ou inative um vendedor (e vice-versa).',
+      'Visualização Aprimorada: A modal de sincronização em Equipes e Setores agora destaca claramente o grupo de cada colaborador com filtros rápidos por função.'
+    ]
+  },
+  {
     version: '3.207.1',
     date: 'Hoje',
     title: 'Fuel360: Desvinculação de Vendedor Inativo em Setores Vagos',

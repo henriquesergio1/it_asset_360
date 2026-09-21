@@ -281,6 +281,37 @@ const ColaboradorModal: React.FC<{
 };
 
 // --- MODAL DE SINCRONIZAÇÃO ---
+const getCategoryFromGroup = (g?: string): 'VENDEDOR' | 'PROMOTOR' | 'SUPERVISOR' | 'OUTROS' => {
+    const u = String(g || '').toUpperCase();
+    if (u.includes('PROM') || u.includes('MERCH') || u.includes('TRADE')) return 'PROMOTOR';
+    if (u.includes('VEND') || u.includes('COMERC') || u.includes('REPRES')) return 'VENDEDOR';
+    if (u.includes('SUPERV') || u.includes('GEREN') || u.includes('COORD') || u.includes('DIRETOR')) return 'SUPERVISOR';
+    return 'OUTROS';
+};
+
+const renderCategoryBadge = (groupName?: string) => {
+    const cat = getCategoryFromGroup(groupName);
+    if (cat === 'PROMOTOR') {
+        return (
+            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-300 dark:border-purple-800 tracking-wider">
+                PROMOTOR
+            </span>
+        );
+    }
+    if (cat === 'VENDEDOR') {
+        return (
+            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 tracking-wider">
+                VENDEDOR
+            </span>
+        );
+    }
+    return (
+        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700 tracking-wider">
+            {groupName || 'OUTROS'}
+        </span>
+    );
+};
+
 const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
     const { refreshData } = useContext(DataContext);
     const [loading, setLoading] = useState(false);
@@ -288,6 +319,7 @@ const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
     const [syncing, setSyncing] = useState(false);
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['NEW', 'PHONE_CHANGE', 'ID_MATCH']));
+    const [filterCategory, setFilterCategory] = useState<'ALL' | 'VENDEDOR' | 'PROMOTOR'>('ALL');
 
     useEffect(() => {
         if (isOpen) {
@@ -320,6 +352,30 @@ const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
         setSelectedItems(newSet);
     };
 
+    const filteredNovos = useMemo(() => {
+        if (!preview) return [];
+        if (filterCategory === 'ALL') return preview.novos;
+        return preview.novos.filter(n => getCategoryFromGroup(n.newData?.grupo) === filterCategory);
+    }, [preview, filterCategory]);
+
+    const filteredAlterados = useMemo(() => {
+        if (!preview) return [];
+        if (filterCategory === 'ALL') return preview.alterados;
+        return preview.alterados.filter(a => getCategoryFromGroup(a.newData?.grupo || a.existingColab?.Grupo) === filterCategory);
+    }, [preview, filterCategory]);
+
+    const filteredConflitos = useMemo(() => {
+        if (!preview) return [];
+        if (filterCategory === 'ALL') return preview.conflitos;
+        return preview.conflitos.filter(c => getCategoryFromGroup(c.newData?.grupo || c.existingColab?.Grupo) === filterCategory);
+    }, [preview, filterCategory]);
+
+    const filteredInativar = useMemo(() => {
+        if (!preview) return [];
+        if (filterCategory === 'ALL') return preview.inativar;
+        return preview.inativar.filter(i => getCategoryFromGroup(i.grupo) === filterCategory);
+    }, [preview, filterCategory]);
+
     const handleSync = async () => {
         if (!preview) return;
         setSyncing(true);
@@ -350,6 +406,51 @@ const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
                     </div>
                     <button onClick={onClose} className="p-2 text-slate-400 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-600 rounded-full transition shadow-sm border border-transparent hover:border-slate-100 dark:hover:border-slate-700"><XCircleIcon className="w-6 h-6"/></button>
                 </div>
+
+                {/* Barra de Filtro de Categoria Funcional (Vendedores vs Promotores) */}
+                <div className="px-6 py-2.5 bg-slate-100/70 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mr-1">Filtrar Categoria:</span>
+                        <button
+                            type="button"
+                            onClick={() => setFilterCategory('ALL')}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                filterCategory === 'ALL'
+                                    ? 'bg-blue-600 text-white shadow-xs'
+                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                            }`}
+                        >
+                            Todos
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFilterCategory('VENDEDOR')}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                filterCategory === 'VENDEDOR'
+                                    ? 'bg-emerald-600 text-white shadow-xs'
+                                    : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-700'
+                            }`}
+                        >
+                            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <span>Vendedores</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFilterCategory('PROMOTOR')}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                filterCategory === 'PROMOTOR'
+                                    ? 'bg-purple-600 text-white shadow-xs'
+                                    : 'bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-slate-700'
+                            }`}
+                        >
+                            <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                            <span>Promotores</span>
+                        </button>
+                    </div>
+                    <div className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                        Setores com mesmo código nunca se misturam
+                    </div>
+                </div>
                 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     {loading ? (
@@ -359,21 +460,24 @@ const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
                         </div>
                     ) : (
                         <>
-                            {preview?.conflitos.length! > 0 && (
+                            {filteredConflitos.length > 0 && (
                                 <div className="border border-indigo-100 dark:border-indigo-900/60 rounded-xl overflow-hidden shadow-sm">
                                     <button onClick={() => toggleSection('PHONE_CHANGE')} className="w-full flex justify-between items-center p-4 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100/70 dark:hover:bg-indigo-900/60 transition-colors">
-                                        <div className="flex items-center text-indigo-800 dark:text-indigo-300 font-black text-sm uppercase tracking-wider"><RefreshIcon className="w-4 h-4 mr-2"/> Possível Troca de Celular ({preview?.conflitos.length})</div>
+                                        <div className="flex items-center text-indigo-800 dark:text-indigo-300 font-black text-sm uppercase tracking-wider"><RefreshIcon className="w-4 h-4 mr-2"/> Possível Troca de Celular ({filteredConflitos.length})</div>
                                         {expandedSections.has('PHONE_CHANGE') ? <ChevronUpIcon className="w-4 h-4 text-indigo-400"/> : <ChevronDownIcon className="w-4 h-4 text-indigo-400"/>}
                                     </button>
                                     {expandedSections.has('PHONE_CHANGE') && (
                                         <div className="p-2 space-y-2 bg-white dark:bg-slate-900 animate-fade-in-up">
-                                            {preview?.conflitos.map(c => (
+                                            {filteredConflitos.map(c => (
                                                 <div key={c.id_pulsus} className="p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/20 dark:bg-indigo-950/20">
                                                     <div className="flex items-center">
                                                         <input type="checkbox" checked={selectedItems.has(`PHONE-${c.id_pulsus}`)} onChange={() => toggleItem(`PHONE-${c.id_pulsus}`)} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 mr-4 cursor-pointer" />
                                                         <div className="flex-1">
                                                             <div className="flex items-center justify-between">
-                                                                <p className="text-sm font-bold text-slate-800 dark:text-white">{c.nome}</p>
+                                                                <div className="flex items-center gap-2">
+                                                                    <p className="text-sm font-bold text-slate-800 dark:text-white">{c.nome}</p>
+                                                                    {renderCategoryBadge(c.newData?.grupo || c.existingColab?.Grupo)}
+                                                                </div>
                                                                 <span className="text-[9px] bg-indigo-600 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Troca de Aparelho</span>
                                                             </div>
                                                             <div className="mt-2 p-2 bg-white dark:bg-slate-800 rounded border border-indigo-50 dark:border-indigo-900/40 text-[10px]">
@@ -400,20 +504,23 @@ const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
                                 </div>
                             )}
 
-                            {preview?.novos.length! > 0 && (
+                            {filteredNovos.length > 0 && (
                                 <div className="border border-emerald-100 dark:border-emerald-900/60 rounded-xl overflow-hidden shadow-sm">
                                     <button onClick={() => toggleSection('NEW')} className="w-full flex justify-between items-center p-4 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/60 transition-colors">
-                                        <div className="flex items-center text-emerald-800 dark:text-emerald-300 font-black text-sm uppercase tracking-wider"><PlusCircleIcon className="w-4 h-4 mr-2"/> Novos Colaboradores ({preview?.novos.length})</div>
+                                        <div className="flex items-center text-emerald-800 dark:text-emerald-300 font-black text-sm uppercase tracking-wider"><PlusCircleIcon className="w-4 h-4 mr-2"/> Novos Colaboradores ({filteredNovos.length})</div>
                                         {expandedSections.has('NEW') ? <ChevronUpIcon className="w-4 h-4 text-emerald-400"/> : <ChevronDownIcon className="w-4 h-4 text-emerald-400"/>}
                                     </button>
                                     {expandedSections.has('NEW') && (
                                         <div className="p-2 space-y-2 bg-white dark:bg-slate-900">
-                                            {preview?.novos.map(n => (
+                                            {filteredNovos.map(n => (
                                                 <div key={n.id_pulsus} className="flex items-center p-3 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                                                     <input type="checkbox" checked={selectedItems.has(`NEW-${n.id_pulsus}`)} onChange={() => toggleItem(`NEW-${n.id_pulsus}`)} className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mr-4 cursor-pointer" />
                                                     <div className="flex-1">
-                                                        <p className="text-sm font-bold text-slate-800 dark:text-white">{n.nome}</p>
-                                                        <p className="text-[10px] text-slate-400 dark:text-slate-400 font-medium">ID Pulsus: {n.id_pulsus} • Setor: {n.newData.codigo_setor} • Grupo: {n.newData.grupo}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm font-bold text-slate-800 dark:text-white">{n.nome}</p>
+                                                            {renderCategoryBadge(n.newData.grupo)}
+                                                        </div>
+                                                        <p className="text-[10px] text-slate-400 dark:text-slate-400 font-medium mt-0.5">ID Pulsus: {n.id_pulsus} • Setor: {n.newData.codigo_setor} • Grupo: {n.newData.grupo}</p>
                                                     </div>
                                                 </div>
                                             ))}
@@ -422,19 +529,22 @@ const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
                                 </div>
                             )}
 
-                            {preview?.alterados.length! > 0 && (
+                            {filteredAlterados.length > 0 && (
                                 <div className="border border-blue-100 dark:border-blue-900/60 rounded-xl overflow-hidden shadow-sm">
                                     <button onClick={() => toggleSection('ID_MATCH')} className="w-full flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100/70 dark:hover:bg-blue-900/60 transition-colors">
-                                        <div className="flex items-center text-blue-800 dark:text-sky-300 font-black text-sm uppercase tracking-wider"><PencilIcon className="w-4 h-4 mr-2"/> Alterações Detectadas ({preview?.alterados.length})</div>
+                                        <div className="flex items-center text-blue-800 dark:text-sky-300 font-black text-sm uppercase tracking-wider"><PencilIcon className="w-4 h-4 mr-2"/> Alterações Detectadas ({filteredAlterados.length})</div>
                                         {expandedSections.has('ID_MATCH') ? <ChevronUpIcon className="w-4 h-4 text-blue-400"/> : <ChevronDownIcon className="w-4 h-4 text-blue-400"/>}
                                     </button>
                                     {expandedSections.has('ID_MATCH') && (
                                         <div className="p-2 space-y-2 bg-white dark:bg-slate-900">
-                                            {preview?.alterados.map(a => (
+                                            {filteredAlterados.map(a => (
                                                 <div key={a.id_pulsus} className="flex items-center p-3 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                                                     <input type="checkbox" checked={selectedItems.has(`ALT-${a.id_pulsus}`)} onChange={() => toggleItem(`ALT-${a.id_pulsus}`)} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 mr-4 cursor-pointer" />
                                                     <div className="flex-1">
-                                                        <p className="text-sm font-bold text-slate-800 dark:text-white">{a.nome}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm font-bold text-slate-800 dark:text-white">{a.nome}</p>
+                                                            {renderCategoryBadge(a.newData.grupo || a.existingColab?.Grupo)}
+                                                        </div>
                                                         <div className="flex flex-wrap gap-2 mt-1.5">
                                                             {a.changes.map((diff, idx) => (
                                                                 <div key={idx} className={`flex items-center text-[9px] px-2 py-1 rounded border ${diff.field === 'Nome' ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
@@ -462,20 +572,23 @@ const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
                                 </div>
                             )}
 
-                            {preview?.inativar.length! > 0 && (
+                            {filteredInativar.length > 0 && (
                                 <div className="border border-red-100 dark:border-red-900/60 rounded-xl overflow-hidden shadow-sm">
                                     <button onClick={() => toggleSection('DEACTIVATE_SECTION')} className="w-full flex justify-between items-center p-4 bg-red-50 dark:bg-red-950/40 hover:bg-red-100/70 dark:hover:bg-red-900/60 transition-colors">
-                                        <div className="flex items-center text-red-800 dark:text-red-300 font-black text-sm uppercase tracking-wider"><TrashIcon className="w-4 h-4 mr-2"/> Setores Removidos (A Inativar) ({preview?.inativar.length})</div>
+                                        <div className="flex items-center text-red-800 dark:text-red-300 font-black text-sm uppercase tracking-wider"><TrashIcon className="w-4 h-4 mr-2"/> Setores Removidos (A Inativar) ({filteredInativar.length})</div>
                                         {expandedSections.has('DEACTIVATE_SECTION') ? <ChevronUpIcon className="w-4 h-4 text-red-400"/> : <ChevronDownIcon className="w-4 h-4 text-red-400"/>}
                                     </button>
                                     {expandedSections.has('DEACTIVATE_SECTION') && (
                                         <div className="p-2 space-y-2 bg-white dark:bg-slate-900">
-                                            {preview?.inativar.map(i => (
+                                            {filteredInativar.map(i => (
                                                 <div key={i.id_pulsus} className="flex items-center p-3 rounded-lg border border-red-50 dark:border-red-900/40 bg-red-50/10 dark:bg-red-950/20">
                                                     <input type="checkbox" checked={selectedItems.has(`DEACT-${i.id_pulsus}`)} onChange={() => toggleItem(`DEACT-${i.id_pulsus}`)} className="w-4 h-4 rounded text-red-600 focus:ring-red-500 mr-4 cursor-pointer" />
                                                     <div className="flex-1">
-                                                        <p className="text-sm font-bold text-slate-800 dark:text-white">{i.nome}</p>
-                                                        <p className="text-[10px] text-red-400 font-bold uppercase tracking-tight">Setor {i.codigo_setor} ({i.grupo}) - Setor Vago ou Removido, será inativado</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm font-bold text-slate-800 dark:text-white">{i.nome}</p>
+                                                            {renderCategoryBadge(i.grupo)}
+                                                        </div>
+                                                        <p className="text-[10px] text-red-400 font-bold uppercase tracking-tight mt-0.5">Setor {i.codigo_setor} ({i.grupo}) - Setor Vago ou Removido, será inativado</p>
                                                     </div>
                                                 </div>
                                             ))}
