@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.210.0',
+    date: 'Hoje',
+    title: 'Fuel360: Opções Rota ERP e Rota via Planilha com Assistente de Destino Territorial',
+    changes: [
+      'Origem de Rota na Barra Superior: Disponibilizados botões diretos de "Rota ERP" e "Rota via Planilha" ao abrir a tela de Ajuste de Rota, permitindo carregamento flexível tanto do ERP quanto de planilhas customizadas.',
+      'Importação Flexível por Código do Cliente: A planilha aceita arquivos informando apenas o código do cliente (Sold), com ou sem dia da semana, semana ou vendedor. Roteirizador ganha flexibilidade para definir vendedor, periodicidade e dias.',
+      'Assistente de Destino Territorial: Ao importar a planilha, um assistente interativo permite escolher entre distribuir os clientes na equipe (com alocação por proximidade da base residencial), atribuir a um vendedor específico, criar novos setores virtuais simulados (901, 902...) ou manter os vendedores originais da planilha.'
+    ]
+  },
+  {
     version: '3.209.0',
     date: 'Hoje',
     title: 'Fuel360: Priorização Estrita de Coordenadas Prediais e Ajuste da Guarda Geográfica',

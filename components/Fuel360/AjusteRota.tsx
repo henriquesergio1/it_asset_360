@@ -1746,6 +1746,14 @@ export const AjusteRota: React.FC = () => {
     const [planilhaSummary, setPlanilhaSummary] = useState<any | null>(null);
     const [planilhaFileName, setPlanilhaFileName] = useState<string>('');
 
+    // Assistente de Destino / Roteirização dos Clientes da Planilha
+    const [showPlanilhaDestinationModal, setShowPlanilhaDestinationModal] = useState<boolean>(false);
+    const [planilhaDestMode, setPlanilhaDestMode] = useState<'equipe' | 'vendedor' | 'planilha' | 'novos_setores'>('equipe');
+    const [planilhaDestSupervisor, setPlanilhaDestSupervisor] = useState<string>('');
+    const [planilhaDestSeller, setPlanilhaDestSeller] = useState<number>(0);
+    const [planilhaDestNewSectorsCount, setPlanilhaDestNewSectorsCount] = useState<number>(2);
+    const [planilhaDestDefaultPeriodicidade, setPlanilhaDestDefaultPeriodicidade] = useState<'SEMANAL' | 'QUINZENAL'>('SEMANAL');
+
     // Persistência corporativa dos Parâmetros do Otimizador no SQL Server
     const [savingParamsToDb, setSavingParamsToDb] = useState(false);
     const [paramsSaveFeedback, setParamsSaveFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -1950,32 +1958,36 @@ export const AjusteRota: React.FC = () => {
                 'Cod_Cliente': 2790697,
                 'Cod_Vend': 101,
                 'Dia_Semana': 'SEGUNDA-FEIRA',
-                'Periodicidade': 'SEMANAL'
+                'Periodicidade': 'SEMANAL',
+                'Observacao': 'Linha completa com todos os campos'
             },
             {
                 'Cod_Cliente': 3387217,
                 'Cod_Vend': 101,
-                'Dia_Semana': 'TERÇA-FEIRA',
-                'Periodicidade': 'QUINZENAL'
+                'Dia_Semana': '',
+                'Periodicidade': 'QUINZENAL',
+                'Observacao': 'Cliente + Vendedor + Periodicidade (dia livre)'
             },
             {
                 'Cod_Cliente': 1658167,
                 'Cod_Vend': 102,
-                'Dia_Semana': 'QUARTA-FEIRA',
-                'Periodicidade': 'SEMANAL'
+                'Dia_Semana': '',
+                'Periodicidade': '',
+                'Observacao': 'Cliente + Vendedor (dia e periodicidade livres)'
             },
             {
                 'Cod_Cliente': 5883176,
-                'Cod_Vend': 102,
-                'Dia_Semana': 'QUINTA-FEIRA',
-                'Periodicidade': 'SEMANAL'
+                'Cod_Vend': '',
+                'Dia_Semana': '',
+                'Periodicidade': '',
+                'Observacao': 'Apenas Cliente (vendedor, dia e periodicidade livres)'
             }
         ];
 
         const ws = XLSX.utils.json_to_sheet(templateData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Simulacao_Rotas');
-        XLSX.writeFile(wb, 'modelo_simulacao_roteirizador_sold_vendedores.xlsx');
+        XLSX.writeFile(wb, 'modelo_simulacao_roteirizador_sold_clientes.xlsx');
     };
 
     const handleUploadPlanilha = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2000,32 +2012,46 @@ export const AjusteRota: React.FC = () => {
             }
 
             const parsedItens = rawJson.map((row: any) => {
-                const codCliente = row.Cod_Cliente || row.COD_CLIENTE || row.cod_cliente || row['Código Cliente'] || row.Sold || row.SOLD || row.Cliente || row.CLIENTE;
-                const codVend = row.Cod_Vend || row.COD_VEND || row.cod_vend || row['Código Vendedor'] || row.Vendedor || row.VENDEDOR || row.Setor || row.SETOR;
-                const diaSemana = row.Dia_Semana || row.DIA_SEMANA || row.dia_semana || row['Dia da Semana'] || row.Dia || '';
-                const periodicidade = row.Periodicidade || row.PERIODICIDADE || row.periodicidade || row.Freq || 'SEMANAL';
+                const codCliente = row.Cod_Cliente || row.COD_CLIENTE || row.cod_cliente || row['Código Cliente'] || row['Codigo Cliente'] || row.Sold || row.SOLD || row.Cliente || row.CLIENTE || row.CD_CLIENTE;
+                const codVend = row.Cod_Vend || row.COD_VEND || row.cod_vend || row['Código Vendedor'] || row['Codigo Vendedor'] || row.Vendedor || row.VENDEDOR || row.Setor || row.SETOR || row.CD_VENDEDOR || 0;
+                const diaSemana = row.Dia_Semana || row.DIA_SEMANA || row.dia_semana || row['Dia da Semana'] || row['Dia Semana'] || row.Dia || '';
+                const periodicidade = row.Periodicidade || row.PERIODICIDADE || row.periodicidade || row.Freq || row.Frequencia || '';
+
+                const parsedCodCliente = parseInt(codCliente, 10);
+                const parsedCodVend = parseInt(codVend, 10) || 0;
 
                 return {
-                    Cod_Cliente: parseInt(codCliente, 10),
-                    Cod_Vend: parseInt(codVend, 10),
+                    Cod_Cliente: parsedCodCliente,
+                    Cod_Vend: parsedCodVend,
                     Dia_Semana: String(diaSemana || '').trim(),
-                    Periodicidade: String(periodicidade || 'SEMANAL').trim().toUpperCase()
+                    Periodicidade: String(periodicidade || '').trim().toUpperCase()
                 };
-            }).filter(item => item.Cod_Cliente > 0 && item.Cod_Vend > 0);
+            }).filter(item => !isNaN(item.Cod_Cliente) && item.Cod_Cliente > 0);
 
             if (parsedItens.length === 0) {
-                throw new Error('Nenhuma linha válida com Código de Cliente e Código de Vendedor encontrada na planilha. Verifique os nomes das colunas.');
+                throw new Error('Nenhuma linha válida com Código de Cliente (Sold) encontrada na planilha. Verifique os nomes das colunas.');
             }
 
             setPlanilhaFileName(file.name);
             setPlanilhaRawItens(parsedItens);
 
-            // Consulta API de Lookup
+            // Consulta API de Lookup corporativo
             const lookupRes = await lookupPlanilhaSimulacao(parsedItens);
             if (lookupRes && lookupRes.success && lookupRes.data) {
                 setPlanilhaEnrichedData(lookupRes.data);
                 setPlanilhaSummary(lookupRes.summary);
                 setPlanilhaSuccess(`Planilha '${file.name}' validada! ${lookupRes.summary.total} registros identificados.`);
+
+                // Pré-selecionar modo de destino inteligente
+                const hasSellers = lookupRes.data.some((d: any) => d.Cod_Vend > 0);
+                if (hasSellers) {
+                    setPlanilhaDestMode('planilha');
+                } else {
+                    setPlanilhaDestMode('equipe');
+                }
+
+                // Abre o Assistente de Decisão de Destino
+                setShowPlanilhaDestinationModal(true);
             } else {
                 throw new Error('Falha ao consultar banco para enriquecimento dos dados da planilha.');
             }
@@ -2036,10 +2062,105 @@ export const AjusteRota: React.FC = () => {
         }
     };
 
-    const handleApplyPlanilhaSimulation = () => {
+    const handleConfirmPlanilhaDestination = () => {
         if (!planilhaEnrichedData || planilhaEnrichedData.length === 0) return;
 
-        const uniqueData = consolidateUniqueClients(planilhaEnrichedData);
+        let processedData = [...planilhaEnrichedData];
+
+        if (planilhaDestMode === 'equipe') {
+            // Identificar vendedores da equipe/supervisor selecionado
+            const targetSellers = teamColaboradores.filter(c => {
+                if (!planilhaDestSupervisor) return true;
+                return String(c.Grupo || (c as any).Supervisor || '') === planilhaDestSupervisor || String(c.CodigoSetor) === planilhaDestSupervisor;
+            });
+
+            const sellersToUse = targetSellers.length > 0 ? targetSellers : teamColaboradores;
+
+            if (sellersToUse.length === 0) {
+                alert('Nenhum vendedor encontrado para a equipe selecionada.');
+                return;
+            }
+
+            // Distribuir os clientes livres entre os vendedores da equipe
+            processedData = processedData.map((item, idx) => {
+                let assignedSeller = sellersToUse[idx % sellersToUse.length];
+                // Se o cliente possui coordenadas e os vendedores têm bases, busca o vendedor mais próximo
+                if (item.Lat && item.Long) {
+                    let bestDist = Infinity;
+                    let bestSeller = assignedSeller;
+                    sellersToUse.forEach(s => {
+                        if (s.LatitudeBase && s.LongitudeBase) {
+                            const d = Math.hypot(item.Lat - s.LatitudeBase, item.Long - s.LongitudeBase);
+                            if (d < bestDist) {
+                                bestDist = d;
+                                bestSeller = s;
+                            }
+                        }
+                    });
+                    assignedSeller = bestSeller;
+                }
+
+                const finalCodVend = item.Cod_Vend > 0 ? item.Cod_Vend : Number(assignedSeller.CodigoSetor);
+                const finalNomeVend = item.Cod_Vend > 0 && item.Nome_Vendedor !== 'A DEFINIR'
+                    ? item.Nome_Vendedor
+                    : (assignedSeller.Nome || `Vendedor ${assignedSeller.CodigoSetor}`);
+
+                return {
+                    ...item,
+                    Cod_Vend: finalCodVend,
+                    Nome_Vendedor: finalNomeVend,
+                    Periodicidade: item.Periodicidade || planilhaDestDefaultPeriodicidade,
+                    Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
+                };
+            });
+        } else if (planilhaDestMode === 'vendedor') {
+            const selectedColab = teamColaboradores.find(c => Number(c.CodigoSetor) === planilhaDestSeller) || teamColaboradores[0];
+            const finalCodVend = selectedColab ? Number(selectedColab.CodigoSetor) : (planilhaDestSeller || 101);
+            const sellerName = selectedColab?.Nome || `Vendedor ${finalCodVend}`;
+
+            processedData = processedData.map(item => ({
+                ...item,
+                Cod_Vend: finalCodVend,
+                Nome_Vendedor: sellerName,
+                Periodicidade: item.Periodicidade || planilhaDestDefaultPeriodicidade,
+                Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
+            }));
+        } else if (planilhaDestMode === 'novos_setores') {
+            const count = Math.max(1, Math.min(10, planilhaDestNewSectorsCount || 2));
+            const newSectors = Array.from({ length: count }, (_, i) => ({
+                code: 901 + i,
+                name: `Setor Simulado ${901 + i}`
+            }));
+
+            processedData = processedData.map((item, idx) => {
+                const assigned = newSectors[idx % newSectors.length];
+                return {
+                    ...item,
+                    Cod_Vend: assigned.code,
+                    Nome_Vendedor: assigned.name,
+                    Periodicidade: item.Periodicidade || planilhaDestDefaultPeriodicidade,
+                    Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
+                };
+            });
+        } else {
+            // Modo 'planilha': preserva os vendedores da planilha, e caso algum cliente esteja sem vendedor, aloca ao setor temporário
+            processedData = processedData.map(item => {
+                const finalCodVend = item.Cod_Vend > 0 ? item.Cod_Vend : 999;
+                const finalNomeVend = item.Cod_Vend > 0 && item.Nome_Vendedor !== 'A DEFINIR'
+                    ? item.Nome_Vendedor
+                    : 'Setor Temporário 999';
+
+                return {
+                    ...item,
+                    Cod_Vend: finalCodVend,
+                    Nome_Vendedor: finalNomeVend,
+                    Periodicidade: item.Periodicidade || planilhaDestDefaultPeriodicidade,
+                    Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
+                };
+            });
+        }
+
+        const uniqueData = consolidateUniqueClients(processedData);
         const dataWithCustomCoords = applyCustomCoordinates(uniqueData);
 
         setOriginalRoutes(dataWithCustomCoords);
@@ -2047,9 +2168,15 @@ export const AjusteRota: React.FC = () => {
         setIsPlanilhaSimulationActive(true);
         setPlanilhaSimulationFileName(planilhaFileName);
         setPlanilhaSimulationSummary(planilhaSummary);
+        setShowPlanilhaDestinationModal(false);
         setShowParamsModal(false);
 
         alert(`✅ Simulação Carregada com Sucesso!\n\nForam carregados ${uniqueData.length} clientes a partir da planilha '${planilhaFileName}'.\nVocê pode visualizar os pontos no mapa e rodar a roteirização agora.`);
+    };
+
+    const handleApplyPlanilhaSimulation = () => {
+        if (!planilhaEnrichedData || planilhaEnrichedData.length === 0) return;
+        setShowPlanilhaDestinationModal(true);
     };
 
     const handleResetPlanilhaSimulation = async () => {
@@ -2764,6 +2891,22 @@ export const AjusteRota: React.FC = () => {
                 return a.name.localeCompare(b.name);
             });
     }, [adjustedRoutes]);
+
+    // Equipes/Supervisões disponíveis para o assistente de planilha
+    const availablePlanilhaTeams = useMemo(() => {
+        const teams = new Map<string, string>();
+        supervisors.forEach(s => {
+            if (s.id && s.id !== 'SEM_SUPERVISOR') {
+                teams.set(s.id, s.name);
+            }
+        });
+        teamColaboradores.forEach(c => {
+            if (c.Grupo && !teams.has(c.Grupo)) {
+                teams.set(c.Grupo, c.Grupo);
+            }
+        });
+        return Array.from(teams.entries()).map(([id, name]) => ({ id, name }));
+    }, [supervisors, teamColaboradores]);
 
     // Vendedores disponíveis conforme escopo
     const availableSellers = useMemo(() => {
@@ -8361,15 +8504,30 @@ export const AjusteRota: React.FC = () => {
                     </button>
 
                     {teamType === 'vendedores' ? (
-                        <button
-                            onClick={handleLoadCurrentRoutes}
-                            disabled={loading}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition flex items-center h-[34px] cursor-pointer"
-                            title="Carregar carteira de clientes integral de cada vendedor"
-                        >
-                            {loading ? <SpinnerIcon className="w-4 h-4 animate-spin mr-1.5"/> : <RefreshIcon className="w-4 h-4 mr-1.5"/>}
-                            {adjustedRoutes.length > 0 ? 'Recarregar Rotas' : 'Carregar Rota Atual'}
-                        </button>
+                        <>
+                            <button
+                                onClick={handleLoadCurrentRoutes}
+                                disabled={loading}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm hover:shadow-md transition flex items-center h-[34px] cursor-pointer"
+                                title="Carregar carteira de clientes integral de cada vendedor a partir do ERP"
+                            >
+                                {loading ? <SpinnerIcon className="w-4 h-4 animate-spin mr-1.5"/> : <RefreshIcon className="w-4 h-4 mr-1.5"/>}
+                                {adjustedRoutes.length > 0 && !isPlanilhaSimulationActive ? 'Recarregar Rota ERP' : 'Rota ERP'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setParamsActiveTab('planilha');
+                                    setShowParamsModal(true);
+                                }}
+                                disabled={loading}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm hover:shadow-md transition flex items-center h-[34px] cursor-pointer"
+                                title="Importar e simular rotas customizadas a partir de arquivo Excel (.xlsx, .xls)"
+                            >
+                                <FileSpreadsheet className="w-4 h-4 mr-1.5 text-white" />
+                                Rota via Planilha
+                            </button>
+                        </>
                     ) : (
                         <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center transition shadow-sm h-[34px]">
                             <UploadIcon className="w-4 h-4 mr-1.5"/> Carregar Planilha (.xlsx)
@@ -11838,6 +11996,304 @@ export const AjusteRota: React.FC = () => {
                                 className="px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition cursor-pointer"
                             >
                                 Salvar Zona
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL / ASSISTENTE DE DESTINO E ALOCAÇÃO DA PLANILHA */}
+            {showPlanilhaDestinationModal && (
+                <div className="fixed inset-0 z-[3000] bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+                        {/* Header */}
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-emerald-500/10 via-transparent to-transparent">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                    <FileSpreadsheet className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        Assistente de Destino da Planilha
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300">
+                                            {planilhaSummary?.total || planilhaRawItens.length} clientes
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Defina como os clientes carregados serão alocados e distribuídos territorialmente no mapa.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowPlanilhaDestinationModal(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Body com Scroll */}
+                        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+                            {/* Card de Resumo do Arquivo */}
+                            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-700/60 space-y-2">
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="text-slate-500 dark:text-slate-400 font-bold">Arquivo carregado:</span>
+                                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                                        {planilhaFileName || 'planilha_clientes.xlsx'}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
+                                    <div className="p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
+                                        <span className="text-slate-400 block text-[10px] font-bold">TOTAL</span>
+                                        <span className="text-sm font-black text-slate-800 dark:text-slate-100">{planilhaSummary?.total || planilhaRawItens.length}</span>
+                                    </div>
+                                    <div className="p-2 bg-emerald-50/50 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/40">
+                                        <span className="text-emerald-600 dark:text-emerald-400 block text-[10px] font-bold">COM GPS</span>
+                                        <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">{planilhaSummary?.comCoordenadas || 0}</span>
+                                    </div>
+                                    <div className="p-2 bg-amber-50/50 dark:bg-amber-950/30 rounded-xl border border-amber-100 dark:border-amber-900/40">
+                                        <span className="text-amber-600 dark:text-amber-400 block text-[10px] font-bold">SEM VENDEDOR</span>
+                                        <span className="text-sm font-black text-amber-600 dark:text-amber-400">{planilhaSummary?.semVendedor || 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Seleção do Modo de Destino */}
+                            <div className="space-y-3">
+                                <label className="text-xs font-black text-slate-800 dark:text-slate-200 block uppercase tracking-wide">
+                                    O que deseja fazer com estes clientes?
+                                </label>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {/* Modo 1: Equipe */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setPlanilhaDestMode('equipe')}
+                                        className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                            planilhaDestMode === 'equipe'
+                                                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
+                                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                                        }`}
+                                    >
+                                        <div>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-base">🏢</span>
+                                                <input
+                                                    type="radio"
+                                                    checked={planilhaDestMode === 'equipe'}
+                                                    onChange={() => setPlanilhaDestMode('equipe')}
+                                                    className="text-emerald-600 focus:ring-emerald-500"
+                                                />
+                                            </div>
+                                            <h4 className="text-xs font-black text-slate-900 dark:text-white">
+                                                Distribuir na Equipe
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                                                Distribui entre os vendedores da equipe selecionada por proximidade geográfica da base residencial.
+                                            </p>
+                                        </div>
+                                    </button>
+
+                                    {/* Modo 2: Vendedor Específico */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setPlanilhaDestMode('vendedor')}
+                                        className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                            planilhaDestMode === 'vendedor'
+                                                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
+                                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                                        }`}
+                                    >
+                                        <div>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-base">👤</span>
+                                                <input
+                                                    type="radio"
+                                                    checked={planilhaDestMode === 'vendedor'}
+                                                    onChange={() => setPlanilhaDestMode('vendedor')}
+                                                    className="text-emerald-600 focus:ring-emerald-500"
+                                                />
+                                            </div>
+                                            <h4 className="text-xs font-black text-slate-900 dark:text-white">
+                                                Vendedor Específico
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                                                Aloca todos os clientes da planilha diretamente na carteira de um único setor/vendedor.
+                                            </p>
+                                        </div>
+                                    </button>
+
+                                    {/* Modo 3: Novos Setores Simulados */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setPlanilhaDestMode('novos_setores')}
+                                        className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                            planilhaDestMode === 'novos_setores'
+                                                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
+                                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                                        }`}
+                                    >
+                                        <div>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-base">🚀</span>
+                                                <input
+                                                    type="radio"
+                                                    checked={planilhaDestMode === 'novos_setores'}
+                                                    onChange={() => setPlanilhaDestMode('novos_setores')}
+                                                    className="text-emerald-600 focus:ring-emerald-500"
+                                                />
+                                            </div>
+                                            <h4 className="text-xs font-black text-slate-900 dark:text-white">
+                                                Novos Setores Virtuais
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                                                Gera novos setores simulados (901, 902...) para testar expansão territorial e divisão de rota.
+                                            </p>
+                                        </div>
+                                    </button>
+
+                                    {/* Modo 4: Manter Vendedores da Planilha */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setPlanilhaDestMode('planilha')}
+                                        className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                            planilhaDestMode === 'planilha'
+                                                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
+                                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                                        }`}
+                                    >
+                                        <div>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-base">📋</span>
+                                                <input
+                                                    type="radio"
+                                                    checked={planilhaDestMode === 'planilha'}
+                                                    onChange={() => setPlanilhaDestMode('planilha')}
+                                                    className="text-emerald-600 focus:ring-emerald-500"
+                                                />
+                                            </div>
+                                            <h4 className="text-xs font-black text-slate-900 dark:text-white">
+                                                Manter da Planilha
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                                                Mantém os códigos de vendedor informados no Excel (linhas sem vendedor irão para setor temporário).
+                                            </p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Configurações Dinâmicas por Modo */}
+                            <div className="bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 space-y-4">
+                                {planilhaDestMode === 'equipe' && (
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                            Equipe / Supervisão Alvo:
+                                        </label>
+                                        <select
+                                            value={planilhaDestSupervisor}
+                                            onChange={(e) => setPlanilhaDestSupervisor(e.target.value)}
+                                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                                        >
+                                            <option value="">(Todas as Equipes / Todos os Vendedores)</option>
+                                            {availablePlanilhaTeams.map(t => (
+                                                <option key={t.id} value={t.id}>{t.name}</option>
+                                            ))}
+                                        </select>
+                                        <p className="text-[10px] text-slate-400 mt-1">
+                                            Os clientes serão distribuídos aos vendedores da equipe com base na menor distância viária da residência.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {planilhaDestMode === 'vendedor' && (
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                            Selecione o Vendedor / Setor:
+                                        </label>
+                                        <select
+                                            value={planilhaDestSeller || (teamColaboradores[0] ? Number(teamColaboradores[0].CodigoSetor) : 0)}
+                                            onChange={(e) => setPlanilhaDestSeller(Number(e.target.value))}
+                                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                                        >
+                                            {teamColaboradores.map(c => (
+                                                <option key={c.ID_Colaborador || c.CodigoSetor} value={c.CodigoSetor}>
+                                                    {formatSellerDisplayName(c.CodigoSetor, c.Nome)} {c.Grupo ? `(${c.Grupo})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {planilhaDestMode === 'novos_setores' && (
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                            Quantidade de Novos Setores Simulados:
+                                        </label>
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={10}
+                                                value={planilhaDestNewSectorsCount}
+                                                onChange={(e) => setPlanilhaDestNewSectorsCount(Number(e.target.value))}
+                                                className="w-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none"
+                                            />
+                                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                Serão criados os setores: {Array.from({ length: Math.max(1, Math.min(10, planilhaDestNewSectorsCount || 2)) }, (_, i) => `Setor ${901 + i}`).join(', ')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Periodicidade Padrão para clientes sem periodicidade na planilha */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                        Periodicidade Padrão (quando não informada no Excel):
+                                    </label>
+                                    <div className="flex items-center gap-4">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="periodicidade_padrao"
+                                                checked={planilhaDestDefaultPeriodicidade === 'SEMANAL'}
+                                                onChange={() => setPlanilhaDestDefaultPeriodicidade('SEMANAL')}
+                                                className="text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            SEMANAL (Toda semana)
+                                        </label>
+                                        <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="periodicidade_padrao"
+                                                checked={planilhaDestDefaultPeriodicidade === 'QUINZENAL'}
+                                                onChange={() => setPlanilhaDestDefaultPeriodicidade('QUINZENAL')}
+                                                className="text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            QUINZENAL (Semana 1 / Semana 2)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Rodapé com Ações */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                            <button
+                                type="button"
+                                onClick={() => setShowPlanilhaDestinationModal(false)}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmPlanilhaDestination}
+                                className="px-5 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg transition cursor-pointer flex items-center gap-2"
+                            >
+                                <Check className="w-4 h-4" />
+                                Confirmar e Iniciar Simulação
                             </button>
                         </div>
                     </div>

@@ -3529,7 +3529,7 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
                 Lat: lat,
                 Long: lon,
                 Cod_Vend: codVend,
-                Nome_Vendedor: seller?.Nome || item.Nome_Vendedor || `Vendedor ${codVend}`,
+                Nome_Vendedor: seller?.Nome || item.Nome_Vendedor || (codVend > 0 ? `Vendedor ${codVend}` : 'A DEFINIR'),
                 Nome_Supervisor: item.Nome_Supervisor || clientDetail?.Nome_Supervisor || '',
                 Cod_Supervisor: item.Cod_Supervisor || clientDetail?.Cod_Supervisor || 0,
                 Dia_Semana: item.Dia_Semana || '',
