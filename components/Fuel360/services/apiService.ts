@@ -258,6 +258,10 @@ const RealService = {
     getClienteCoordenadas: (): Promise<{ success: boolean; coordenadas: Record<number, { lat: number; lon: number; status: string; at: string }> }> => apiRequest('/cliente-coordenadas'),
     getClienteERPCoords: (codCliente: number): Promise<{ success: boolean; codCliente: number; hasValidCoord: boolean; lat: number; long: number; razaoSocial: string; endereco: string; cidade: string; periodicidade: string; message: string }> => apiRequest(`/cliente/${codCliente}/erp-coords`),
     saveClienteCoordenada: (payload: { codCliente: number; lat: number; lon: number; status?: string; usuario?: string }): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-coordenadas', 'POST', payload),
+    getClienteAuditoriaBase: (): Promise<{ success: boolean; clientes: any[] }> => apiRequest('/cliente-auditoria'),
+    saveClienteAuditoria: (cliente: any): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-auditoria/salvar', 'POST', cliente),
+    saveClienteAuditoriaLote: (clientes: any[], usuario?: string): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-auditoria/salvar-lote', 'POST', { clientes, usuario }),
+    syncClienteAuditoriaERP: (clientes: any[], usuario?: string): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-auditoria/sincronizar-erp', 'POST', { clientes, usuario }),
     lookupPlanilhaSimulacao: (itens: Array<{ Cod_Cliente: number; Cod_Vend: number; Dia_Semana?: string; Periodicidade?: string }>): Promise<{ success: boolean; data: any[]; summary: any }> => apiRequest('/lookup-planilha-simulacao', 'POST', { itens }),
     geocodeAddress: async (input: string | { address?: string; street?: string; number?: string; neighborhood?: string; city?: string; state?: string; cep?: string; forceCepOnly?: boolean }): Promise<{lat: number, lon: number}> => {
         let street = '';
@@ -732,6 +736,10 @@ const MockService = {
     getClienteCoordenadas: async (): Promise<{ success: boolean; coordenadas: Record<number, { lat: number; lon: number; status: string; at: string }> }> => ({ success: true, coordenadas: {} }),
     getClienteERPCoords: async (codCliente: number) => ({ success: true, codCliente, hasValidCoord: true, lat: -23.8543, long: -46.1345, razaoSocial: 'Cliente Mock', endereco: '', cidade: '', periodicidade: 'SEMANAL', message: 'OK' }),
     saveClienteCoordenada: async (payload: any): Promise<{ success: boolean; message: string }> => ({ success: true, message: 'Salvo com sucesso' }),
+    getClienteAuditoriaBase: async (): Promise<{ success: boolean; clientes: any[] }> => ({ success: true, clientes: [] }),
+    saveClienteAuditoria: async (cliente: any): Promise<{ success: boolean; message: string }> => ({ success: true, message: 'Salvo com sucesso' }),
+    saveClienteAuditoriaLote: async (clientes: any[], usuario?: string): Promise<{ success: boolean; message: string }> => ({ success: true, message: 'Lote salvo com sucesso' }),
+    syncClienteAuditoriaERP: async (clientes: any[], usuario?: string): Promise<{ success: boolean; message: string }> => ({ success: true, message: 'Sincronizado com sucesso' }),
     lookupPlanilhaSimulacao: async (itens: any[]) => ({ success: true, data: itens, summary: { total: itens.length, uniqueClients: itens.length, foundCoords: itens.length, missingCoords: 0, matchedSellers: itens.length } }),
     getCidadesERP: async (): Promise<string[]> => [
         'APARECIDA', 'CACAPAVA', 'GUARATINGUETA', 'JACAREI', 'LORENA', 'PINDAMONHANGABA', 'POTIM', 'ROSEIRA', 'SAO JOSE DOS CAMPOS', 'TAUBATE'
@@ -771,6 +779,8 @@ export const {
     getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount,
     moveColaboradoresToGroup, bulkUpdateColaboradores, corrigirAusenciasHistorico, getSugestoesVinculo, batchUpdateColaboradoresAddress,
     getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao,
-    getClienteCoordenadas, getClienteERPCoords, saveClienteCoordenada, lookupPlanilhaSimulacao, getCidadesERP,
+    getClienteCoordenadas, getClienteERPCoords, saveClienteCoordenada, 
+    getClienteAuditoriaBase, saveClienteAuditoria, saveClienteAuditoriaLote, syncClienteAuditoriaERP,
+    lookupPlanilhaSimulacao, getCidadesERP,
     geocodeAddress, getOSRMData, getOSRMTable, calcDistance
 } = Service;

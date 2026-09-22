@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.214.0',
+    date: 'Hoje',
+    title: 'Fuel360: Base Centralizada de Auditoria de Geocodificação no Banco de Dados',
+    changes: [
+      'Tabela SQL FuelClienteAuditoria: Criação da base centralizada persistente no banco de dados corporativo, armazenando cadastros completos de clientes, coordenadas ERP e Geocode, divergências em metros e status de auditoria.',
+      'Acesso Multi-computador sem Reprocessamento: A tela de Geolocalizador & Auditor ERP agora carrega instantaneamente a base salva do banco SQL, permitindo que múltiplos computadores acessem e confiram as correções sem depender de localStorage nem rodar a geolocalização toda vez.',
+      'Controle de Aceite e Ajuste no ERP: Adicionados status e ações rápidas (Pendente, Aprovado p/ ERP, Ajustado no ERP, Ignorado) tanto na tabela quanto no modal de mapa para gestão de correções no cadastro ERP.',
+      'Sincronização com ERP e Gravação em Lote: Botão "Sincronizar c/ ERP" para atualizar novos cadastros preservando geocodificações e aceites já realizados, com persistência automática em lote durante o motor de geocodificação em massa.'
+    ]
+  },
+  {
     version: '3.213.0',
     date: 'Hoje',
     title: 'Fuel360: Dia da Semana e Sequência do ERP na Simulação por Planilha',

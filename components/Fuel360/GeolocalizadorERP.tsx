@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { getVisitasPrevistas, geocodeAddress, getClienteCoordenadas, saveClienteCoordenada, cleanAddressForGeocoding } from './services/apiService';
+import { 
+    getVisitasPrevistas, 
+    geocodeAddress, 
+    getClienteCoordenadas, 
+    saveClienteCoordenada, 
+    cleanAddressForGeocoding,
+    getClienteAuditoriaBase,
+    saveClienteAuditoria,
+    saveClienteAuditoriaLote,
+    syncClienteAuditoriaERP
+} from './services/apiService';
 import { VisitaPrevista } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -31,7 +41,10 @@ import {
     Compass,
     Database,
     HelpCircle,
-    Trash2
+    Trash2,
+    CheckCheck,
+    Clock,
+    Share2
 } from 'lucide-react';
 import {
     UI_CARD_CONTAINER,
@@ -55,6 +68,12 @@ export type StatusAuditoria =
     | 'DIVERGENCIA_CRITICA' 
     | 'PENDENTE' 
     | 'FALHA_GEOCODE';
+
+export type StatusAceiteERP = 
+    | 'PENDENTE' 
+    | 'APROVADO_GEOCODE' 
+    | 'AJUSTADO_NO_ERP' 
+    | 'IGNORADO';
 
 export interface ClienteAuditado {
     Cod_Cliente: number;
@@ -83,6 +102,11 @@ export interface ClienteAuditado {
     Divergencia_Metros: number | null;
     Status: StatusAuditoria;
     GeocodedAt?: string;
+
+    // Controle de Aceite e Ajuste no ERP (Persistência no Banco)
+    Aceite_ERP?: StatusAceiteERP;
+    Observacao?: string;
+    UsuarioAtualizacao?: string;
 }
 
 // --- CÁLCULO DE DISTÂNCIA HAVERSINE EM METROS ---
@@ -189,6 +213,7 @@ export const GeolocalizadorERP: React.FC = () => {
     const [selectedSupervisor, setSelectedSupervisor] = useState<string>('ALL');
     const [selectedVendedor, setSelectedVendedor] = useState<string>('ALL');
     const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
+    const [selectedAceiteFilter, setSelectedAceiteFilter] = useState<string>('ALL');
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [toleranciaCriticaMetros, setToleranciaCriticaMetros] = useState<number>(500); // Acima de 500m é divergência crítica
     const toleranciaOkMetros = 150; // Até 150m é considerado OK (concordante)
@@ -236,7 +261,63 @@ export const GeolocalizadorERP: React.FC = () => {
         }
     }, [getLocalCache]);
 
-    // --- CARREGAR CLIENTES DO ERP ---
+    // --- CARREGAR BASE AUDITADA DO BANCO DE DADOS (COMPARTILHADA ENTRE COMPUTADORES) ---
+    const loadFromDatabase = useCallback(async (silencioso = false) => {
+        if (!silencioso) setIsLoadingData(true);
+        try {
+            const res = await getClienteAuditoriaBase();
+            if (res && res.success && Array.isArray(res.clientes) && res.clientes.length > 0) {
+                const list: ClienteAuditado[] = res.clientes.map(c => {
+                    const latErp = Number(c.Lat_ERP || 0);
+                    const longErp = Number(c.Long_ERP || 0);
+                    const hasValidErp = !isNaN(latErp) && !isNaN(longErp) && (Math.abs(latErp) > 0.001 || Math.abs(longErp) > 0.001);
+                    const latGeo = c.Lat_Geocode !== null && c.Lat_Geocode !== undefined ? Number(c.Lat_Geocode) : null;
+                    const longGeo = c.Long_Geocode !== null && c.Long_Geocode !== undefined ? Number(c.Long_Geocode) : null;
+                    
+                    return {
+                        Cod_Cliente: c.Cod_Cliente,
+                        Razao_Social: String(c.Razao_Social || `Cliente ${c.Cod_Cliente}`).trim(),
+                        Cod_Vend: c.Cod_Vend || 0,
+                        Nome_Vendedor: String(c.Nome_Vendedor || 'Vendedor Não Informado').trim(),
+                        Cod_Supervisor: c.Cod_Supervisor || 0,
+                        Nome_Supervisor: String(c.Nome_Supervisor || 'Supervisor Não Informado').trim(),
+                        Endereco: String(c.Endereco || '').trim(),
+                        Numero: String(c.Numero || '').trim() || undefined,
+                        Bairro: String(c.Bairro || '').trim(),
+                        Cidade: String(c.Cidade || '').trim(),
+                        CEP: String(c.CEP || '').trim(),
+                        Canal_Remuneracao: c.Canal_Remuneracao,
+                        Lat_ERP: latErp,
+                        Long_ERP: longErp,
+                        HasValidERPCoords: hasValidErp,
+                        Lat_Geocode: latGeo,
+                        Long_Geocode: longGeo,
+                        Divergencia_Metros: c.Divergencia_Metros !== null && c.Divergencia_Metros !== undefined ? Number(c.Divergencia_Metros) : null,
+                        Status: c.Status || 'PENDENTE',
+                        Aceite_ERP: c.Aceite_ERP || 'PENDENTE',
+                        Observacao: c.Observacao,
+                        UsuarioAtualizacao: c.UsuarioAtualizacao,
+                        GeocodedAt: c.DataAtualizacao
+                    };
+                });
+                setClientes(list);
+                return list;
+            }
+            return [];
+        } catch (err) {
+            console.warn('Aviso: falha ao carregar base de clientes do banco:', err);
+            return [];
+        } finally {
+            if (!silencioso) setIsLoadingData(false);
+        }
+    }, []);
+
+    // Carga inicial automática da base persistida no banco corporativo
+    useEffect(() => {
+        loadFromDatabase();
+    }, [loadFromDatabase]);
+
+    // --- CARREGAR / SINCRONIZAR CLIENTES DO ERP ---
     const handleLoadClientes = async () => {
         setIsLoadingData(true);
         try {
@@ -247,65 +328,13 @@ export const GeolocalizadorERP: React.FC = () => {
                 return;
             }
 
-            // Buscar coordenadas aprovadas e homologadas no banco SQL corporativo
-            let sqlCoords: Record<number, { lat: number; lon: number; status: string; at: string }> = {};
-            try {
-                const resSql = await getClienteCoordenadas();
-                if (resSql && resSql.success && resSql.coordenadas) {
-                    sqlCoords = resSql.coordenadas;
-                }
-            } catch (err) {
-                console.warn('Aviso: falha ao obter coordenadas do SQL, usando cache local:', err);
-            }
-
-            const cache = getLocalCache();
-            const combinedCache: Record<number, { lat: number; lon: number; status?: string; at?: string }> = { ...cache };
-            Object.entries(sqlCoords).forEach(([codStr, val]) => {
-                combinedCache[Number(codStr)] = val;
-            });
-            try {
-                localStorage.setItem(GEOCODE_CACHE_STORAGE_KEY, JSON.stringify(combinedCache));
-            } catch (e) {}
-
-            const clientMap = new Map<number, ClienteAuditado>();
-
+            // Preparar dados do ERP para sincronizar na tabela FuelClienteAuditoria
+            const clientMap = new Map<number, any>();
             visitas.forEach(v => {
                 if (!v.Cod_Cliente) return;
                 if (!clientMap.has(v.Cod_Cliente)) {
                     const latErp = Number(v.Lat || 0);
                     const longErp = Number(v.Long || 0);
-                    const hasValidErp = !isNaN(latErp) && !isNaN(longErp) && (Math.abs(latErp) > 0.001 || Math.abs(longErp) > 0.001);
-
-                    const cached = combinedCache[v.Cod_Cliente];
-                    let latGeo: number | null = null;
-                    let longGeo: number | null = null;
-                    let divergencia: number | null = null;
-                    let status: StatusAuditoria = 'PENDENTE';
-
-                    if (!hasValidErp) {
-                        status = 'SEM_COORDENADAS_ERP';
-                    }
-
-                    if (cached && !isNaN(cached.lat) && !isNaN(cached.lon)) {
-                        latGeo = cached.lat;
-                        longGeo = cached.lon;
-                        if (cached.status === 'APROVADO_ERP' || (cached.lat === latErp && cached.lon === longErp)) {
-                            divergencia = 0;
-                            status = 'OK';
-                        } else if (hasValidErp) {
-                            divergencia = calcDistanceMeters(latErp, longErp, latGeo, longGeo);
-                            if (divergencia <= toleranciaOkMetros) {
-                                status = 'OK';
-                            } else if (divergencia <= toleranciaCriticaMetros) {
-                                status = 'DIVERGENCIA_LEVE';
-                            } else {
-                                status = 'DIVERGENCIA_CRITICA';
-                            }
-                        } else {
-                            status = 'SEM_COORDENADAS_ERP';
-                        }
-                    }
-
                     clientMap.set(v.Cod_Cliente, {
                         Cod_Cliente: v.Cod_Cliente,
                         Razao_Social: String(v.Razao_Social || `Cliente ${v.Cod_Cliente}`).trim(),
@@ -314,29 +343,27 @@ export const GeolocalizadorERP: React.FC = () => {
                         Cod_Supervisor: v.Cod_Supervisor || 0,
                         Nome_Supervisor: String(v.Nome_Supervisor || 'Supervisor Não Informado').trim(),
                         Endereco: String(v.Endereco || '').trim(),
-                        Numero: String(v.Numero || '').trim() || undefined,
+                        Numero: String(v.Numero || '').trim() || null,
                         Bairro: String(v.Bairro || '').trim(),
                         Cidade: String(v.Cidade || '').trim(),
                         CEP: String(v.CEP || '').trim(),
-                        Canal_Remuneracao: v.Canal_Remuneracao,
+                        Canal_Remuneracao: v.Canal_Remuneracao || null,
                         Lat_ERP: latErp,
-                        Long_ERP: longErp,
-                        HasValidERPCoords: hasValidErp,
-                        Lat_Geocode: latGeo,
-                        Long_Geocode: longGeo,
-                        Divergencia_Metros: divergencia,
-                        Status: status,
-                        GeocodedAt: cached?.at
+                        Long_ERP: longErp
                     });
                 }
             });
 
-            const loadedList = Array.from(clientMap.values());
-            setClientes(loadedList);
+            const payloadSync = Array.from(clientMap.values());
+            // Sincronizar na tabela FuelClienteAuditoria do SQL Server (preserva geocodes e aceites já existentes)
+            await syncClienteAuditoriaERP(payloadSync);
+
+            // Recarregar a base completa do banco
+            await loadFromDatabase();
             setCurrentPage(1);
         } catch (error: any) {
-            console.error('Erro ao carregar clientes do ERP:', error);
-            alert(`Erro ao conectar ao ERP: ${error.message || 'Falha na comunicação'}`);
+            console.error('Erro ao sincronizar clientes do ERP:', error);
+            alert(`Erro ao sincronizar clientes do ERP: ${error.message || 'Falha na comunicação'}`);
         } finally {
             setIsLoadingData(false);
         }
@@ -415,7 +442,7 @@ export const GeolocalizadorERP: React.FC = () => {
                     }
                 }
 
-                return {
+                const updated: ClienteAuditado = {
                     ...client,
                     Lat_Geocode: res.lat,
                     Long_Geocode: res.lon,
@@ -423,17 +450,28 @@ export const GeolocalizadorERP: React.FC = () => {
                     Status: status,
                     GeocodedAt: new Date().toISOString()
                 };
+
+                // Persistir imediatamente na tabela FuelClienteAuditoria do banco corporativo
+                saveClienteAuditoria(updated).catch(e => console.warn('Erro ao salvar auditoria no SQL:', e));
+
+                return updated;
             } else {
-                return {
+                const updated: ClienteAuditado = {
                     ...client,
-                    Status: 'FALHA_GEOCODE'
+                    Status: 'FALHA_GEOCODE',
+                    GeocodedAt: new Date().toISOString()
                 };
+                saveClienteAuditoria(updated).catch(e => console.warn('Erro ao salvar auditoria no SQL:', e));
+                return updated;
             }
         } catch (e) {
-            return {
+            const updated: ClienteAuditado = {
                 ...client,
-                Status: 'FALHA_GEOCODE'
+                Status: 'FALHA_GEOCODE',
+                GeocodedAt: new Date().toISOString()
             };
+            saveClienteAuditoria(updated).catch(e => console.warn('Erro ao salvar auditoria no SQL:', e));
+            return updated;
         }
     };
 
@@ -450,10 +488,28 @@ export const GeolocalizadorERP: React.FC = () => {
         }
     };
 
+    // --- ATUALIZAR STATUS DE ACEITE / AJUSTE ERP ---
+    const handleUpdateAceite = async (client: ClienteAuditado, novoAceite: StatusAceiteERP) => {
+        const updated: ClienteAuditado = {
+            ...client,
+            Aceite_ERP: novoAceite,
+            GeocodedAt: new Date().toISOString()
+        };
+        setClientes(prev => prev.map(c => c.Cod_Cliente === updated.Cod_Cliente ? updated : c));
+        if (selectedClientModal && selectedClientModal.Cod_Cliente === updated.Cod_Cliente) {
+            setSelectedClientModal(updated);
+        }
+        try {
+            await saveClienteAuditoria(updated);
+        } catch (e) {
+            console.warn('Erro ao salvar status de aceite no banco:', e);
+        }
+    };
+
     // --- LIMPAR TODO O CACHE LOCAL ---
     const handleClearAllCache = () => {
         if (clientes.length === 0) return;
-        if (confirm('Deseja realmente limpar todo o cache de geocodificação local? Todas as coordenadas calculadas serão resetadas para você refazer do zero.')) {
+        if (confirm('Deseja realmente limpar o cache de geocodificação local?')) {
             try {
                 localStorage.removeItem(GEOCODE_CACHE_STORAGE_KEY);
             } catch {}
@@ -496,8 +552,10 @@ export const GeolocalizadorERP: React.FC = () => {
             Long_Geocode: client.Long_ERP,
             Divergencia_Metros: 0,
             Status: 'OK',
+            Aceite_ERP: 'AJUSTADO_NO_ERP',
             GeocodedAt: new Date().toISOString()
         };
+        saveClienteAuditoria(updated).catch(e => console.warn('Erro ao salvar auditoria no SQL:', e));
         setClientes(prev => prev.map(c => c.Cod_Cliente === updated.Cod_Cliente ? updated : c));
         if (selectedClientModal && selectedClientModal.Cod_Cliente === updated.Cod_Cliente) {
             setSelectedClientModal(updated);
@@ -552,6 +610,7 @@ export const GeolocalizadorERP: React.FC = () => {
                     Status: status,
                     GeocodedAt: new Date().toISOString()
                 };
+                saveClienteAuditoria(updated).catch(e => console.warn('Erro ao salvar auditoria no SQL:', e));
                 setClientes(prev => prev.map(c => c.Cod_Cliente === updated.Cod_Cliente ? updated : c));
                 if (selectedClientModal && selectedClientModal.Cod_Cliente === updated.Cod_Cliente) {
                     setSelectedClientModal(updated);
@@ -648,6 +707,7 @@ export const GeolocalizadorERP: React.FC = () => {
 
         let successCount = 0;
         let failedCount = 0;
+        let batchBuffer: ClienteAuditado[] = [];
 
         for (let i = 0; i < queue.length; i++) {
             // Verificar cancelamento
@@ -673,6 +733,13 @@ export const GeolocalizadorERP: React.FC = () => {
 
             // Atualizar cliente no estado principal
             setClientes(prev => prev.map(c => c.Cod_Cliente === updated.Cod_Cliente ? updated : c));
+            batchBuffer.push(updated);
+
+            // Persistir em lote no banco a cada 25 registros para garantir gravação rápida
+            if (batchBuffer.length >= 25) {
+                saveClienteAuditoriaLote([...batchBuffer]).catch(e => console.warn('Erro ao salvar lote de auditoria no banco:', e));
+                batchBuffer = [];
+            }
 
             // Atualizar progresso
             setBatchProgress({
@@ -684,6 +751,11 @@ export const GeolocalizadorERP: React.FC = () => {
 
             // Delay de segurança entre requisições para evitar Rate Limit (429) das APIs de mapas
             await new Promise(r => setTimeout(r, 180));
+        }
+
+        // Salvar qualquer registro restante no buffer
+        if (batchBuffer.length > 0) {
+            await saveClienteAuditoriaLote([...batchBuffer]).catch(e => console.warn('Erro ao salvar lote final no banco:', e));
         }
 
         setIsProcessingBatch(false);
@@ -746,6 +818,11 @@ export const GeolocalizadorERP: React.FC = () => {
             if (selectedStatus !== 'ALL') {
                 if (c.Status !== selectedStatus) return false;
             }
+            // Filtro Aceite / Ajuste ERP
+            if (selectedAceiteFilter !== 'ALL') {
+                const currentAceite = c.Aceite_ERP || 'PENDENTE';
+                if (currentAceite !== selectedAceiteFilter) return false;
+            }
             // Busca textual
             if (searchTerm.trim() !== '') {
                 const term = searchTerm.toLowerCase();
@@ -762,7 +839,7 @@ export const GeolocalizadorERP: React.FC = () => {
             }
             return true;
         });
-    }, [clientes, selectedSupervisor, selectedVendedor, selectedStatus, searchTerm]);
+    }, [clientes, selectedSupervisor, selectedVendedor, selectedStatus, selectedAceiteFilter, searchTerm]);
 
     // --- ESTATÍSTICAS E CARDS SUPERIORES ---
     const stats = useMemo(() => {
@@ -774,6 +851,8 @@ export const GeolocalizadorERP: React.FC = () => {
         let ok = 0;
         let pendentes = 0;
         let falhas = 0;
+        let ajustadoNoErp = 0;
+        let aprovadoGeocode = 0;
 
         clientes.forEach(c => {
             if (c.Lat_Geocode !== null && c.Long_Geocode !== null) {
@@ -787,6 +866,9 @@ export const GeolocalizadorERP: React.FC = () => {
             else if (c.Status === 'OK') ok++;
             else if (c.Status === 'PENDENTE') pendentes++;
             else if (c.Status === 'FALHA_GEOCODE') falhas++;
+
+            if (c.Aceite_ERP === 'AJUSTADO_NO_ERP') ajustadoNoErp++;
+            else if (c.Aceite_ERP === 'APROVADO_GEOCODE') aprovadoGeocode++;
         });
 
         return {
@@ -798,6 +880,8 @@ export const GeolocalizadorERP: React.FC = () => {
             ok,
             pendentes,
             falhas,
+            ajustadoNoErp,
+            aprovadoGeocode,
             percentGeocoded: total > 0 ? Math.round((geocoded / total) * 100) : 0
         };
     }, [clientes]);
@@ -837,6 +921,12 @@ export const GeolocalizadorERP: React.FC = () => {
                 c.Status === 'DIVERGENCIA_CRITICA' ? 'Divergência Crítica (> Limiar)' :
                 c.Status === 'SEM_COORDENADAS_ERP' ? 'Sem Coordenadas no ERP' :
                 c.Status === 'PENDENTE' ? 'Pendente de Geocoding' : 'Falha ao Localizar',
+            'Status Aceite / Ajuste ERP':
+                c.Aceite_ERP === 'AJUSTADO_NO_ERP' ? 'Ajustado no ERP' :
+                c.Aceite_ERP === 'APROVADO_GEOCODE' ? 'Aprovado Geocode (Ajustar ERP)' :
+                c.Aceite_ERP === 'IGNORADO' ? 'Ignorado' : 'Pendente de Ajuste',
+            'Última Atualização': c.GeocodedAt ? new Date(c.GeocodedAt).toLocaleString('pt-BR') : '',
+            'Usuário Atualização': c.UsuarioAtualizacao || '',
             'Ação Recomendada': 
                 !c.HasValidERPCoords && c.Lat_Geocode ? 'Cadastrar Lat/Long no ERP via Geocode' :
                 c.Status === 'DIVERGENCIA_CRITICA' ? 'Corrigir Coordenadas no ERP' :
@@ -929,20 +1019,28 @@ export const GeolocalizadorERP: React.FC = () => {
                         onClick={handleLoadClientes}
                         disabled={isLoadingData || isProcessingBatch}
                         className={`${UI_BUTTON_PRIMARY} flex items-center gap-2 text-xs py-2.5 shadow-md`}
+                        title="Sincronizar clientes do ERP atualizando cadastros e preservando geocodificações e aceites salvos no banco"
                     >
                         <RefreshCw size={14} className={isLoadingData ? 'animate-spin' : ''} />
-                        {isLoadingData ? 'Carregando ERP...' : 'Carregar Base ERP'}
+                        {isLoadingData ? 'Sincronizando ERP...' : 'Sincronizar c/ ERP'}
                     </button>
 
                     {clientes.length > 0 && (
-                        <button
-                            onClick={handleExportExcel}
-                            className={`${UI_BUTTON_SECONDARY} flex items-center gap-2 text-xs py-2.5`}
-                            title="Exportar dados filtrados para planilha Excel"
-                        >
-                            <FileSpreadsheet size={14} className="text-emerald-600" />
-                            Exportar Excel
-                        </button>
+                        <>
+                            <div className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                                <Database size={13} className="text-emerald-500" />
+                                Base Central Salva ({clientes.length})
+                            </div>
+
+                            <button
+                                onClick={handleExportExcel}
+                                className={`${UI_BUTTON_SECONDARY} flex items-center gap-2 text-xs py-2.5`}
+                                title="Exportar dados filtrados para planilha Excel"
+                            >
+                                <FileSpreadsheet size={14} className="text-emerald-600" />
+                                Exportar Excel
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -1127,7 +1225,7 @@ export const GeolocalizadorERP: React.FC = () => {
 
             {/* ÁREA DE FILTROS E PESQUISA */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
                     {/* Busca Textual */}
                     <div className="lg:col-span-2">
                         <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 ml-1 text-slate-500 dark:text-slate-400">
@@ -1196,6 +1294,24 @@ export const GeolocalizadorERP: React.FC = () => {
                             <option value="OK">✅ Concordante (OK)</option>
                             <option value="PENDENTE">⏳ Pendente de Geocoding</option>
                             <option value="FALHA_GEOCODE">❌ Falha na Localização</option>
+                        </select>
+                    </div>
+
+                    {/* Filtro Status de Aceite / Ajuste ERP */}
+                    <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 ml-1 text-slate-500 dark:text-slate-400">
+                            Aceite / Ajuste ERP
+                        </label>
+                        <select
+                            value={selectedAceiteFilter}
+                            onChange={e => { setSelectedAceiteFilter(e.target.value); setCurrentPage(1); }}
+                            className={`${UI_INPUT_BASE} text-xs py-2 cursor-pointer`}
+                        >
+                            <option value="ALL">Todos os Aceites</option>
+                            <option value="PENDENTE">⏳ Pendente de Ajuste</option>
+                            <option value="APROVADO_GEOCODE">🎯 Aprovado p/ ERP</option>
+                            <option value="AJUSTADO_NO_ERP">✅ Ajustado no ERP</option>
+                            <option value="IGNORADO">⚪ Ignorado</option>
                         </select>
                     </div>
                 </div>
@@ -1270,6 +1386,7 @@ export const GeolocalizadorERP: React.FC = () => {
                                         <th className={UI_TABLE_TH}>Coordenadas Geocode</th>
                                         <th className={UI_TABLE_TH}>Divergência</th>
                                         <th className={UI_TABLE_TH}>Status</th>
+                                        <th className={UI_TABLE_TH}>Aceite / Ajuste ERP</th>
                                         <th className={`${UI_TABLE_TH} text-center`}>Ações</th>
                                     </tr>
                                 </thead>
@@ -1399,6 +1516,28 @@ export const GeolocalizadorERP: React.FC = () => {
                                                             Falha Geocode
                                                         </span>
                                                     )}
+                                                </td>
+
+                                                {/* Aceite / Ajuste ERP */}
+                                                <td className={UI_TABLE_TD}>
+                                                    <select
+                                                        value={client.Aceite_ERP || 'PENDENTE'}
+                                                        onChange={e => handleUpdateAceite(client, e.target.value as StatusAceiteERP)}
+                                                        className={`text-[11px] font-extrabold px-2 py-1 rounded-lg border outline-none cursor-pointer transition-all ${
+                                                            client.Aceite_ERP === 'AJUSTADO_NO_ERP'
+                                                                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                                                                : client.Aceite_ERP === 'APROVADO_GEOCODE'
+                                                                ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                                                                : client.Aceite_ERP === 'IGNORADO'
+                                                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-300 dark:border-slate-700'
+                                                                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                                        }`}
+                                                    >
+                                                        <option value="PENDENTE">⏳ Pendente</option>
+                                                        <option value="APROVADO_GEOCODE">🎯 Aprovado p/ ERP</option>
+                                                        <option value="AJUSTADO_NO_ERP">✅ Ajustado no ERP</option>
+                                                        <option value="IGNORADO">⚪ Ignorar</option>
+                                                    </select>
                                                 </td>
 
                                                 {/* Ações */}
@@ -1668,15 +1807,37 @@ export const GeolocalizadorERP: React.FC = () => {
                             </div>
 
                             <div className="flex items-center gap-2">
+                                {/* Aprovar Geocode p/ Ajustar no ERP */}
+                                {selectedClientModal.Lat_Geocode !== null && (
+                                    <button
+                                        onClick={() => handleUpdateAceite(selectedClientModal, 'APROVADO_GEOCODE')}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider transition-all active:scale-95 text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm shadow-blue-900/20"
+                                        title="Marcar como Geocode aprovado para orientar o ajuste cadastral no ERP"
+                                    >
+                                        <CheckCheck size={14} />
+                                        Aprovar p/ ERP
+                                    </button>
+                                )}
+
+                                {/* Marcar como Já Ajustado no ERP */}
+                                <button
+                                    onClick={() => handleUpdateAceite(selectedClientModal, 'AJUSTADO_NO_ERP')}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-wider transition-all active:scale-95 text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm shadow-emerald-900/20"
+                                    title="Marcar que as coordenadas deste cliente já foram ajustadas no ERP"
+                                >
+                                    <Check size={14} />
+                                    Ajustado no ERP
+                                </button>
+
                                 {/* Aprovar Posição do ERP */}
                                 {selectedClientModal.HasValidERPCoords && (
                                     <button
                                         onClick={() => handleApproveErpCoord(selectedClientModal)}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider transition-all active:scale-95 text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm shadow-blue-900/20"
+                                        className="bg-slate-700 hover:bg-slate-800 text-white font-bold uppercase tracking-wider transition-all active:scale-95 text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm shadow-slate-900/20"
                                         title="Aprovar e adotar a coordenada do ERP como a localização correta deste cliente"
                                     >
-                                        <Check size={14} />
-                                        Aprovar Posição ERP
+                                        <MapPin size={14} />
+                                        Posição ERP OK
                                     </button>
                                 )}
 
@@ -1688,7 +1849,7 @@ export const GeolocalizadorERP: React.FC = () => {
                                         title="Forçar localização utilizando estritamente o CEP municipal"
                                     >
                                         <Compass size={14} />
-                                        Geocodificar por CEP
+                                        Por CEP
                                     </button>
                                 )}
 
