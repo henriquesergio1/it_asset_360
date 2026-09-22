@@ -1766,6 +1766,7 @@ export const AjusteRota: React.FC = () => {
     const [planilhaDestSeller, setPlanilhaDestSeller] = useState<number>(0);
     const [planilhaDestNewSectorsCount, setPlanilhaDestNewSectorsCount] = useState<number>(2);
     const [planilhaDestDefaultPeriodicidade, setPlanilhaDestDefaultPeriodicidade] = useState<'MANTER_ERP' | 'SEMANAL' | 'QUINZENAL'>('MANTER_ERP');
+    const [planilhaDestDefaultDay, setPlanilhaDestDefaultDay] = useState<'MANTER_ERP' | 'SEGUNDA'>('MANTER_ERP');
 
     // Persistência corporativa dos Parâmetros do Otimizador no SQL Server
     const [savingParamsToDb, setSavingParamsToDb] = useState(false);
@@ -2131,6 +2132,34 @@ export const AjusteRota: React.FC = () => {
             return planilhaDestDefaultPeriodicidade;
         };
 
+        // Helper para resolver dia da semana respeitando a opção do assistente
+        const resolveDiaSemana = (item: any) => {
+            if (item.Dia_Semana && String(item.Dia_Semana).trim() !== '') {
+                return normalizeDiaSemana(item.Dia_Semana, item.Data_da_Visita);
+            }
+            if (planilhaDestDefaultDay === 'MANTER_ERP') {
+                const erpDay = item.Dia_Semana_ERP || '';
+                if (erpDay && String(erpDay).trim() !== '') {
+                    return normalizeDiaSemana(erpDay, item.Data_da_Visita);
+                }
+            }
+            return optDays[0] || 'SEGUNDA-FEIRA';
+        };
+
+        // Helper para resolver sequência de visita respeitando a opção do assistente
+        const resolveSequencia = (item: any) => {
+            if (item.Sequencia !== undefined && item.Sequencia !== null && Number(item.Sequencia) > 0) {
+                return Number(item.Sequencia);
+            }
+            if (planilhaDestDefaultDay === 'MANTER_ERP') {
+                const erpSeq = Number(item.Sequencia_ERP);
+                if (!isNaN(erpSeq) && erpSeq > 0) {
+                    return erpSeq;
+                }
+            }
+            return 0;
+        };
+
         if (planilhaDestMode === 'equipe') {
             // Identificar vendedores da equipe/supervisor selecionado
             const targetSellers = teamColaboradores.filter(c => {
@@ -2174,7 +2203,8 @@ export const AjusteRota: React.FC = () => {
                     Cod_Vend: finalCodVend,
                     Nome_Vendedor: finalNomeVend,
                     Periodicidade: resolvePeriodicidade(item),
-                    Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
+                    Dia_Semana: resolveDiaSemana(item),
+                    Sequencia: resolveSequencia(item)
                 };
             });
         } else if (planilhaDestMode === 'vendedor') {
@@ -2187,7 +2217,8 @@ export const AjusteRota: React.FC = () => {
                 Cod_Vend: finalCodVend,
                 Nome_Vendedor: sellerName,
                 Periodicidade: resolvePeriodicidade(item),
-                Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
+                Dia_Semana: resolveDiaSemana(item),
+                Sequencia: resolveSequencia(item)
             }));
         } else if (planilhaDestMode === 'novos_setores') {
             const count = Math.max(1, Math.min(10, planilhaDestNewSectorsCount || 2));
@@ -2203,7 +2234,8 @@ export const AjusteRota: React.FC = () => {
                     Cod_Vend: assigned.code,
                     Nome_Vendedor: assigned.name,
                     Periodicidade: resolvePeriodicidade(item),
-                    Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
+                    Dia_Semana: resolveDiaSemana(item),
+                    Sequencia: resolveSequencia(item)
                 };
             });
         } else {
@@ -2219,7 +2251,8 @@ export const AjusteRota: React.FC = () => {
                     Cod_Vend: finalCodVend,
                     Nome_Vendedor: finalNomeVend,
                     Periodicidade: resolvePeriodicidade(item),
-                    Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
+                    Dia_Semana: resolveDiaSemana(item),
+                    Sequencia: resolveSequencia(item)
                 };
             });
         }
@@ -12428,6 +12461,35 @@ export const AjusteRota: React.FC = () => {
                                                 className="text-emerald-600 focus:ring-emerald-500"
                                             />
                                             QUINZENAL (Semana 1 / Semana 2)
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Dia da Semana e Sequência Padrão para clientes sem dia na planilha */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                        Dia da Semana e Sequência (quando não informados no Excel):
+                                    </label>
+                                    <div className="flex flex-wrap items-center gap-4">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="dia_semana_padrao"
+                                                checked={planilhaDestDefaultDay === 'MANTER_ERP'}
+                                                onChange={() => setPlanilhaDestDefaultDay('MANTER_ERP')}
+                                                className="text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            Manter Atual do Cliente (Query ERP)
+                                        </label>
+                                        <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="dia_semana_padrao"
+                                                checked={planilhaDestDefaultDay === 'SEGUNDA'}
+                                                onChange={() => setPlanilhaDestDefaultDay('SEGUNDA')}
+                                                className="text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            Alocar na Segunda-feira
                                         </label>
                                     </div>
                                 </div>

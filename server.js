@@ -3536,10 +3536,13 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
                 Nome_Vendedor: seller?.Nome || item.Nome_Vendedor || (codVend > 0 ? `Vendedor ${codVend}` : 'A DEFINIR'),
                 Nome_Supervisor: item.Nome_Supervisor || clientDetail?.Nome_Supervisor || '',
                 Cod_Supervisor: item.Cod_Supervisor || clientDetail?.Cod_Supervisor || 0,
-                Dia_Semana: item.Dia_Semana || '',
+                Dia_Semana: item.Dia_Semana || clientDetail?.Dia_Semana || '',
+                Dia_Semana_ERP: clientDetail?.Dia_Semana || '',
+                Sequencia: item.Sequencia || clientDetail?.Sequencia || 0,
+                Sequencia_ERP: clientDetail?.Sequencia || 0,
                 Periodicidade: item.Periodicidade || clientDetail?.Periodicidade || '',
                 Periodicidade_ERP: clientDetail?.Periodicidade || '',
-                Data_da_Visita: item.Data_da_Visita || '',
+                Data_da_Visita: item.Data_da_Visita || clientDetail?.Data_da_Visita || '',
                 Origem: 'PLANILHA'
             };
         });
@@ -4235,6 +4238,7 @@ function normalizeVisitaData(row) {
         Razao_Social: findValue(['RazaoSocial', 'Razão Social', 'NOMRAZSCLCET', 'CLIENTE']),
         Dia_Semana: parseDiaSemana(rawDia, rawDataVisita),
         Periodicidade: findValue(['Periodicidade', 'DESCCOVSTCET', 'FREQ', 'FREQUENCIA', 'A1_FREQ', 'A1_PERIOD', 'CODOVSTCET', 'PERIOD', 'PERIODICIDADE_VISITA', 'FREQ_VISITA']),
+        Sequencia: parseInt(findValue(['Sequencia', 'Sequência', 'NUMSEQVST', 'NUMSEQ', 'ORDEM', 'SEQ', 'NUMSEQVSTSGD']) || 0, 10),
         Data_da_Visita: rawDataVisita,
         Endereco: rawEndereco,
         Numero: numeroStr,

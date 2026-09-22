@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.213.0',
+    date: 'Hoje',
+    title: 'Fuel360: Dia da Semana e Sequência do ERP na Simulação por Planilha',
+    changes: [
+      'Manter Dia da Semana e Sequência do ERP: No Assistente de Destino da Planilha, adicionada opção para herdar o dia de atendimento e a sequência de visita vigentes na query do ERP quando a planilha não informar o dia da semana.',
+      'Captura de Sequência no ERP: O backend agora normaliza e expõe a propriedade Sequencia/Sequencia_ERP a partir da query do ERP (colunas NUMSEQVST, ORDEM, SEQ).',
+      'Distribuição Diária Fiel à Carteira: Evita que todos os clientes importados fiquem acumulados na segunda-feira, distribuindo-os harmonicamente pelos dias cadastrados no ERP.'
+    ]
+  },
+  {
     version: '3.212.1',
     date: 'Hoje',
     title: 'Hotfix: Correção de Fechamento de Sintaxe no Backend',
