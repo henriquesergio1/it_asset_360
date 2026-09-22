@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.216.0',
+    date: 'Hoje',
+    title: 'Fuel360: Consolidação Territorial de Cidades e Eliminação de Clientes Órfãos no Roteirizador',
+    changes: [
+      'Consolidação de Cidades Secundárias por Dia: Cidades externas à base (ex: Caçapava) são mantidas como blocos territoriais indivisíveis no particionamento diário sempre que sua carga total couber na jornada, eliminando splits artificiais gerados por cotas numéricas rígidas.',
+      'Pós-Processador de Eliminação de Clientes Órfãos: Detecção e reatribuição automática de clientes isolados que ficavam em dias diferentes da massa de sua cidade, unificando-os no dia principal dentro da jornada.',
+      'Função de Avaliação Multi-Objetivo Otimizada: Aumento substancial do peso para redução de Km rodado e penalidade severa (800 pontos) para deslocamentos intermunicipais repetidos, flexibilizando o balanceamento de tempo diário para priorizar rotas eficientes e coerentes.',
+      'Novos Cenários Concorrentes de Coesão Municipal: Adicionados cenários "City-First Cohesive" no algoritmo DP para explorar particionamentos estritamente agrupados por proximidade e contiguidade territorial.'
+    ]
+  },
+  {
     version: '3.215.0',
     date: 'Hoje',
     title: 'Fuel360: Otimização Territorial Quinzenal (Agrupamento por Cidade e Quadrantes Contíguos)',
