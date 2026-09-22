@@ -2492,6 +2492,20 @@ async function ensureFuelTablesExist(pool) {
                 await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD OptResectorizeMode NVARCHAR(50) NOT NULL DEFAULT 'BALANCED';");
             }
         }
+
+        const checkClienteCoord = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelClienteCoordenadas'");
+        if (checkClienteCoord.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelClienteCoordenadas (
+                    Cod_Cliente INT PRIMARY KEY,
+                    Lat FLOAT NOT NULL,
+                    Long FLOAT NOT NULL,
+                    Status NVARCHAR(50) NOT NULL DEFAULT 'OK',
+                    Usuario NVARCHAR(255) NULL,
+                    DataAtualizacao DATETIME DEFAULT GETDATE()
+                );
+            `);
+        }
     } catch (err) {
         console.error('AVISO ao verificar/criar tabelas Fuel360:', err.message);
     }
@@ -3179,6 +3193,66 @@ app.delete('/api/fuel360/cliente-restricoes/:id', async (req, res) => {
         res.json({ success: true, message: `Particularidade do cliente ${clientDesc} removida com sucesso.`, restricoes: updated.recordset || [], lastAudit });
     } catch (err) {
         console.error('[Fuel360 ERROR] Falha ao excluir restricao de cliente:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// --- COORDENADAS HOMOLOGADAS / AUDITADAS DE CLIENTES ---
+app.get('/api/fuel360/cliente-coordenadas', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request().query("SELECT Cod_Cliente, Lat, Long, Status, Usuario, DataAtualizacao FROM FuelClienteCoordenadas");
+        const map = {};
+        (result.recordset || []).forEach(row => {
+            map[row.Cod_Cliente] = {
+                lat: row.Lat,
+                lon: row.Long,
+                status: row.Status,
+                usuario: row.Usuario,
+                at: row.DataAtualizacao
+            };
+        });
+        res.json({ success: true, coordenadas: map });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha ao buscar coordenadas de clientes salvas:', err.message);
+        res.status(500).json({ success: false, error: err.message, coordenadas: {} });
+    }
+});
+
+app.post('/api/fuel360/cliente-coordenadas', async (req, res) => {
+    const { codCliente, lat, lon, status, usuario } = req.body || {};
+    if (!codCliente || lat === undefined || lon === undefined) {
+        return res.status(400).json({ success: false, message: 'Dados inválidos. Cod_Cliente, Lat e Long são obrigatórios.' });
+    }
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const userName = usuario || req.user?.Nome || req.user?.Usuario || 'Operador Fuel';
+        
+        await pool.request()
+            .input('Cod_Cliente', sql.Int, parseInt(codCliente, 10))
+            .input('Lat', sql.Float, parseFloat(lat))
+            .input('Long', sql.Float, parseFloat(lon))
+            .input('Status', sql.NVarChar(50), status || 'OK')
+            .input('Usuario', sql.NVarChar(255), userName)
+            .query(`
+                IF EXISTS (SELECT 1 FROM FuelClienteCoordenadas WHERE Cod_Cliente = @Cod_Cliente)
+                BEGIN
+                    UPDATE FuelClienteCoordenadas
+                    SET Lat = @Lat, Long = @Long, Status = @Status, Usuario = @Usuario, DataAtualizacao = GETDATE()
+                    WHERE Cod_Cliente = @Cod_Cliente;
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO FuelClienteCoordenadas (Cod_Cliente, Lat, Long, Status, Usuario, DataAtualizacao)
+                    VALUES (@Cod_Cliente, @Lat, @Long, @Status, @Usuario, GETDATE());
+                END
+            `);
+
+        res.json({ success: true, message: 'Coordenada persistida com sucesso no banco de dados.' });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha ao salvar coordenada de cliente:', err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -3915,6 +3989,25 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
                 if (extRes.recordset && extRes.recordset.length > 0) {
                     console.log(`[Roteirizador ERP] Sucesso! ${extRes.recordset.length} registros de visitas carregados do ERP.`);
                     const normalized = extRes.recordset.map(row => normalizeVisitaData(row));
+
+                    // Sobreposição com coordenadas homologadas/aprovadas no Fuel360
+                    try {
+                        const savedCoordsRes = await pool.request().query("SELECT Cod_Cliente, Lat, Long FROM FuelClienteCoordenadas");
+                        if (savedCoordsRes.recordset && savedCoordsRes.recordset.length > 0) {
+                            const coordMap = new Map();
+                            savedCoordsRes.recordset.forEach(c => coordMap.set(c.Cod_Cliente, c));
+                            normalized.forEach(v => {
+                                if (v.Cod_Cliente && coordMap.has(v.Cod_Cliente)) {
+                                    const c = coordMap.get(v.Cod_Cliente);
+                                    v.Lat = c.Lat;
+                                    v.Long = c.Long;
+                                }
+                            });
+                        }
+                    } catch (cErr) {
+                        console.warn('[Fuel360 WARN] Falha ao sobrepor coordenadas salvas:', cErr.message);
+                    }
+
                     return res.json(normalized);
                 } else {
                     console.log('[Roteirizador ERP] Query executada com sucesso mas retornou 0 linhas do ERP.');
@@ -4019,6 +4112,25 @@ app.get('/api/fuel360/roteiro/promotores/clientes', async (req, res) => {
                             Long: isNaN(lng) ? 0 : lng
                         };
                     });
+
+                    // Sobreposição com coordenadas homologadas/aprovadas no Fuel360
+                    try {
+                        const savedCoordsRes = await pool.request().query("SELECT Cod_Cliente, Lat, Long FROM FuelClienteCoordenadas");
+                        if (savedCoordsRes.recordset && savedCoordsRes.recordset.length > 0) {
+                            const coordMap = new Map();
+                            savedCoordsRes.recordset.forEach(c => coordMap.set(c.Cod_Cliente, c));
+                            normalized.forEach(v => {
+                                if (v.Cod_Cliente && coordMap.has(v.Cod_Cliente)) {
+                                    const c = coordMap.get(v.Cod_Cliente);
+                                    v.Lat = c.Lat;
+                                    v.Long = c.Long;
+                                }
+                            });
+                        }
+                    } catch (cErr) {
+                        console.warn('[Fuel360 WARN] Falha ao sobrepor coordenadas salvas em promotores:', cErr.message);
+                    }
+
                     return res.json(normalized);
                 } else {
                     console.log('[Roteirizador Promotores ERP] Query executada com sucesso mas retornou 0 linhas do ERP.');

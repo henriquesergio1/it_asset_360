@@ -6637,7 +6637,8 @@ export const AjusteRota: React.FC = () => {
                 'ENDERECO': v.Endereco,
                 'BAIRRO': v.Bairro,
                 'CIDADE': v.Cidade,
-                'CEP': v.CEP
+                'CEP': v.CEP,
+                'CANAL DE REMUNERAÇÃO': v.Canal_Remuneracao || ''
             };
         };
 

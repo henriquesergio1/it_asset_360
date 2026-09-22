@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { getVisitasPrevistas, geocodeAddress } from './services/apiService';
+import { getVisitasPrevistas, geocodeAddress, getClienteCoordenadas, saveClienteCoordenada } from './services/apiService';
 import { VisitaPrevista } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -247,7 +247,26 @@ export const GeolocalizadorERP: React.FC = () => {
                 return;
             }
 
+            // Buscar coordenadas aprovadas e homologadas no banco SQL corporativo
+            let sqlCoords: Record<number, { lat: number; lon: number; status: string; at: string }> = {};
+            try {
+                const resSql = await getClienteCoordenadas();
+                if (resSql && resSql.success && resSql.coordenadas) {
+                    sqlCoords = resSql.coordenadas;
+                }
+            } catch (err) {
+                console.warn('Aviso: falha ao obter coordenadas do SQL, usando cache local:', err);
+            }
+
             const cache = getLocalCache();
+            const combinedCache: Record<number, { lat: number; lon: number; status?: string; at?: string }> = { ...cache };
+            Object.entries(sqlCoords).forEach(([codStr, val]) => {
+                combinedCache[Number(codStr)] = val;
+            });
+            try {
+                localStorage.setItem(GEOCODE_CACHE_STORAGE_KEY, JSON.stringify(combinedCache));
+            } catch (e) {}
+
             const clientMap = new Map<number, ClienteAuditado>();
 
             visitas.forEach(v => {
@@ -257,7 +276,7 @@ export const GeolocalizadorERP: React.FC = () => {
                     const longErp = Number(v.Long || 0);
                     const hasValidErp = !isNaN(latErp) && !isNaN(longErp) && (Math.abs(latErp) > 0.001 || Math.abs(longErp) > 0.001);
 
-                    const cached = cache[v.Cod_Cliente];
+                    const cached = combinedCache[v.Cod_Cliente];
                     let latGeo: number | null = null;
                     let longGeo: number | null = null;
                     let divergencia: number | null = null;
@@ -270,7 +289,10 @@ export const GeolocalizadorERP: React.FC = () => {
                     if (cached && !isNaN(cached.lat) && !isNaN(cached.lon)) {
                         latGeo = cached.lat;
                         longGeo = cached.lon;
-                        if (hasValidErp) {
+                        if (cached.status === 'APROVADO_ERP' || (cached.lat === latErp && cached.lon === longErp)) {
+                            divergencia = 0;
+                            status = 'OK';
+                        } else if (hasValidErp) {
                             divergencia = calcDistanceMeters(latErp, longErp, latGeo, longGeo);
                             if (divergencia <= toleranciaOkMetros) {
                                 status = 'OK';
@@ -370,6 +392,14 @@ export const GeolocalizadorERP: React.FC = () => {
             });
             if (res && res.lat && res.lon && !isNaN(res.lat) && !isNaN(res.lon)) {
                 saveToLocalCache(client.Cod_Cliente, res.lat, res.lon);
+                // Persistir no SQL corporativo
+                saveClienteCoordenada({
+                    codCliente: client.Cod_Cliente,
+                    lat: res.lat,
+                    lon: res.lon,
+                    status: 'GEOCODE_INDIVIDUAL'
+                }).catch(e => console.warn('Erro ao salvar no SQL:', e));
+
                 let divergencia: number | null = null;
                 let status: StatusAuditoria = 'SEM_COORDENADAS_ERP';
 
@@ -448,9 +478,17 @@ export const GeolocalizadorERP: React.FC = () => {
     };
 
     // --- APROVAR COORDENADA DO ERP COMO CORRETA ---
-    const handleApproveErpCoord = (client: ClienteAuditado) => {
+    const handleApproveErpCoord = async (client: ClienteAuditado) => {
         if (!client.HasValidERPCoords) return;
         saveToLocalCache(client.Cod_Cliente, client.Lat_ERP, client.Long_ERP);
+        // Persistir imediatamente no banco SQL corporativo
+        saveClienteCoordenada({
+            codCliente: client.Cod_Cliente,
+            lat: client.Lat_ERP,
+            lon: client.Long_ERP,
+            status: 'APROVADO_ERP'
+        }).catch(e => console.warn('Erro ao persistir aprovação no SQL:', e));
+
         const updated: ClienteAuditado = {
             ...client,
             Lat_Geocode: client.Lat_ERP,
@@ -483,6 +521,14 @@ export const GeolocalizadorERP: React.FC = () => {
             });
             if (res && res.lat && res.lon && !isNaN(res.lat) && !isNaN(res.lon)) {
                 saveToLocalCache(client.Cod_Cliente, res.lat, res.lon);
+                // Persistir no SQL corporativo
+                saveClienteCoordenada({
+                    codCliente: client.Cod_Cliente,
+                    lat: res.lat,
+                    lon: res.lon,
+                    status: 'GEOCODE_CEP'
+                }).catch(e => console.warn('Erro ao salvar no SQL:', e));
+
                 let divergencia: number | null = null;
                 let status: StatusAuditoria = 'SEM_COORDENADAS_ERP';
 

@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.208.0',
+    date: 'Hoje',
+    title: 'Fuel360: Persistência SQL de Coordenadas Auditadas e Canal de Remuneração no Excel',
+    changes: [
+      'Persistência Definitiva no Banco SQL: As coordenadas aprovadas ("Aprovar Posição ERP") ou geocodificadas no Geolocalizador ERP agora são persistidas diretamente na tabela FuelClienteCoordenadas no SQL Server. Ao recarregar a tela, trocar de máquina ou limpar cache, a localização permanece homologada e não volta a apresentar divergência.',
+      'Sobreposição Automática em Rotas: Ao carregar as rotas de vendedores e promotores, o sistema consulta a tabela de coordenadas homologadas e substitui automaticamente qualquer coordenada desatualizada vinda do ERP.',
+      'Exportação Excel com Canal de Remuneração: Incluída a coluna "CANAL DE REMUNERAÇÃO" imediatamente após a coluna "CEP" na exportação da planilha de rotas ajustadas.'
+    ]
+  },
+  {
     version: '3.207.2',
     date: 'Hoje',
     title: 'Fuel360: Isolamento Estrito entre Promotores e Vendedores na Sincronização',
