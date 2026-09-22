@@ -412,11 +412,12 @@ const RealService = {
                     const lon = Number(gRes.lon);
                     if (!isNaN(lat) && !isNaN(lon)) {
                         // Guarda Universal de Consistência Geográfica Municipal:
+                        // Tolerância de 45 km para abranger distritos e bairros periféricos de grandes municípios sem descartar coordenadas prediais exatas
                         if (cleanZip.length === 8 || city) {
                             const cepPoint = cleanZip.length === 8 ? await resolveCoordsByCep(cleanZip) : null;
                             if (cepPoint) {
                                 const distFromCep = RealService.calcDistance(lat, lon, cepPoint.lat, cepPoint.lon);
-                                if (distFromCep > 12) {
+                                if (distFromCep > 45) {
                                     console.warn(`[Fuel360] Ponto do Google Maps divergiu ${distFromCep.toFixed(1)}km do centróide de ${city || cleanZip}. Rejeitando falso positivo intermunicipal.`);
                                     continue;
                                 }
@@ -508,12 +509,12 @@ const RealService = {
                         }
 
                         if (!isNaN(lat) && !isNaN(lon)) {
-                            // Guarda de consistência geográfica também para tentativas do Nominatim
+                            // Guarda de consistência geográfica também para tentativas do Nominatim (tolerância de 45 km)
                             if (cleanZip.length === 8 || city) {
                                 const cepPoint = cleanZip.length === 8 ? await resolveCoordsByCep(cleanZip) : null;
                                 if (cepPoint) {
                                     const dist = RealService.calcDistance(lat, lon, cepPoint.lat, cepPoint.lon);
-                                    if (dist > 12) {
+                                    if (dist > 45) {
                                         console.warn(`[Fuel360] Ponto do Nominatim (${attempt.label}) divergiu ${dist.toFixed(1)}km de ${city}. Rejeitando falso positivo intermunicipal.`);
                                         continue;
                                     }

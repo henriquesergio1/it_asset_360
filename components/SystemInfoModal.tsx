@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.208.3',
+    date: 'Hoje',
+    title: 'Fuel360: Priorização Estrita de Coordenadas Prediais e Ajuste da Guarda Geográfica',
+    changes: [
+      'Priorização Estrita de Fachada Predial: O sistema prioriza estritamente as coordenadas métricas de número e fachada retornadas pelo Google Maps e Nominatim, evitando a substituição indevida por centróides genéricos municipais.',
+      'Ajuste da Guarda de Consistência Geográfica: Ampliado o raio de consistência de 12 km para 45 km, acomodando distritos, bairros periféricos e regiões metropolitanas extensas sem descartar coordenadas exatas obtidas nos motores de busca.',
+      'Eliminação de Falso Positivo em Bairros Periféricos: Clientes localizados em bairros afastados do centro urbano (ex.: Galo Branco / Eugênio de Melo) passam a ser georreferenciados na porta do estabelecimento com precisão de fachada.'
+    ]
+  },
+  {
     version: '3.208.2',
     date: 'Hoje',
     title: 'Fuel360: Sanitizador Inteligente de Endereços e Geocodificação Predial Escalonada',
