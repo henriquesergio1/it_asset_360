@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.219.0',
+    date: 'Hoje',
+    title: 'Fuel360: Coloração Dinâmica por Vendedor/Dia e Legenda Territorial para Invasão de Área',
+    changes: [
+      'Coloração Exclusiva por Vendedor no Mapa Multi-Vendedor: Ao analisar mais de um vendedor simultaneamente (análise de invasão de área/sobreposição), cada vendedor recebe uma cor única e vibrante para seus clientes e polilinhas de rota.',
+      'Coloração por Dia da Semana no Modo Individual: Ao selecionar ou focar em um único vendedor, o mapa colore automaticamente os clientes e rotas pelas cores dos dias da semana (Segunda a Sábado) com distinção de quinzenas.',
+      'Legenda Contextual Inteligente: Exibição dinâmica de Legenda de Vendedores (com cor, nome, total de PDVs e clique para isolamento) ou Legenda de Dias da Semana.',
+      'Seletor Manual de Modo de Cor (Auto / Vendedor / Dia): Permite ao operador alternar a qualquer momento o critério visual do mapa entre automático, vendedor fixo ou dia da semana fixo.'
+    ]
+  },
+  {
     version: '3.218.0',
     date: 'Hoje',
     title: 'Fuel360: Bloqueio e Exclusão de Clientes Inativos no ERP / Planilha da Roteirização',

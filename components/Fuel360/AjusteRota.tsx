@@ -3162,15 +3162,32 @@ export const AjusteRota: React.FC = () => {
         return uniqueSellersInScope.size === 1;
     }, [focusedMapSellerId, scopeMode, selectedSeller, selectedPromoter, selectedTeamSellers, scopedAdjustedRoutes]);
 
-    // Mapeamento de cores dos colaboradores
+    // Modo de coloração no mapa: 'AUTO' (dia se 1 vendedor, vendedor se > 1), 'VENDEDOR', 'DIA'
+    const [mapColorMode, setMapColorMode] = useState<'AUTO' | 'VENDEDOR' | 'DIA'>('AUTO');
+
+    const effectiveMapColorMode = useMemo(() => {
+        if (mapColorMode === 'VENDEDOR') return 'VENDEDOR';
+        if (mapColorMode === 'DIA') return 'DIA';
+        return isSingleSellerView ? 'DIA' : 'VENDEDOR';
+    }, [mapColorMode, isSingleSellerView]);
+
+    // Mapeamento de cores dos colaboradores (alto contraste para análise de invasão de área)
     const promoterColorMap = useMemo(() => {
         const map = new Map<string, string>();
-        const uniqueIds = Array.from(new Set(originalRoutes.map(v => String(v.Cod_Vend))));
-        uniqueIds.forEach((id, idx) => {
+        // Prioriza os vendedores presentes no escopo atual
+        const scopedIds = Array.from(new Set(scopedAdjustedRoutes.map(v => String(v.Cod_Vend)))).filter(Boolean).sort();
+        scopedIds.forEach((id, idx) => {
             map.set(id, PROMOTER_COLORS[idx % PROMOTER_COLORS.length]);
         });
+        // Adiciona demais vendedores de originalRoutes caso haja
+        const allIds = Array.from(new Set(originalRoutes.map(v => String(v.Cod_Vend)))).filter(Boolean).sort();
+        allIds.forEach(id => {
+            if (!map.has(id)) {
+                map.set(id, PROMOTER_COLORS[map.size % PROMOTER_COLORS.length]);
+            }
+        });
         return map;
-    }, [originalRoutes]);
+    }, [scopedAdjustedRoutes, originalRoutes]);
 
     // Lista de vendedores pertencentes ao escopo atual para o filtro multi-select no Ajuste Fino
     const availableTeamSellers = useMemo(() => {
@@ -6925,7 +6942,7 @@ export const AjusteRota: React.FC = () => {
                         if (seqA && seqB) return seqA - seqB;
                         return 0;
                     });
-                    const lineColor = isSingleSellerView ? (DAY_COLORS[day]?.hex || sellerBaseColor) : sellerBaseColor;
+                    const lineColor = (effectiveMapColorMode === 'DIA') ? (DAY_COLORS[day]?.hex || sellerBaseColor) : sellerBaseColor;
                     
                     const pointsObj: any[] = [];
                     if (colab?.LatitudeBase && colab?.LongitudeBase) {
@@ -7011,7 +7028,7 @@ export const AjusteRota: React.FC = () => {
         updateLines();
         
         return () => { isMounted = false; };
-    }, [filteredRoutes, scopedOriginalRoutes, selectedDaysFilter, selectedQuinzenaFilter, selectedPromoter, promoterColorMap, colaboradores, isSingleSellerView, optEndAtLastClient]);
+    }, [filteredRoutes, scopedOriginalRoutes, selectedDaysFilter, selectedQuinzenaFilter, selectedPromoter, promoterColorMap, colaboradores, isSingleSellerView, effectiveMapColorMode, optEndAtLastClient]);
 
     // Mapa da ordem/sequência de atendimento diário de cada cliente por Quinzena 1/3 e 2/4
     const visitOrderMap = useMemo(() => {
@@ -9636,7 +9653,7 @@ export const AjusteRota: React.FC = () => {
 
                                 {/* Polilinhas das rotas originais (Tracejado claro se houver comparação) */}
                                 {!isDrawingZone && (focusedMapSellerId ? originalPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : originalPolylines).map((line, idx) => {
-                                    const polyColor = ((isSingleSellerView || focusedMapSellerId !== null) && line.day && DAY_COLORS[line.day]) ? DAY_COLORS[line.day].hex : line.color;
+                                    const polyColor = (effectiveMapColorMode === 'DIA' && line.day && DAY_COLORS[line.day]) ? DAY_COLORS[line.day].hex : line.color;
                                     return (
                                         <Polyline 
                                             key={`orig-poly-${line.id || idx}`} 
@@ -9654,7 +9671,7 @@ export const AjusteRota: React.FC = () => {
 
                                 {/* Polilinhas das rotas otimizadas com transição visual animada e Popup Interativo */}
                                 {!isDrawingZone && (focusedMapSellerId ? adjustedPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : adjustedPolylines).map((line: any, idx) => {
-                                    const polyColor = ((isSingleSellerView || focusedMapSellerId !== null) && line.day && DAY_COLORS[line.day]) ? DAY_COLORS[line.day].hex : line.color;
+                                    const polyColor = (effectiveMapColorMode === 'DIA' && line.day && DAY_COLORS[line.day]) ? DAY_COLORS[line.day].hex : line.color;
                                     return (
                                         <Polyline 
                                             key={`adj-poly-${line.id || idx}`} 
@@ -9722,7 +9739,8 @@ export const AjusteRota: React.FC = () => {
                                     const dayColor = dayCfg.hex;
                                     const sellerColor = promoterColorMap.get(String(v.Cod_Vend)) || '#4f46e5';
                                     const isSingleView = isSingleSellerView || focusedMapSellerId !== null;
-                                    const mainColor = isSingleView ? dayColor : sellerColor;
+                                    const isColorByDay = effectiveMapColorMode === 'DIA';
+                                    const mainColor = isColorByDay ? dayColor : sellerColor;
 
                                     // Distinção visual no mapa:
                                     // Semanal: sólido com borda branca clássica (radius: 7, weight: 2)
@@ -9733,7 +9751,7 @@ export const AjusteRota: React.FC = () => {
                                     let radius = 7;
                                     let dashArray: string | undefined = undefined;
 
-                                    if (isSingleView) {
+                                    if (isSingleView || isColorByDay) {
                                         if (pType === 'QUINZENAL_1_3') {
                                             borderColor = '#f59e0b';
                                             borderWidth = 3.5;
@@ -10047,31 +10065,116 @@ export const AjusteRota: React.FC = () => {
                         )}
 
                         {/* Legenda Explicativa de Rotas e Heatmap no Mapa */}
-                        {!isDrawingZone && scopedAdjustedRoutes.length > 0 && (isSingleSellerView || showHeatmap) && (
-                            <div className="absolute bottom-2 right-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg z-[1000] text-[9px] space-y-1 max-w-[340px]">
-                                {isSingleSellerView && (
-                                    <>
-                                        <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200/80 dark:border-slate-800 pb-1">
-                                            <span className="flex items-center gap-1">
-                                                <GlobeIcon className="w-3 h-3 text-indigo-600"/> Legenda do Roteiro
-                                            </span>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-[8px] text-indigo-600 dark:text-indigo-400 font-semibold uppercase">Filtrar</span>
-                                                {(selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL') && (
+                        {!isDrawingZone && scopedAdjustedRoutes.length > 0 && (
+                            <div className="absolute bottom-2 right-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg z-[1000] text-[9px] space-y-1.5 max-w-[360px] max-h-[380px] overflow-y-auto">
+                                {/* Cabeçalho da Legenda com Seletor de Modo de Cor */}
+                                <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200/80 dark:border-slate-800 pb-1 gap-2">
+                                    <span className="flex items-center gap-1 shrink-0">
+                                        <GlobeIcon className="w-3 h-3 text-indigo-600"/> 
+                                        {effectiveMapColorMode === 'VENDEDOR' ? 'Legenda por Vendedor' : 'Legenda por Dia'}
+                                    </span>
+                                    <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[8px]">
+                                        <button
+                                            type="button"
+                                            onClick={() => setMapColorMode('AUTO')}
+                                            className={`px-1.5 py-0.5 rounded font-bold transition-all cursor-pointer ${
+                                                mapColorMode === 'AUTO' 
+                                                    ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs' 
+                                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                                            }`}
+                                            title="Modo Automático: colore por dia se 1 vendedor, ou por vendedor se múltiplos"
+                                        >
+                                            Auto
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setMapColorMode('VENDEDOR')}
+                                            className={`px-1.5 py-0.5 rounded font-bold transition-all cursor-pointer ${
+                                                mapColorMode === 'VENDEDOR' 
+                                                    ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs' 
+                                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                                            }`}
+                                            title="Colorir mapa por Vendedor (ideal para analisar sobreposição e invasão de área)"
+                                        >
+                                            Vendedor
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setMapColorMode('DIA')}
+                                            className={`px-1.5 py-0.5 rounded font-bold transition-all cursor-pointer ${
+                                                mapColorMode === 'DIA' 
+                                                    ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs' 
+                                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                                            }`}
+                                            title="Colorir mapa por Dia da Semana (Segunda a Sábado)"
+                                        >
+                                            Dia
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Conteúdo da Legenda: MODO VENDEDOR */}
+                                {effectiveMapColorMode === 'VENDEDOR' ? (
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between text-[8px] text-slate-500 dark:text-slate-400 font-semibold">
+                                            <span>Vendedores ({availableTeamSellers.length})</span>
+                                            {focusedMapSellerId !== null && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFocusedMapSellerId(null)}
+                                                    className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer font-bold"
+                                                >
+                                                    Mostrar Todos
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap gap-1 max-h-[140px] overflow-y-auto pr-0.5">
+                                            {availableTeamSellers.map(seller => {
+                                                const isFocused = focusedMapSellerId === Number(seller.id);
+                                                return (
                                                     <button
+                                                        key={seller.id}
                                                         type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSelectedDaysFilter([]);
-                                                            setSelectedQuinzenaFilter('ALL');
-                                                        }}
-                                                        className="text-[8px] font-black text-red-600 dark:text-red-400 hover:underline cursor-pointer flex items-center gap-0.5 ml-0.5"
-                                                        title="Limpar todos os filtros da legenda"
+                                                        onClick={() => setFocusedMapSellerId(prev => prev === Number(seller.id) ? null : Number(seller.id))}
+                                                        className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-[8.5px] font-bold transition-all cursor-pointer select-none active:scale-95 border ${
+                                                            isFocused
+                                                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xs ring-1 ring-offset-1 ring-slate-400'
+                                                                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                        }`}
+                                                        title={`Clique para ${isFocused ? 'desfocar' : 'focar'} no vendedor ${seller.name}`}
                                                     >
-                                                        ✕ Limpar
+                                                        <span 
+                                                            className="w-2.5 h-2.5 rounded-full shrink-0 border border-white dark:border-slate-900 shadow-xs" 
+                                                            style={{ backgroundColor: seller.color }} 
+                                                        />
+                                                        <span className="max-w-[120px] truncate">{seller.name}</span>
+                                                        <span className="text-[8px] opacity-70 bg-black/10 dark:bg-white/10 px-1 rounded-full font-mono">
+                                                            {seller.count}
+                                                        </span>
                                                     </button>
-                                                )}
-                                            </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* Conteúdo da Legenda: MODO DIA DA SEMANA */
+                                    <>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[8px] text-slate-500 dark:text-slate-400 font-semibold">Dias da Semana</span>
+                                            {(selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL') && (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedDaysFilter([]);
+                                                        setSelectedQuinzenaFilter('ALL');
+                                                    }}
+                                                    className="text-[8px] font-black text-red-600 dark:text-red-400 hover:underline cursor-pointer flex items-center gap-0.5 ml-0.5"
+                                                    title="Limpar todos os filtros da legenda"
+                                                >
+                                                    ✕ Limpar
+                                                </button>
+                                            )}
                                         </div>
                                         <div className="flex flex-wrap gap-1">
                                             {WEEKDAYS.map(day => {
@@ -10167,7 +10270,7 @@ export const AjusteRota: React.FC = () => {
                                     </>
                                 )}
                                 {showHeatmap && (
-                                    <div className={`flex items-center justify-between text-[8px] text-slate-600 dark:text-slate-300 font-bold ${isSingleSellerView ? 'pt-1 border-t border-slate-200/80 dark:border-slate-800' : ''}`}>
+                                    <div className="flex items-center justify-between text-[8px] text-slate-600 dark:text-slate-300 font-bold pt-1 border-t border-slate-200/80 dark:border-slate-800">
                                         <span className="flex items-center gap-1">🔥 Menor densidade</span>
                                         <div className="w-20 h-2 rounded-full bg-gradient-to-r from-blue-500 via-yellow-400 to-red-600 mx-2 shadow-xs ring-1 ring-slate-300 dark:ring-slate-700" />
                                         <span>Alta densidade</span>
