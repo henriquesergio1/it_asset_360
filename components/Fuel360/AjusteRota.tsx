@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
-import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount, lookupPlanilhaSimulacao } from './services/apiService';
+import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount, lookupPlanilhaSimulacao, getCidadesERP } from './services/apiService';
 import { VisitaPrevista, Colaborador, SequenceStrategy, ClienteRestricao } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, Tooltip, useMap, Polygon, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -1858,6 +1858,30 @@ export const AjusteRota: React.FC = () => {
     };
 
     // --- HANDLERS DE REGIÕES E CIDADES ---
+    const [erpCities, setErpCities] = useState<string[]>([]);
+    const [loadingErpCities, setLoadingErpCities] = useState<boolean>(false);
+
+    const handleLoadErpCities = useCallback(async (silent = false) => {
+        if (loadingErpCities) return;
+        setLoadingErpCities(true);
+        try {
+            const cities = await getCidadesERP();
+            if (Array.isArray(cities) && cities.length > 0) {
+                setErpCities(cities);
+            } else if (!silent) {
+                alert('Nenhuma cidade retornada pela query do ERP.');
+            }
+        } catch (err: any) {
+            console.error('Erro ao buscar cidades do ERP:', err);
+            if (!silent) {
+                alert('Não foi possível carregar as cidades do ERP. Verifique a conexão com o banco.');
+            }
+        } finally {
+            setLoadingErpCities(false);
+        }
+    }, [loadingErpCities]);
+
+    // Unificação de cidades atendidas (rotas em memória + cidades da query ERP)
     const availableCities = useMemo(() => {
         const citiesSet = new Set<string>();
         (adjustedRoutes || []).forEach(r => {
@@ -1865,8 +1889,20 @@ export const AjusteRota: React.FC = () => {
                 citiesSet.add(r.Cidade.trim().toUpperCase());
             }
         });
-        return Array.from(citiesSet).sort();
-    }, [adjustedRoutes]);
+        (erpCities || []).forEach(c => {
+            if (c && typeof c === 'string' && c.trim()) {
+                citiesSet.add(c.trim().toUpperCase());
+            }
+        });
+        return Array.from(citiesSet).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }, [adjustedRoutes, erpCities]);
+
+    // Auto-carregamento de cidades do ERP ao abrir a aba de Regiões se a lista estiver vazia
+    useEffect(() => {
+        if (showParamsModal && paramsActiveTab === 'regioes' && availableCities.length === 0 && !loadingErpCities && erpCities.length === 0) {
+            handleLoadErpCities(true);
+        }
+    }, [showParamsModal, paramsActiveTab, availableCities.length, loadingErpCities, erpCities.length, handleLoadErpCities]);
 
     const handleAddRegiaoCidade = (nome: string, cor: string, cidadesIniciais: string[] = []) => {
         if (!nome.trim()) return;
@@ -9022,12 +9058,14 @@ export const AjusteRota: React.FC = () => {
 
                         {/* Barra Flutuante Durante Desenho de Zona Poligonal */}
                         {isDrawingZone && (
-                            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4 animate-in fade-in">
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex flex-col sm:flex-row items-center gap-4 animate-in fade-in">
                                 <div className="flex items-center gap-2">
                                     <span className="text-base animate-bounce">📍</span>
                                     <div className="text-xs">
                                         <span className="font-black block">Modo Desenho de Zona: Clique no mapa para adicionar vértices</span>
-                                        <span className="text-slate-400 text-[10px]">{drawingZonePoints.length} ponto(s) demarcado(s)</span>
+                                        <span className="text-emerald-400 text-[11px] font-semibold">
+                                            Mapa limpo (clientes ocultados) • {drawingZonePoints.length} ponto(s) demarcado(s)
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -9050,7 +9088,7 @@ export const AjusteRota: React.FC = () => {
                             </div>
                         )}
 
-                        {scopedAdjustedRoutes.length === 0 ? (
+                        {scopedAdjustedRoutes.length === 0 && !isDrawingZone ? (
                             <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500">
                                 <LocationMarkerIcon className="w-12 h-12 mb-2 text-slate-300"/>
                                 <p className="text-sm font-semibold">Carregue ou importe um roteiro para visualizar o mapa</p>
@@ -9119,9 +9157,10 @@ export const AjusteRota: React.FC = () => {
                                 )}
 
                                 {/* Camada de Mapa de Calor (Heatmap de Concentração de Visitas) */}
-                                {showHeatmap && <HeatmapLayer points={heatmapPoints} />}
+                                {!isDrawingZone && showHeatmap && <HeatmapLayer points={heatmapPoints} />}
+
                                 {/* Casas / Bases dos Colaboradores com Destaque Especial */}
-                                {Array.from(new Set((focusedMapSellerId ? scopedAdjustedRoutes.filter(v => v.Cod_Vend === focusedMapSellerId) : scopedAdjustedRoutes).map(v => v.Cod_Vend))).map(vId => {
+                                {!isDrawingZone && Array.from(new Set((focusedMapSellerId ? scopedAdjustedRoutes.filter(v => v.Cod_Vend === focusedMapSellerId) : scopedAdjustedRoutes).map(v => v.Cod_Vend))).map(vId => {
                                     const vVisits = scopedAdjustedRoutes.filter(v => v.Cod_Vend === vId);
                                     const colab = getColabBySectorOrName(vId, vVisits[0]?.Nome_Vendedor);
                                     if(colab && colab.LatitudeBase && colab.LongitudeBase) {
@@ -9170,7 +9209,7 @@ export const AjusteRota: React.FC = () => {
                                 })}
 
                                 {/* Polilinhas das rotas originais (Tracejado claro se houver comparação) */}
-                                {(focusedMapSellerId ? originalPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : originalPolylines).map((line, idx) => {
+                                {!isDrawingZone && (focusedMapSellerId ? originalPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : originalPolylines).map((line, idx) => {
                                     const polyColor = ((isSingleSellerView || focusedMapSellerId !== null) && line.day && DAY_COLORS[line.day]) ? DAY_COLORS[line.day].hex : line.color;
                                     return (
                                         <Polyline 
@@ -9188,7 +9227,7 @@ export const AjusteRota: React.FC = () => {
                                 })}
 
                                 {/* Polilinhas das rotas otimizadas com transição visual animada e Popup Interativo */}
-                                {(focusedMapSellerId ? adjustedPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : adjustedPolylines).map((line: any, idx) => {
+                                {!isDrawingZone && (focusedMapSellerId ? adjustedPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : adjustedPolylines).map((line: any, idx) => {
                                     const polyColor = ((isSingleSellerView || focusedMapSellerId !== null) && line.day && DAY_COLORS[line.day]) ? DAY_COLORS[line.day].hex : line.color;
                                     return (
                                         <Polyline 
@@ -9250,8 +9289,8 @@ export const AjusteRota: React.FC = () => {
                                     );
                                 })}
 
-                                {/* Clientes Marcados (com distinção cromática por dia da semana e quinzena) */}
-                                {(focusedMapSellerId ? filteredRoutes.filter(v => v.Cod_Vend === focusedMapSellerId) : filteredRoutes).filter(v => v.Lat && v.Long).map((v, idx) => {
+                                {/* Clientes Marcados (com distinção cromática por dia da semana e quinzena - ocultados durante desenho de zona) */}
+                                {!isDrawingZone && (focusedMapSellerId ? filteredRoutes.filter(v => v.Cod_Vend === focusedMapSellerId) : filteredRoutes).filter(v => v.Lat && v.Long).map((v, idx) => {
                                     const pType = parsePeriodicidade(v.Periodicidade).tipo;
                                     const dayCfg = DAY_COLORS[v.Dia_Semana] || { hex: '#4f46e5', label: 'DIA' };
                                     const dayColor = dayCfg.hex;
@@ -9582,7 +9621,7 @@ export const AjusteRota: React.FC = () => {
                         )}
 
                         {/* Legenda Explicativa de Rotas e Heatmap no Mapa */}
-                        {scopedAdjustedRoutes.length > 0 && (isSingleSellerView || showHeatmap) && (
+                        {!isDrawingZone && scopedAdjustedRoutes.length > 0 && (isSingleSellerView || showHeatmap) && (
                             <div className="absolute bottom-2 right-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg z-[1000] text-[9px] space-y-1 max-w-[340px]">
                                 {isSingleSellerView && (
                                     <>
@@ -11533,11 +11572,34 @@ export const AjusteRota: React.FC = () => {
 
                                             {/* Seleção de Cidades da Carteira */}
                                             <div>
-                                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-1.5">
-                                                    Selecione as Cidades deste Grupo ({newRegionSelectedCities.length} selecionadas):
-                                                </label>
+                                                <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                                        Selecione as Cidades deste Grupo ({newRegionSelectedCities.length} selecionadas):
+                                                    </label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleLoadErpCities(false)}
+                                                        disabled={loadingErpCities}
+                                                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                                        title="Consultar e sincronizar a lista completa de cidades diretamente do ERP"
+                                                    >
+                                                        {loadingErpCities ? <SpinnerIcon className="w-3.5 h-3.5 animate-spin" /> : <RefreshIcon className="w-3.5 h-3.5" />}
+                                                        <span>{loadingErpCities ? 'Carregando Cidades...' : 'Carregar Cidades ERP'}</span>
+                                                    </button>
+                                                </div>
                                                 {availableCities.length === 0 ? (
-                                                    <p className="text-[11px] text-slate-400 italic">Carregue ou importe uma rota para listar as cidades atendidas.</p>
+                                                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                                                        <p className="text-[11px] text-slate-400 italic mb-2">Nenhuma cidade carregada no momento.</p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleLoadErpCities(false)}
+                                                            disabled={loadingErpCities}
+                                                            className="px-3 py-1.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                                        >
+                                                            {loadingErpCities ? <SpinnerIcon className="w-3.5 h-3.5 animate-spin" /> : <RefreshIcon className="w-3.5 h-3.5" />}
+                                                            Carregar Cidades da Query ERP
+                                                        </button>
+                                                    </div>
                                                 ) : (
                                                     <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto custom-scrollbar p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/50">
                                                         {availableCities.map(city => {

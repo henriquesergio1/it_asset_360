@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.211.0',
+    date: 'Hoje',
+    title: 'Fuel360: Cidades da Query ERP e Modo Desenho de Zonas com Mapa Limpo',
+    changes: [
+      'Modo Desenho de Zonas com Mapa Limpo: Ao clicar em "Desenhar Zona no Mapa", o mapa abre limpo, sem marcadores de clientes, halos ou linhas viárias, permitindo traçar polígonos sobre a malha de vias e bairros com total visibilidade, mesmo antes de carregar rotas.',
+      'Sincronização de Cidades do ERP: Criado o endpoint dedicado para consultar e agrupar as cidades atendidas diretamente da query ERP configurada no sistema.',
+      'Auto-Carregamento e Botão de Sincronização: Na aba Regiões & Zoneamento, as cidades do ERP são carregadas automaticamente ao abrir a tela (se vazias) e podem ser atualizadas a qualquer momento via botão "Carregar Cidades ERP".'
+    ]
+  },
+  {
     version: '3.210.0',
     date: 'Hoje',
     title: 'Fuel360: Opções Rota ERP e Rota via Planilha com Assistente de Destino Territorial',

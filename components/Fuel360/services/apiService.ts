@@ -224,6 +224,7 @@ const RealService = {
         if (startDate && endDate) query += `?startDate=${startDate}&endDate=${endDate}`;
         return apiRequest(query);
     },
+    getCidadesERP: (): Promise<string[]> => apiRequest('/roteiro/cidades'),
     getPromoterClients: (): Promise<any[]> => apiRequest('/roteiro/promotores/clientes'),
     // Rota Prevista (Simulações)
     checkRotaPrevistaExists: (periodo: string, totalKm: number): Promise<{ exists: boolean; id?: number; periodo?: string; totalKm?: number; descricao?: string }> => 
@@ -730,6 +731,9 @@ const MockService = {
     getClienteCoordenadas: async (): Promise<{ success: boolean; coordenadas: Record<number, { lat: number; lon: number; status: string; at: string }> }> => ({ success: true, coordenadas: {} }),
     saveClienteCoordenada: async (payload: any): Promise<{ success: boolean; message: string }> => ({ success: true, message: 'Salvo com sucesso' }),
     lookupPlanilhaSimulacao: async (itens: any[]) => ({ success: true, data: itens, summary: { total: itens.length, uniqueClients: itens.length, foundCoords: itens.length, missingCoords: 0, matchedSellers: itens.length } }),
+    getCidadesERP: async (): Promise<string[]> => [
+        'APARECIDA', 'CACAPAVA', 'GUARATINGUETA', 'JACAREI', 'LORENA', 'PINDAMONHANGABA', 'POTIM', 'ROSEIRA', 'SAO JOSE DOS CAMPOS', 'TAUBATE'
+    ],
     geocodeAddress: async (address: string | any) => {
         await new Promise(r => setTimeout(r, 800));
         const addrStr = typeof address === 'string' ? address : (address?.address || address?.street || '');
@@ -765,6 +769,6 @@ export const {
     getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount,
     moveColaboradoresToGroup, bulkUpdateColaboradores, corrigirAusenciasHistorico, getSugestoesVinculo, batchUpdateColaboradoresAddress,
     getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao,
-    getClienteCoordenadas, saveClienteCoordenada, lookupPlanilhaSimulacao,
+    getClienteCoordenadas, saveClienteCoordenada, lookupPlanilhaSimulacao, getCidadesERP,
     geocodeAddress, getOSRMData, getOSRMTable, calcDistance
 } = Service;

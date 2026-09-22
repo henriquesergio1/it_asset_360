@@ -4205,6 +4205,85 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
     }
 });
 
+// Consulta de cidades atendidas no ERP para agrupamento de regiões
+app.get('/api/fuel360/roteiro/cidades', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+
+        const settingsRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
+        const s = settingsRes.recordset ? settingsRes.recordset[0] : null;
+
+        const citiesSet = new Set();
+
+        if (s && s.ExtRoute_Host && s.ExtRoute_Query && s.ExtRoute_Host.trim() !== '' && s.ExtRoute_Query.trim() !== '') {
+            let extPool = null;
+            try {
+                extPool = new sql.ConnectionPool({
+                    server: s.ExtRoute_Host,
+                    port: parseInt(s.ExtRoute_Port || 1433),
+                    user: s.ExtRoute_User,
+                    password: s.ExtRoute_Pass,
+                    database: s.ExtRoute_Database,
+                    options: {
+                        encrypt: false,
+                        trustServerCertificate: true,
+                        requestTimeout: 60000
+                    }
+                });
+                await extPool.connect();
+
+                const now = new Date();
+                const y = now.getFullYear();
+                const m = now.getMonth();
+                const pad = (n) => String(n).padStart(2, '0');
+                const defaultStart = `${y}-${pad(m + 1)}-01`;
+                const lastDay = new Date(y, m + 1, 0).getDate();
+                const defaultEnd = `${y}-${pad(m + 1)}-${pad(lastDay)}`;
+
+                const extRes = await extPool.request()
+                    .input('pStartDate', sql.NVarChar, defaultStart)
+                    .input('pEndDate', sql.NVarChar, defaultEnd)
+                    .query(s.ExtRoute_Query);
+
+                await extPool.close();
+
+                if (extRes.recordset && extRes.recordset.length > 0) {
+                    extRes.recordset.forEach(row => {
+                        const c = row.CIDADE || row.Cidade || row.cidade || row.MUNICIP || row.MUNICIPIO || row.Municipio;
+                        if (c && typeof c === 'string' && c.trim()) {
+                            citiesSet.add(c.trim().toUpperCase());
+                        }
+                    });
+                }
+            } catch (extErr) {
+                if (extPool) try { await extPool.close(); } catch(e) {}
+                console.error('[Fuel360] Erro ao consultar cidades no ERP externo:', extErr.message);
+            }
+        }
+
+        // Fallback complementar: cidades cadastradas no histórico e coordenadas salvas
+        try {
+            const localCitiesRes = await pool.request().query(`
+                SELECT DISTINCT Cidade FROM FuelClienteCoordenadas WHERE Cidade IS NOT NULL AND Cidade <> ''
+            `);
+            if (localCitiesRes.recordset) {
+                localCitiesRes.recordset.forEach(r => {
+                    if (r.Cidade && r.Cidade.trim()) citiesSet.add(r.Cidade.trim().toUpperCase());
+                });
+            }
+        } catch (lErr) {
+            // Ignora se tabela local não tiver coluna Cidade
+        }
+
+        const sortedCities = Array.from(citiesSet).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        res.json(sortedCities);
+    } catch (err) {
+        console.error('Erro em GET /api/fuel360/roteiro/cidades:', err);
+        res.json([]);
+    }
+});
+
 // Proxy HTTPS seguro para o motor de rotas OSRM local (Evita Mixed Content HTTP vs HTTPS no navegador)
 app.get('/api/fuel360/osrm', async (req, res) => {
     const { coords } = req.query;
