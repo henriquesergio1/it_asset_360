@@ -259,6 +259,7 @@ const RealService = {
     getClienteERPCoords: (codCliente: number): Promise<{ success: boolean; codCliente: number; hasValidCoord: boolean; lat: number; long: number; razaoSocial: string; endereco: string; cidade: string; periodicidade: string; message: string }> => apiRequest(`/cliente/${codCliente}/erp-coords`),
     saveClienteCoordenada: (payload: { codCliente: number; lat: number; lon: number; status?: string; usuario?: string }): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-coordenadas', 'POST', payload),
     getClienteAuditoriaBase: (): Promise<{ success: boolean; clientes: any[] }> => apiRequest('/cliente-auditoria'),
+    getCoordenadasBaseCentral: (codigos?: number[]): Promise<{ success: boolean; coordenadas: Record<number, { lat: number; long: number; origem: string; statusAuditoria?: string; aceiteERP?: string }>; totalEncontrados: number }> => apiRequest('/cliente-coordenadas-base-central', 'POST', { codigos }),
     saveClienteAuditoria: (cliente: any): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-auditoria/salvar', 'POST', cliente),
     saveClienteAuditoriaLote: (clientes: any[], usuario?: string): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-auditoria/salvar-lote', 'POST', { clientes, usuario }),
     syncClienteAuditoriaERP: (clientes: any[], usuario?: string): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-auditoria/sincronizar-erp', 'POST', { clientes, usuario }),
@@ -737,6 +738,7 @@ const MockService = {
     getClienteERPCoords: async (codCliente: number) => ({ success: true, codCliente, hasValidCoord: true, lat: -23.8543, long: -46.1345, razaoSocial: 'Cliente Mock', endereco: '', cidade: '', periodicidade: 'SEMANAL', message: 'OK' }),
     saveClienteCoordenada: async (payload: any): Promise<{ success: boolean; message: string }> => ({ success: true, message: 'Salvo com sucesso' }),
     getClienteAuditoriaBase: async (): Promise<{ success: boolean; clientes: any[] }> => ({ success: true, clientes: [] }),
+    getCoordenadasBaseCentral: async (codigos?: number[]) => ({ success: true, coordenadas: {}, totalEncontrados: 0 }),
     saveClienteAuditoria: async (cliente: any): Promise<{ success: boolean; message: string }> => ({ success: true, message: 'Salvo com sucesso' }),
     saveClienteAuditoriaLote: async (clientes: any[], usuario?: string): Promise<{ success: boolean; message: string }> => ({ success: true, message: 'Lote salvo com sucesso' }),
     syncClienteAuditoriaERP: async (clientes: any[], usuario?: string): Promise<{ success: boolean; message: string }> => ({ success: true, message: 'Sincronizado com sucesso' }),
@@ -780,7 +782,7 @@ export const {
     moveColaboradoresToGroup, bulkUpdateColaboradores, corrigirAusenciasHistorico, getSugestoesVinculo, batchUpdateColaboradoresAddress,
     getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao,
     getClienteCoordenadas, getClienteERPCoords, saveClienteCoordenada, 
-    getClienteAuditoriaBase, saveClienteAuditoria, saveClienteAuditoriaLote, syncClienteAuditoriaERP,
+    getClienteAuditoriaBase, getCoordenadasBaseCentral, saveClienteAuditoria, saveClienteAuditoriaLote, syncClienteAuditoriaERP,
     lookupPlanilhaSimulacao, getCidadesERP,
     geocodeAddress, getOSRMData, getOSRMTable, calcDistance
 } = Service;

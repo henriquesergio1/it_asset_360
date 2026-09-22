@@ -3342,6 +3342,115 @@ app.get('/api/fuel360/cliente-auditoria', async (req, res) => {
     }
 });
 
+// --- CONSULTA RÁPIDA DE COORDENADAS NA BASE CENTRAL (SEM ACESSAR O ERP REMOTO) ---
+app.post('/api/fuel360/cliente-coordenadas-base-central', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const { codigos } = req.body || {};
+
+        let filterSql = '';
+        const validCods = Array.isArray(codigos) ? codigos.map(n => parseInt(n, 10)).filter(n => !isNaN(n) && n > 0) : [];
+        if (validCods.length > 0) {
+            filterSql = `WHERE ca.Cod_Cliente IN (${validCods.join(',')})`;
+        }
+
+        const queryStr = `
+            SELECT 
+                ca.Cod_Cliente,
+                ca.Lat_ERP,
+                ca.Long_ERP,
+                ca.Lat_Geocode,
+                ca.Long_Geocode,
+                ca.Aceite_ERP,
+                ca.Status AS StatusAuditoria,
+                cc.Lat AS LatManual,
+                cc.Long AS LongManual,
+                cc.Status AS StatusManual
+            FROM FuelClienteAuditoria ca
+            LEFT JOIN FuelClienteCoordenadas cc ON cc.Cod_Cliente = ca.Cod_Cliente
+            ${filterSql}
+        `;
+
+        const result = await pool.request().query(queryStr);
+        const coordsMap = {};
+
+        (result.recordset || []).forEach(row => {
+            const cod = row.Cod_Cliente;
+            let lat = null;
+            let lon = null;
+            let origem = 'ERP';
+
+            const latManual = row.LatManual !== null && row.LatManual !== undefined ? parseFloat(row.LatManual) : null;
+            const longManual = row.LongManual !== null && row.LongManual !== undefined ? parseFloat(row.LongManual) : null;
+            const hasManual = latManual !== null && longManual !== null && !isNaN(latManual) && !isNaN(longManual) && (Math.abs(latManual) > 0.001 || Math.abs(longManual) > 0.001);
+
+            const latGeo = row.Lat_Geocode !== null && row.Lat_Geocode !== undefined ? parseFloat(row.Lat_Geocode) : null;
+            const longGeo = row.Long_Geocode !== null && row.Long_Geocode !== undefined ? parseFloat(row.Long_Geocode) : null;
+            const hasGeo = latGeo !== null && longGeo !== null && !isNaN(latGeo) && !isNaN(longGeo) && (Math.abs(latGeo) > 0.001 || Math.abs(longGeo) > 0.001);
+
+            const latErp = row.Lat_ERP !== null && row.Lat_ERP !== undefined ? parseFloat(row.Lat_ERP) : null;
+            const longErp = row.Long_ERP !== null && row.Long_ERP !== undefined ? parseFloat(row.Long_ERP) : null;
+            const hasErp = latErp !== null && longErp !== null && !isNaN(latErp) && !isNaN(longErp) && (Math.abs(latErp) > 0.001 || Math.abs(longErp) > 0.001);
+
+            if (hasManual) {
+                lat = latManual;
+                lon = longManual;
+                origem = 'MANUAL';
+            } else if (row.Aceite_ERP === 'APROVADO_GEOCODE' && hasGeo) {
+                lat = latGeo;
+                lon = longGeo;
+                origem = 'GEOCODE_APROVADO';
+            } else if (hasErp) {
+                lat = latErp;
+                lon = longErp;
+                origem = 'ERP';
+            } else if (hasGeo) {
+                lat = latGeo;
+                lon = longGeo;
+                origem = 'GEOCODE';
+            }
+
+            if (lat !== null && lon !== null) {
+                coordsMap[cod] = {
+                    lat,
+                    long: lon,
+                    origem,
+                    statusAuditoria: row.StatusAuditoria,
+                    aceiteERP: row.Aceite_ERP
+                };
+            }
+        });
+
+        // Caso haja clientes em FuelClienteCoordenadas que não estejam em FuelClienteAuditoria
+        if (validCods.length > 0 || !filterSql) {
+            const manualQueryStr = validCods.length > 0 
+                ? `SELECT Cod_Cliente, Lat, Long FROM FuelClienteCoordenadas WHERE Cod_Cliente IN (${validCods.join(',')})`
+                : `SELECT Cod_Cliente, Lat, Long FROM FuelClienteCoordenadas`;
+            const manualRes = await pool.request().query(manualQueryStr);
+            (manualRes.recordset || []).forEach(r => {
+                const c = r.Cod_Cliente;
+                if (!coordsMap[c] && r.Lat && r.Long) {
+                    coordsMap[c] = {
+                        lat: parseFloat(r.Lat),
+                        long: parseFloat(r.Long),
+                        origem: 'MANUAL'
+                    };
+                }
+            });
+        }
+
+        res.json({
+            success: true,
+            coordenadas: coordsMap,
+            totalEncontrados: Object.keys(coordsMap).length
+        });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha ao consultar coordenadas na base central:', err.message);
+        res.status(500).json({ success: false, error: err.message, coordenadas: {} });
+    }
+});
+
 app.post('/api/fuel360/cliente-auditoria/salvar', async (req, res) => {
     const c = req.body || {};
     if (!c.Cod_Cliente) {

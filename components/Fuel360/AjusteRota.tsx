@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
-import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount, lookupPlanilhaSimulacao, getCidadesERP, getClienteERPCoords, saveClienteCoordenada } from './services/apiService';
+import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount, lookupPlanilhaSimulacao, getCidadesERP, getClienteERPCoords, saveClienteCoordenada, getCoordenadasBaseCentral } from './services/apiService';
 import { VisitaPrevista, Colaborador, SequenceStrategy, ClienteRestricao } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, Tooltip, useMap, Polygon, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -7984,54 +7984,24 @@ export const AjusteRota: React.FC = () => {
         }
     };
 
-    // Rechecar e sincronizar coordenadas de clientes em lote com ERP e base homologada
-    const syncVisitsCoordinatesWithERP = useCallback(async (visitsToSync: VisitaPrevista[]): Promise<{ updatedVisits: VisitaPrevista[]; updatedCount: number }> => {
+    // Rechecar e sincronizar coordenadas de clientes em lote com a Base Central do banco de dados local
+    const syncVisitsCoordinatesWithBaseCentral = useCallback(async (visitsToSync: VisitaPrevista[]): Promise<{ updatedVisits: VisitaPrevista[]; updatedCount: number }> => {
         if (!visitsToSync || visitsToSync.length === 0) {
             return { updatedVisits: visitsToSync, updatedCount: 0 };
         }
 
         try {
-            const queryItems = visitsToSync.map(v => ({
-                Cod_Cliente: Number(v.Cod_Cliente),
-                Cod_Vend: Number(v.Cod_Vend)
-            }));
-
-            const res = await lookupPlanilhaSimulacao(queryItems);
-            if (!res || !res.success || !Array.isArray(res.data)) {
+            const cods = visitsToSync.map(v => Number(v.Cod_Cliente)).filter(n => !isNaN(n) && n > 0);
+            const res = await getCoordenadasBaseCentral(cods);
+            if (!res || !res.success || !res.coordenadas) {
                 return { updatedVisits: visitsToSync, updatedCount: 0 };
             }
 
-            const freshCoordsMap = new Map<number, { lat: number; long: number }>();
-            res.data.forEach((item: any) => {
-                const cod = Number(item.Cod_Cliente);
-                const lat = Number(item.Lat);
-                const long = Number(item.Long);
-                if (cod && !isNaN(lat) && !isNaN(long) && (Math.abs(lat) > 0.001 || Math.abs(long) > 0.001)) {
-                    freshCoordsMap.set(cod, { lat, long });
-                }
-            });
-
-            // Considera também coordenadas manuais armazenadas localmente caso o ERP não tenha
-            try {
-                const raw = localStorage.getItem('FUEL360_CUSTOM_CLIENT_COORDS');
-                if (raw) {
-                    const localMap = JSON.parse(raw);
-                    Object.keys(localMap).forEach(key => {
-                        const cod = Number(key);
-                        const c = localMap[key];
-                        if (cod && c && typeof c.lat === 'number' && typeof c.long === 'number') {
-                            if (!freshCoordsMap.has(cod)) {
-                                freshCoordsMap.set(cod, { lat: c.lat, long: c.long });
-                            }
-                        }
-                    });
-                }
-            } catch (e) {}
-
+            const freshCoordsMap = res.coordenadas;
             let updatedCount = 0;
             const updatedVisits = visitsToSync.map(v => {
-                const fresh = freshCoordsMap.get(Number(v.Cod_Cliente));
-                if (fresh) {
+                const fresh = freshCoordsMap[Number(v.Cod_Cliente)];
+                if (fresh && typeof fresh.lat === 'number' && typeof fresh.long === 'number' && !isNaN(fresh.lat) && !isNaN(fresh.long) && (Math.abs(fresh.lat) > 0.001 || Math.abs(fresh.long) > 0.001)) {
                     const diffLat = Math.abs(Number(v.Lat || 0) - fresh.lat);
                     const diffLng = Math.abs(Number(v.Long || 0) - fresh.long);
                     if (diffLat > 0.00001 || diffLng > 0.00001) {
@@ -8048,7 +8018,7 @@ export const AjusteRota: React.FC = () => {
 
             return { updatedVisits, updatedCount };
         } catch (err: any) {
-            console.warn("Aviso ao sincronizar coordenadas com o ERP:", err);
+            console.warn("Aviso ao sincronizar coordenadas com a Base Central:", err);
             return { updatedVisits: visitsToSync, updatedCount: 0 };
         }
     }, []);
@@ -8117,19 +8087,19 @@ export const AjusteRota: React.FC = () => {
                 setTeamType('vendedores');
             }
 
-            // Rechecar e sincronizar coordenadas atualizadas do ERP/banco automaticamente
+            // Rechecar e sincronizar coordenadas atualizadas da Base Central automaticamente (ultrarrápido)
             let finalVisits = restoredVisits;
             try {
-                const syncRes = await syncVisitsCoordinatesWithERP(restoredVisits);
+                const syncRes = await syncVisitsCoordinatesWithBaseCentral(restoredVisits);
                 finalVisits = syncRes.updatedVisits;
                 if (syncRes.updatedCount > 0) {
                     setSyncCoordsFeedback({
                         type: 'success',
-                        message: `Simulação carregada! ${syncRes.updatedCount} cliente(s) tiveram suas coordenadas atualizadas com dados recentes do ERP/banco.`
+                        message: `Simulação carregada! ${syncRes.updatedCount} cliente(s) tiveram suas coordenadas atualizadas com a Base Central do banco.`
                     });
                 }
             } catch (syncErr) {
-                console.warn("Aviso ao sincronizar coordenadas do ERP na abertura da simulação:", syncErr);
+                console.warn("Aviso ao sincronizar coordenadas da Base Central na abertura da simulação:", syncErr);
             }
 
             setAdjustedRoutes(finalVisits);
@@ -8163,8 +8133,8 @@ export const AjusteRota: React.FC = () => {
         }
     };
 
-    // Atualização manual das coordenadas do ERP para a simulação/tela atual sem recarregar tudo
-    const handleManualSyncCoordinatesWithERP = useCallback(async () => {
+    // Atualização manual das coordenadas a partir da Base Central local sem recarregar tudo nem sobrecarregar o ERP
+    const handleManualSyncCoordinatesWithBaseCentral = useCallback(async () => {
         if (adjustedRoutes.length === 0) {
             alert("Nenhuma rota ou cliente carregado em tela para atualizar coordenadas.");
             return;
@@ -8174,7 +8144,7 @@ export const AjusteRota: React.FC = () => {
         setSyncCoordsFeedback(null);
 
         try {
-            const syncRes = await syncVisitsCoordinatesWithERP(adjustedRoutes);
+            const syncRes = await syncVisitsCoordinatesWithBaseCentral(adjustedRoutes);
             if (syncRes.updatedCount > 0) {
                 setAdjustedRoutes(syncRes.updatedVisits);
                 setOriginalRoutes(prev => prev.map(orig => {
@@ -8183,24 +8153,24 @@ export const AjusteRota: React.FC = () => {
                 }));
                 setSyncCoordsFeedback({
                     type: 'success',
-                    message: `✅ Coordenadas sincronizadas com sucesso! ${syncRes.updatedCount} cliente(s) atualizados com as coordenadas mais recentes do ERP/banco.`
+                    message: `✅ Coordenadas sincronizadas com a Base Central! ${syncRes.updatedCount} cliente(s) atualizados com as coordenadas da base local.`
                 });
             } else {
                 setSyncCoordsFeedback({
                     type: 'info',
-                    message: `ℹ️ Todas as coordenadas dos clientes em tela já estão atualizadas e em conformidade com o ERP/banco.`
+                    message: `ℹ️ Todas as coordenadas dos clientes em tela já estão em conformidade com a Base Central do banco de dados.`
                 });
             }
         } catch (err: any) {
-            console.error("Erro ao sincronizar coordenadas com ERP:", err);
+            console.error("Erro ao sincronizar coordenadas com a Base Central:", err);
             setSyncCoordsFeedback({
                 type: 'error',
-                message: `Erro ao sincronizar coordenadas com o ERP: ${err.message || err}`
+                message: `Erro ao sincronizar coordenadas com a Base Central: ${err.message || err}`
             });
         } finally {
             setIsSyncingErpCoords(false);
         }
-    }, [adjustedRoutes, syncVisitsCoordinatesWithERP]);
+    }, [adjustedRoutes, syncVisitsCoordinatesWithBaseCentral]);
 
     const handleDeleteSavedSimulation = async (simId: number, name: string) => {
         if (!confirm(`Tem certeza que deseja excluir permanentemente a simulação "${name}"?\nEsta ação removerá o registro e os detalhes de cálculo associados.`)) {
@@ -9107,21 +9077,21 @@ export const AjusteRota: React.FC = () => {
                         )}
                     </button>
 
-                    {/* Botão de Atualizar Coordenadas ERP no Cabeçalho Superior */}
+                    {/* Botão de Atualizar Coordenadas (Base Central) no Cabeçalho Superior */}
                     {adjustedRoutes.length > 0 && (
                         <button
                             type="button"
-                            onClick={handleManualSyncCoordinatesWithERP}
+                            onClick={handleManualSyncCoordinatesWithBaseCentral}
                             disabled={isSyncingErpCoords}
                             className="bg-white dark:bg-slate-800 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-slate-700 border border-sky-300 dark:border-sky-700 font-bold px-3 py-2 rounded-xl text-xs flex items-center shadow-xs h-[34px] cursor-pointer transition disabled:opacity-50"
-                            title="Rechecar e atualizar as coordenadas dos clientes diretamente do ERP sem recarregar a simulação"
+                            title="Rechecar e atualizar as coordenadas dos clientes diretamente da Base Central do banco de dados (ultrarrápido, sem sobrecarregar o ERP)"
                         >
                             {isSyncingErpCoords ? (
                                 <SpinnerIcon className="w-4 h-4 animate-spin mr-1.5 text-sky-600" />
                             ) : (
                                 <LocationMarkerIcon className="w-4 h-4 mr-1.5 text-sky-600" />
                             )}
-                            <span>{isSyncingErpCoords ? 'Atualizando...' : 'Atualizar Coordenadas ERP'}</span>
+                            <span>{isSyncingErpCoords ? 'Atualizando...' : 'Atualizar Coordenadas (Base Central)'}</span>
                         </button>
                     )}
 
@@ -10735,17 +10705,17 @@ export const AjusteRota: React.FC = () => {
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={handleManualSyncCoordinatesWithERP}
+                                                onClick={handleManualSyncCoordinatesWithBaseCentral}
                                                 disabled={isSyncingErpCoords || effectiveScopedRoutes.length === 0}
                                                 className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition h-[32px] cursor-pointer disabled:opacity-50"
-                                                title="Rechecar e sincronizar coordenadas GPS mais recentes de todos os clientes no ERP/banco sem recarregar nem perder os ajustes da tela"
+                                                title="Rechecar e sincronizar coordenadas GPS mais recentes de todos os clientes a partir da Base Central Salva no banco de dados local (ultrarrápido, sem sobrecarregar o ERP)"
                                             >
                                                 {isSyncingErpCoords ? (
                                                     <SpinnerIcon className="w-3.5 h-3.5 animate-spin mr-1.5" />
                                                 ) : (
                                                     <LocationMarkerIcon className="w-3.5 h-3.5 mr-1.5" />
                                                 )}
-                                                <span>{isSyncingErpCoords ? 'Atualizando...' : 'Atualizar Coordenadas ERP'}</span>
+                                                <span>{isSyncingErpCoords ? 'Atualizando...' : 'Atualizar Coordenadas (Base Central)'}</span>
                                             </button>
                                             <button
                                                 type="button"

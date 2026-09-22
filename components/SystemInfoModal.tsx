@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.221.0',
+    date: 'Hoje',
+    title: 'Fuel360: Sincronização Ultrarrápida de Coordenadas via Base Central Salva (Local SQL)',
+    changes: [
+      'Sincronização Direta pela Base Central: Ajuste de Rota agora utiliza prioritariamente a Base Central Salva no banco de dados local (FuelClienteAuditoria e FuelClienteCoordenadas) para consultar coordenadas atualizadas.',
+      'Execução Instantânea e Sem Sobrecarga: Eliminação de chamadas de rede remotas lentas ao ERP durante a abertura de simulações salvas ou atualização manual de coordenadas em tela.',
+      'Isolamento da Consulta ERP Remota: O acesso externo ao ERP permanece estritamente reservado para o carregamento inicial da carteira de vendedores ("Rota ERP") e sincronização cadastral no Geolocalizador.',
+      'Priorização Inteligente de Coordenadas: Resolução de coordenadas na ordem: ajustes manuais homologados > geocode aprovado > coordenadas salvas do ERP > geocode padrão.'
+    ]
+  },
+  {
     version: '3.220.0',
     date: 'Hoje',
     title: 'Fuel360: Rechecagem Automática de Coordenadas do ERP em Simulações Salvas e Botão de Atualização em Tela',
