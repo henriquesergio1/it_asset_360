@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.220.0',
+    date: 'Hoje',
+    title: 'Fuel360: Rechecagem Automática de Coordenadas do ERP em Simulações Salvas e Botão de Atualização em Tela',
+    changes: [
+      'Rechecagem Automática ao Abrir Simulação: Ao carregar uma simulação salva, o sistema recheca em lote as coordenadas mais recentes dos clientes diretamente no ERP e na base homologada, aplicando correções geográficas sem perder nenhum ajuste manual de dias, sequências ou vendedores.',
+      'Botão "Atualizar Coordenadas ERP": Disponibilizado botão dedicado no cabeçalho e na barra de ações da tabela para consultar e sincronizar as coordenadas mais recentes de todos os clientes em tela instantaneamente.',
+      'Preservação Integral de Roteirização: Vendedores atribuídos, dias da semana, periodicidade e sequenciamento quinzenal são 100% preservados durante qualquer sincronização de coordenadas.',
+      'Feedback Visual de Sincronização: Banner informativo detalha a quantidade de clientes que tiveram coordenadas atualizadas ou confirma se todas as coordenadas já estavam em perfeita conformidade.'
+    ]
+  },
+  {
     version: '3.219.0',
     date: 'Hoje',
     title: 'Fuel360: Coloração Dinâmica por Vendedor/Dia e Legenda Territorial para Invasão de Área',
