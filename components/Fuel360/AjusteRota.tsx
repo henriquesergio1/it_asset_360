@@ -5593,95 +5593,158 @@ export const AjusteRota: React.FC = () => {
                 });
 
                 if (optBalanceWorkload) {
-                    dynamicQuinzenais.sort((a, b) => a.polarAngle - b.polarAngle);
-
                     const q13: typeof uniqueClients = [...fixed13];
                     const q24: typeof uniqueClients = [...fixed24];
 
-                    const satGroups = new Map<string, typeof uniqueClients>();
-                    const nonSat: typeof uniqueClients = [];
-
-                    dynamicQuinzenais.forEach(c => {
-                        const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
-                        const isSat = clusters.some(cl => cl.isSatellite && cl.cityName === cCity);
-                        if (isSat) {
-                            if (!satGroups.has(cCity)) satGroups.set(cCity, []);
-                            satGroups.get(cCity)!.push(c);
-                        } else {
-                            nonSat.push(c);
+                    // Identifica a cidade base do vendedor (pelo EnderecoBase, proximidade geográfica ou maior concentração de clientes)
+                    const sellerBaseCity = (() => {
+                        if (colab?.EnderecoBase) {
+                            const parts = colab.EnderecoBase.split('-');
+                            if (parts.length >= 2) {
+                                const possibleCity = parts[parts.length - 2]?.trim().toUpperCase();
+                                if (possibleCity && possibleCity.length > 2) return possibleCity;
+                            }
                         }
+                        if (baseLat && baseLng && uniqueClients.length > 0) {
+                            let nearestCity = '';
+                            let minDist = Infinity;
+                            uniqueClients.forEach(c => {
+                                if (c.lat && c.lng && c.sampleVisit.Cidade) {
+                                    const d = calcDist(baseLat, baseLng, c.lat, c.lng);
+                                    if (d < minDist) {
+                                        minDist = d;
+                                        nearestCity = c.sampleVisit.Cidade.trim().toUpperCase();
+                                    }
+                                }
+                            });
+                            if (nearestCity) return nearestCity;
+                        }
+                        const cityCounts = new Map<string, number>();
+                        uniqueClients.forEach(c => {
+                            const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
+                            if (cCity) cityCounts.set(cCity, (cityCounts.get(cCity) || 0) + 1);
+                        });
+                        let maxCity = '';
+                        let maxCount = 0;
+                        cityCounts.forEach((count, cCity) => {
+                            if (count > maxCount) {
+                                maxCount = count;
+                                maxCity = cCity;
+                            }
+                        });
+                        return maxCity;
+                    })();
+
+                    // Helper para ordenação espacial contígua por projeção no eixo principal de dispersão (PCA 1D)
+                    // Garante divisão em quadrantes/setores contíguos (ex: Norte/Sul ou Leste/Oeste), eliminando sobreposição
+                    const sortClientsContiguously = (clients: typeof uniqueClients) => {
+                        if (clients.length <= 2) return [...clients];
+                        const valid = clients.filter(c => c.lat && c.lng);
+                        if (valid.length <= 2) {
+                            return [...clients].sort((a, b) => a.polarAngle - b.polarAngle);
+                        }
+                        const avgLat = valid.reduce((s, c) => s + c.lat, 0) / valid.length;
+                        const avgLng = valid.reduce((s, c) => s + c.lng, 0) / valid.length;
+
+                        let varLat = 0, varLng = 0, covLatLng = 0;
+                        valid.forEach(c => {
+                            const dLat = (c.lat - avgLat) * 111.32;
+                            const dLng = (c.lng - avgLng) * 111.32 * Math.cos((avgLat * Math.PI) / 180);
+                            varLat += dLat * dLat;
+                            varLng += dLng * dLng;
+                            covLatLng += dLat * dLng;
+                        });
+
+                        const theta = 0.5 * Math.atan2(2 * covLatLng, varLng - varLat);
+                        const axisX = Math.cos(theta);
+                        const axisY = Math.sin(theta);
+
+                        return [...clients].sort((a, b) => {
+                            const projA = (a.lng - avgLng) * axisX + (a.lat - avgLat) * axisY;
+                            const projB = (b.lng - avgLng) * axisX + (b.lat - avgLat) * axisY;
+                            return projA - projB;
+                        });
+                    };
+
+                    // Agrupamento dos clientes quinzenais do dia por cidade
+                    const cityBuckets = new Map<string, typeof uniqueClients>();
+                    dynamicQuinzenais.forEach(c => {
+                        const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase() || 'GERAL';
+                        if (!cityBuckets.has(cCity)) cityBuckets.set(cCity, []);
+                        cityBuckets.get(cCity)!.push(c);
                     });
 
                     const protectedCityGroupedClients = new Set<string | number>();
-
                     const dayLimitHours = (activeDays[d] === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
                     const dayLimitMins = dayLimitHours * 60;
                     const weeklyWorkloadMins = semanais.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit) + interStopTravelMins, 0);
 
-                    // Cidades satélites:
-                    // Se optGroupSmallCitiesInSingleCycle estiver ativo e a carga horária total da cidade couber na jornada diária,
-                    // agrupa 100% dos clientes da cidade em um único ciclo quinzenal com folga no outro ciclo,
-                    // evitando viagens repetidas até a cidade toda semana.
-                    satGroups.forEach((sList) => {
-                        const cityServiceTimeMins = sList.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
-                        const cityInternalTravelMins = Math.max(0, (sList.length - 1) * interStopTravelMins);
+                    // 1. Processamento de Cidades Secundárias (distintas da cidade base)
+                    // Prioridade: alocar 100% dos clientes da cidade em um único ciclo quinzenal (1/3 ou 2/4),
+                    // evitando viagens repetidas à cidade toda semana.
+                    const baseCityClients: typeof uniqueClients = [];
+
+                    cityBuckets.forEach((cList, cCity) => {
+                        if (cCity === sellerBaseCity && cityBuckets.size > 1) {
+                            baseCityClients.push(...cList);
+                            return;
+                        }
+
+                        const cityServiceTimeMins = cList.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
+                        const cityInternalTravelMins = Math.max(0, (cList.length - 1) * interStopTravelMins);
                         const cityTotalWorkloadMins = cityServiceTimeMins + cityInternalTravelMins;
 
-                        // Verifica se a carga da cidade cabe confortavelmente na jornada diária (com margem de deslocamento)
+                        // Verifica se a cidade cabe confortavelmente em um único ciclo quinzenal
                         const canGroupInSingleCycle = optGroupSmallCitiesInSingleCycle &&
-                            sList.length <= optSmallCityThreshold &&
-                            (weeklyWorkloadMins + cityTotalWorkloadMins <= dayLimitMins * 0.9 || cityTotalWorkloadMins <= dayLimitMins * 0.85);
+                            cList.length <= optSmallCityThreshold &&
+                            (weeklyWorkloadMins + cityTotalWorkloadMins <= dayLimitMins * 0.95 || cityTotalWorkloadMins <= dayLimitMins * 0.85);
 
                         if (canGroupInSingleCycle) {
-                            // Aloca a cidade inteira no ciclo com menor carga
+                            // Aloca a cidade inteira no ciclo com menor carga atual
                             if (q13.length <= q24.length) {
-                                q13.push(...sList);
+                                q13.push(...cList);
                             } else {
-                                q24.push(...sList);
+                                q24.push(...cList);
                             }
-                            // Blinda os clientes da cidade para não serem desmembrados na equalização fina
-                            sList.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
+                            // Blinda os clientes da cidade para preservá-los juntos na equalização fina
+                            cList.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
                         } else {
-                            const totalInDayWithoutSat = semanais.length + nonSat.length;
-                            const wouldEmptyOtherCycle = (semanais.length === 0 && satGroups.size === 1);
-                            const isLargeGroup = sList.length >= 4;
+                            // Se a cidade secundária não couber em um único ciclo, divide em setores geográficos contíguos
+                            // (ex: Norte na quinzena 1/3 e Sul na quinzena 2/4), NUNCA intercalando cliente a cliente
+                            const sortedSec = sortClientsContiguously(cList);
+                            const half = Math.ceil(sortedSec.length / 2);
+                            const part1 = sortedSec.slice(0, half);
+                            const part2 = sortedSec.slice(half);
 
-                            if (wouldEmptyOtherCycle || (isLargeGroup && sList.length > (totalInDayWithoutSat + 2))) {
-                                // Subdivide a cidade entre os dois ciclos de forma geograficamente contígua
-                                sList.sort((a, b) => a.polarAngle - b.polarAngle);
-                                const half = Math.ceil(sList.length / 2);
-                                const part1 = sList.slice(0, half);
-                                const part2 = sList.slice(half);
-
-                                if (q13.length <= q24.length) {
-                                    q13.push(...part1);
-                                    q24.push(...part2);
-                                } else {
-                                    q24.push(...part1);
-                                    q13.push(...part2);
-                                }
+                            if (q13.length <= q24.length) {
+                                q13.push(...part1);
+                                q24.push(...part2);
                             } else {
-                                if (q13.length <= q24.length) {
-                                    q13.push(...sList);
-                                } else {
-                                    q24.push(...sList);
-                                }
+                                q24.push(...part1);
+                                q13.push(...part2);
                             }
                         }
                     });
 
-                    // Clientes não-satélites dinâmicos: distribui alternadamente equilibrando as quinzenas
-                    nonSat.sort((a, b) => a.polarAngle - b.polarAngle);
-                    nonSat.forEach(c => {
-                        if (q13.length <= q24.length) {
-                            q13.push(c);
-                        } else {
-                            q24.push(c);
-                        }
-                    });
+                    // 2. Processamento da Cidade Base / Região Metropolitana Central
+                    // Setorização contígua por quadrantes geográficos (elimina rotas sobrepostas na cidade base)
+                    if (baseCityClients.length > 0 || (cityBuckets.size === 1 && cityBuckets.has(sellerBaseCity))) {
+                        const targetBaseClients = baseCityClients.length > 0 ? baseCityClients : (cityBuckets.get(sellerBaseCity) || []);
+                        const sortedBase = sortClientsContiguously(targetBaseClients);
 
-                    // Equalização fina: garante que a diferença entre q13 e q24 seja no máximo 1 cliente
-                    // Salvaguarda: NUNCA move clientes com quinzena fixada (fixed13 / fixed24) nem de cidades agrupadas em ciclo único!
+                        // Determina o ponto de corte contíguo para balancear perfeitamente os ciclos
+                        const totalNeeded13 = Math.max(0, Math.round((sortedBase.length + q24.length - q13.length) / 2));
+                        const cutIdx = Math.max(0, Math.min(sortedBase.length, totalNeeded13));
+
+                        const part13 = sortedBase.slice(0, cutIdx);
+                        const part24 = sortedBase.slice(cutIdx);
+
+                        q13.push(...part13);
+                        q24.push(...part24);
+                    }
+
+                    // 3. Equalização Fina com Salvaguarda Territorial
+                    // Ajusta diferenças residuais sem desmembrar cidades blindadas e movendo apenas clientes da fronteira
                     let maxLoop = 15;
                     while (Math.abs(q13.length - q24.length) > 1 && maxLoop-- > 0) {
                         if (q13.length > q24.length + 1) {

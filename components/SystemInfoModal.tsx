@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.215.0',
+    date: 'Hoje',
+    title: 'Fuel360: Otimização Territorial Quinzenal (Agrupamento por Cidade e Quadrantes Contíguos)',
+    changes: [
+      'Agrupamento Territorial de Cidades Secundárias: Cidades externas à base (ex: Caçapava) agora são alocadas integralmente em um único ciclo quinzenal (Semana 1/3 ou Semana 2/4) quando a carga diária permitir, eliminando deslocamentos redundantes semanais.',
+      'Setorização Contígua por Quadrantes Geográficos: Para a cidade base (ex: Taubaté) ou cidades volumosas, eliminada a distribuição alternada cliente a cliente; os clientes agora são divididos em blocos geográficos contíguos (ex: Norte na 1/3 e Sul na 2/4) pelo eixo principal de dispersão espacial (PCA 1D).',
+      'Eliminação de Sobreposição de Rotas: Fim dos cruzamentos de trajetos onde o vendedor passava pelas mesmas ruas e bairros em semanas alternadas.',
+      'Equalização Fina Territorial: Balanceamento residual de visitas que preserva cidades blindadas e movimenta apenas clientes da fronteira espacial entre as quinzenas.'
+    ]
+  },
+  {
     version: '3.214.0',
     date: 'Hoje',
     title: 'Fuel360: Base Centralizada de Auditoria de Geocodificação no Banco de Dados',
