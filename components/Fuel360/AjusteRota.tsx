@@ -507,7 +507,16 @@ const applyCustomCoordinates = (routes: VisitaPrevista[]): VisitaPrevista[] => {
         const raw = localStorage.getItem('FUEL360_CUSTOM_CLIENT_COORDS');
         if (!raw) return routes;
         const customMap: Record<string, { lat: number; long: number }> = JSON.parse(raw);
-        return routes.map(r => {
+        let changed = false;
+        const updatedRoutes = routes.map(r => {
+            // Se o item já veio com coordenadas válidas do ERP, NÃO sobrescrever com cache antigo do navegador
+            if (r.Lat && r.Long && (Math.abs(r.Lat) > 0.001 || Math.abs(r.Long) > 0.001)) {
+                if (customMap[String(r.Cod_Cliente)]) {
+                    delete customMap[String(r.Cod_Cliente)];
+                    changed = true;
+                }
+                return r;
+            }
             const custom = customMap[String(r.Cod_Cliente)];
             if (custom && typeof custom.lat === 'number' && typeof custom.long === 'number' && !isNaN(custom.lat) && !isNaN(custom.long)) {
                 return {
@@ -518,6 +527,10 @@ const applyCustomCoordinates = (routes: VisitaPrevista[]): VisitaPrevista[] => {
             }
             return r;
         });
+        if (changed) {
+            localStorage.setItem('FUEL360_CUSTOM_CLIENT_COORDS', JSON.stringify(customMap));
+        }
+        return updatedRoutes;
     } catch {
         return routes;
     }

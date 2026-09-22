@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.211.1',
+    date: 'Hoje',
+    title: 'Fuel360: Priorização e Sincronização de Coordenadas de Clientes do ERP',
+    changes: [
+      'Prioridade Absoluta às Coordenadas do ERP: Clientes que tiveram Latitude e Longitude corrigidas no ERP têm seus valores refletidos imediatamente ao carregar rotas no Fuel360.',
+      'Sincronização com Base SQL Corporativa: As coordenadas válidas vindas do ERP são sincronizadas e persistidas automaticamente na tabela FuelClienteCoordenadas, alimentando o geolocalizador e o restante do sistema.',
+      'Normalização Robusta e Limpeza de Cache: Suporte a strings com vírgula (ex: "-23,12345"), mapeamento expandido de aliases de coordenadas e limpeza de caches locais obsoletos do navegador.'
+    ]
+  },
+  {
     version: '3.211.0',
     date: 'Hoje',
     title: 'Fuel360: Cidades da Query ERP e Modo Desenho de Zonas com Mapa Limpo',
