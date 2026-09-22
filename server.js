@@ -3560,6 +3560,8 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
         console.error('[Fuel360 ERROR] Falha no lookup da planilha de simulacao:', err.message);
         res.status(500).json({ success: false, error: err.message });
     }
+});
+
 // Endpoint para consulta e sincronização em tempo real das coordenadas de um cliente específico no ERP
 app.get('/api/fuel360/cliente/:codCliente/erp-coords', async (req, res) => {
     try {

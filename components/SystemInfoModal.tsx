@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.212.1',
+    date: 'Hoje',
+    title: 'Hotfix: Correção de Fechamento de Sintaxe no Backend',
+    changes: [
+      'Correção de Sintaxe no Servidor: Corrigido fechamento do endpoint app.post(/api/fuel360/lookup-planilha-simulacao) em server.js que causava SyntaxError na inicialização do serviço Node em produção.'
+    ]
+  },
+  {
     version: '3.212.0',
     date: 'Hoje',
     title: 'Fuel360: Periodicidade Atual do ERP na Planilha e Sincronização em Tempo Real de Coordenadas',
