@@ -249,11 +249,26 @@ const RealService = {
 
         const cleanZip = zip.replace(/\D/g, '');
 
-        // Função interna para resolver coordenadas pelo CEP (AwesomeAPI -> Google Maps CEP -> Nominatim)
+        // Função interna para resolver coordenadas pelo CEP (BrasilAPI -> AwesomeAPI -> Google Maps CEP -> Nominatim)
         const resolveCoordsByCep = async (targetCep: string): Promise<{ lat: number; lon: number } | null> => {
             if (!targetCep || targetCep.length !== 8) return null;
 
-            // 1. AwesomeAPI
+            // 1. BrasilAPI (Maior precisão para CEPs brasileiros e limites municipais)
+            try {
+                const resB = await fetch(`https://brasilapi.com.br/api/cep/v2/${targetCep}`);
+                if (resB.ok) {
+                    const bData = await resB.json();
+                    if (bData && bData.location && bData.location.coordinates) {
+                        const lat = parseFloat(bData.location.coordinates.latitude);
+                        const lon = parseFloat(bData.location.coordinates.longitude);
+                        if (!isNaN(lat) && !isNaN(lon) && Math.abs(lat) > 0.001) return { lat, lon };
+                    }
+                }
+            } catch (eB) {
+                console.warn('[Fuel360] Fallback BrasilAPI falhou:', eB);
+            }
+
+            // 2. AwesomeAPI
             try {
                 const resCep = await fetch(`https://cep.awesomeapi.com.br/json/${targetCep}`);
                 if (resCep.ok) {
@@ -268,7 +283,7 @@ const RealService = {
                 console.warn('[Fuel360] Fallback AwesomeAPI falhou:', eCep);
             }
 
-            // 2. Google Maps com o CEP formatado
+            // 3. Google Maps com o CEP formatado
             try {
                 const formattedCep = `${targetCep.substring(0, 5)}-${targetCep.substring(5)}`;
                 const gCepRes = await fetch('/api/geocode', {
@@ -288,7 +303,7 @@ const RealService = {
                 console.warn('[Fuel360] Fallback Google Maps CEP falhou:', eGCep);
             }
 
-            // 3. Nominatim por Postalcode
+            // 4. Nominatim por Postalcode
             try {
                 const urlZipNom = `https://nominatim.openstreetmap.org/search?format=json&postalcode=${targetCep}&country=Brazil&limit=1`;
                 const resNomZip = await fetch(urlZipNom, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
@@ -344,15 +359,14 @@ const RealService = {
                     const lat = Number(gRes.lat);
                     const lon = Number(gRes.lon);
                     if (!isNaN(lat) && !isNaN(lon)) {
-                        // Guarda de consistência geográfica para rodovias interestaduais/estaduais
-                        const isHighway = /rodovia|rod\.|sp\s*-?\s*\d+|br\s*-?\s*\d+|km\s*\d+/i.test(fullQuery);
-                        if (isHighway && cleanZip.length === 8 && city) {
-                            const cepPoint = await resolveCoordsByCep(cleanZip);
+                        // Guarda Universal de Consistência Geográfica Municipal:
+                        // Evita falsos positivos intermunicipais quando nomes de ruas contêm nomes de outras cidades (ex: Av Sao Jose dos Campos em Paraibuna)
+                        if (cleanZip.length === 8 || city) {
+                            const cepPoint = cleanZip.length === 8 ? await resolveCoordsByCep(cleanZip) : null;
                             if (cepPoint) {
                                 const distFromCep = RealService.calcDistance(lat, lon, cepPoint.lat, cepPoint.lon);
-                                // Se a busca genérica por rodovia colocou o pino em outro município (> 10 km do CEP oficial da rodovia)
-                                if (distFromCep > 10) {
-                                    console.warn(`[Fuel360] Ponto do Google Maps divergiu ${distFromCep.toFixed(1)}km do CEP setorial de ${city} (típico em rodovias interestaduais). Adotando coordenada de alta precisão do CEP do município.`);
+                                if (distFromCep > 12) {
+                                    console.warn(`[Fuel360] Ponto do Google Maps divergiu ${distFromCep.toFixed(1)}km do centróide de ${city || cleanZip}. Rejeitando falso positivo intermunicipal e adotando coordenada de alta precisão do CEP.`);
                                     return cepPoint;
                                 }
                             }
@@ -376,6 +390,10 @@ const RealService = {
             }
             attempts.push({ label: 'Logradouro e Número', query: `${addrNum}, ${city}${state ? ` - ${state}` : ''}, Brasil` });
             attempts.push({ label: 'Logradouro', query: `${street}, ${city}${state ? ` - ${state}` : ''}, Brasil` });
+            if (neighborhood) {
+                attempts.push({ label: 'Bairro e Cidade', query: `${neighborhood}, ${city}${state ? ` - ${state}` : ''}, Brasil` });
+            }
+            attempts.push({ label: 'Centro da Cidade', query: `Centro, ${city}${state ? ` - ${state}` : ''}, Brasil` });
         }
 
         if (fullQuery && !attempts.some(a => a.query === fullQuery)) {
@@ -438,6 +456,17 @@ const RealService = {
                         }
 
                         if (!isNaN(lat) && !isNaN(lon)) {
+                            // Guarda de consistência geográfica também para tentativas do Nominatim
+                            if (cleanZip.length === 8 || city) {
+                                const cepPoint = cleanZip.length === 8 ? await resolveCoordsByCep(cleanZip) : null;
+                                if (cepPoint) {
+                                    const dist = RealService.calcDistance(lat, lon, cepPoint.lat, cepPoint.lon);
+                                    if (dist > 12) {
+                                        console.warn(`[Fuel360] Ponto do Nominatim (${attempt.label}) divergiu ${dist.toFixed(1)}km de ${city}. Rejeitando falso positivo intermunicipal.`);
+                                        continue;
+                                    }
+                                }
+                            }
                             return { lat, lon };
                         }
                     }

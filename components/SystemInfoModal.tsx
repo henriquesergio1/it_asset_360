@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.208.1',
+    date: 'Hoje',
+    title: 'Fuel360: Blindagem Municipal do Geolocalizador ERP e Integração BrasilAPI',
+    changes: [
+      'Guarda de Consistência Geográfica Municipal: Implementada validação universal de distância municipal. Se o motor geocodificador retornar um ponto que divirja mais de 12 km do centróide/CEP da cidade do cliente (como ocorrido quando a via continha o nome de cidades vizinhas), o falso positivo intermunicipal é sumariamente rejeitado.',
+      'Integração de Alta Precisão com a BrasilAPI: O resolvedor de CEPs agora utiliza prioritariamente a BrasilAPI (base oficial dos Correios / OpenCEP), garantindo centróides urbanos exatos para qualquer município brasileiro.',
+      'Refinamento de Consultas Livres: A montagem de endereços de busca foi otimizada para não poluir os termos com prefixos desnecessários, adicionando tentativas estruturadas para o bairro e centro da cidade.'
+    ]
+  },
+  {
     version: '3.208.0',
     date: 'Hoje',
     title: 'Fuel360: Persistência SQL de Coordenadas Auditadas e Canal de Remuneração no Excel',
