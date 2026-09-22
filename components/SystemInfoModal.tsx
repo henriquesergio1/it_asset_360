@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.222.0',
+    date: 'Hoje',
+    title: 'Fuel360: Waypoints de Desvio Manual Arrastáveis e Rotas Alternativas no Mapa (Anti-Estradas de Terra)',
+    changes: [
+      'Pontos de Desvio Manuais no Mapa (Estilo Google Maps): Possibilidade de inserir waypoints de desvio clicando diretamente na rota no mapa. Marcadores arrastáveis permitem deslocar o traçado para rodovias ou vias pavimentadas em tempo real.',
+      'Suporte a Rotas Alternativas do OSRM: O motor viário passa a consultar rotas alternativas viáveis. As alternativas são renderizadas com destaque tracejado e tooltip informativo para fixação com um clique.',
+      'Recálculo Instantâneo com Desvios: Ao soltar o marcador arrastável no mapa (dragend), o sistema recalcula imediatamente a rota rodoviária pelo OSRM passando pelo ponto de desvio, atualizando a quilometragem e tempo real.',
+      'Persistência nos Snapshots de Simulação: Os waypoints de desvio manuais configurados são preservados e restaurados fielmente ao salvar e recarregar simulações.'
+    ]
+  },
+  {
     version: '3.221.0',
     date: 'Hoje',
     title: 'Fuel360: Sincronização Ultrarrápida de Coordenadas via Base Central Salva (Local SQL)',

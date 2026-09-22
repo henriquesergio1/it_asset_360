@@ -5018,11 +5018,12 @@ app.get('/api/fuel360/roteiro/cidades', async (req, res) => {
 
 // Proxy HTTPS seguro para o motor de rotas OSRM local (Evita Mixed Content HTTP vs HTTPS no navegador)
 app.get('/api/fuel360/osrm', async (req, res) => {
-    const { coords } = req.query;
+    const { coords, alternatives } = req.query;
     if (!coords) return res.status(400).json({ error: 'Coordenadas inválidas' });
     try {
         const SERVER_IP = "10.10.10.10";
-        const url = `http://${SERVER_IP}:5000/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+        const altParam = (alternatives === 'true' || alternatives === '2') ? '&alternatives=true' : '';
+        const url = `http://${SERVER_IP}:5000/route/v1/driving/${coords}?overview=full&geometries=geojson${altParam}`;
         const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
         if (!response.ok) return res.status(502).json({ error: 'Erro no servidor OSRM local' });
         const data = await response.json();

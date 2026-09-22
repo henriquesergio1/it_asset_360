@@ -136,6 +136,58 @@ function createHomeIcon(promoterColor?: string, isAnomalous?: boolean, anomalyBa
     });
 }
 
+function createDeviationWaypointIcon(index: number, dayColor?: string) {
+    return L.divIcon({
+        className: 'custom-waypoint-icon',
+        html: `
+            <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: grab; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">
+                <div style="
+                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    border: 2.5px solid #ffffff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 0 0 2px ${dayColor || '#f59e0b'}, 0 0 10px rgba(245, 158, 11, 0.6);
+                ">
+                    <svg style="width: 16px; height: 16px; fill: none; stroke: white; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+                    </svg>
+                </div>
+                <div style="
+                    background: #1e293b;
+                    color: #fef08a;
+                    font-size: 8px;
+                    font-weight: 900;
+                    padding: 1px 5px;
+                    border-radius: 4px;
+                    margin-top: -2px;
+                    white-space: nowrap;
+                    border: 1px solid #f59e0b;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                ">
+                    DESVIO ${index + 1}
+                </div>
+            </div>
+        `,
+        iconSize: [30, 44],
+        iconAnchor: [15, 22],
+        popupAnchor: [0, -20]
+    });
+}
+
+export interface RouteDeviationWaypoint {
+    id: string;
+    routeKey: string;
+    sellerId: number;
+    day: string;
+    lat: number;
+    lng: number;
+}
+
 // Paleta de cores cromáticas e consistentes por dia da semana para visão detalhada de vendedor
 export const DAY_COLORS: Record<string, { bg: string, text: string, border: string, hex: string, label: string }> = {
     'SEGUNDA-FEIRA': { bg: 'bg-blue-600', text: 'text-blue-600', border: 'border-blue-500', hex: '#2563eb', label: 'SEG' },
@@ -2800,7 +2852,19 @@ export const AjusteRota: React.FC = () => {
         stopsCount?: number;
         distKm?: number;
         durationMin?: number;
+        alternatives?: Array<{ distance: number; geometry: [number, number][] }>;
     }[]>([]);
+
+    // Waypoints de Desvio Manual (Arrastáveis no mapa - estilo Google Maps)
+    const [customRouteWaypoints, setCustomRouteWaypoints] = useState<Map<string, RouteDeviationWaypoint[]>>(new Map());
+    const [activePolylineClick, setActivePolylineClick] = useState<{
+        routeKey: string;
+        sellerId: number;
+        day: string;
+        lat: number;
+        lng: number;
+    } | null>(null);
+
     const [selectedPromoter, setSelectedPromoter] = useState<string>('ALL');
     const [selectedTeamSellers, setSelectedTeamSellers] = useState<Set<string>>(new Set());
     const [showTeamSellerDropdown, setShowTeamSellerDropdown] = useState(false);
@@ -4540,6 +4604,8 @@ export const AjusteRota: React.FC = () => {
         setAdjustedRoutes([]);
         setOriginalPolylines([]);
         setAdjustedPolylines([]);
+        setCustomRouteWaypoints(new Map());
+        setActivePolylineClick(null);
         setOptimizedSellersSet(new Set());
         setScopeMode('geral');
         setSelectedSupervisor('');
@@ -6914,13 +6980,78 @@ export const AjusteRota: React.FC = () => {
         alert("Redistribuição desfeita com sucesso! O setor e todas as suas visitas foram restaurados.");
     };
 
+    // Inserir Waypoint de Desvio Manual (Arrastável no mapa estilo Google Maps)
+    const handleAddDeviationWaypoint = useCallback((routeKey: string, sellerId: number, day: string, lat: number, lng: number) => {
+        const newWp: RouteDeviationWaypoint = {
+            id: `wp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            routeKey,
+            sellerId,
+            day,
+            lat,
+            lng
+        };
+        setCustomRouteWaypoints(prev => {
+            const next = new Map(prev);
+            const currentList = next.get(routeKey) || [];
+            next.set(routeKey, [...currentList, newWp]);
+            return next;
+        });
+        setActivePolylineClick(null);
+    }, []);
+
+    // Remover Waypoint de Desvio Manual
+    const handleRemoveDeviationWaypoint = useCallback((routeKey: string, wpId: string) => {
+        setCustomRouteWaypoints(prev => {
+            const next = new Map(prev);
+            const currentList = next.get(routeKey) || [];
+            const filtered = currentList.filter(w => w.id !== wpId);
+            if (filtered.length === 0) {
+                next.delete(routeKey);
+            } else {
+                next.set(routeKey, filtered);
+            }
+            return next;
+        });
+    }, []);
+
+    // Atualizar posição do Waypoint após ser arrastado no mapa (dragend)
+    const handleWaypointDragEnd = useCallback((routeKey: string, wpId: string, lat: number, lng: number) => {
+        setCustomRouteWaypoints(prev => {
+            const next = new Map(prev);
+            const currentList = next.get(routeKey) || [];
+            const updated = currentList.map(w => w.id === wpId ? { ...w, lat, lng } : w);
+            next.set(routeKey, updated);
+            return next;
+        });
+    }, []);
+
+    // Aplicar rota alternativa clicada no mapa
+    const handleApplyAlternativeRoute = useCallback((routeKey: string, sellerId: number, day: string, altGeometry: [number, number][]) => {
+        if (!altGeometry || altGeometry.length === 0) return;
+        const midIdx = Math.floor(altGeometry.length / 2);
+        const [midLat, midLng] = altGeometry[midIdx];
+        handleAddDeviationWaypoint(routeKey, sellerId, day, midLat, midLng);
+    }, [handleAddDeviationWaypoint]);
+
     const osrmCacheRef = useRef<Map<string, [number, number][]>>(new Map());
 
     // Traçar polilinhas baseadas na ordem geográfica das visitas no mapa
     useEffect(() => {
-        const traceAsync = async (routes: VisitaPrevista[]) => {
+        const traceAsync = async (routes: VisitaPrevista[], isAdjusted: boolean = false) => {
             const sellers = Array.from(new Set(routes.map(r => r.Cod_Vend)));
-            const lines: { id: string, color: string, points: [number, number][] }[] = [];
+            const lines: { 
+                id: string; 
+                color: string; 
+                points: [number, number][];
+                day?: string;
+                quinzena?: string;
+                sellerId?: number;
+                sellerName?: string;
+                stopsCount?: number;
+                distKm?: number;
+                durationMin?: number;
+                alternatives?: Array<{ distance: number; geometry: [number, number][] }>;
+            }[] = [];
 
             for (const sellerId of sellers) {
                 if (selectedPromoter !== 'ALL' && String(sellerId) !== selectedPromoter) continue;
@@ -6957,29 +7088,58 @@ export const AjusteRota: React.FC = () => {
                         pointsObj.push({ Lat: colab.LatitudeBase, Long: colab.LongitudeBase });
                     }
 
+                    // Se for rota ajustada, inserir waypoints de desvio manuais configurados para este vendedor e dia
+                    const routeKey = `${sellerId}-${day}`;
+                    if (isAdjusted && pointsObj.length > 1) {
+                        const waypoints = customRouteWaypoints.get(routeKey) || [];
+                        waypoints.forEach(wp => {
+                            let bestIdx = 0;
+                            let minDetour = Infinity;
+                            for (let i = 0; i < pointsObj.length - 1; i++) {
+                                const p1 = pointsObj[i];
+                                const p2 = pointsObj[i + 1];
+                                const d1 = calcDist(p1.Lat, p1.Long, wp.lat, wp.lng);
+                                const d2 = calcDist(wp.lat, wp.lng, p2.Lat, p2.Long);
+                                const direct = calcDist(p1.Lat, p1.Long, p2.Lat, p2.Long);
+                                const detour = d1 + d2 - direct;
+                                if (detour < minDetour) {
+                                    minDetour = detour;
+                                    bestIdx = i;
+                                }
+                            }
+                            pointsObj.splice(bestIdx + 1, 0, { Lat: wp.lat, Long: wp.lng, isCustomWaypoint: true });
+                        });
+                    }
+
                     if (pointsObj.length > 1) {
-                        const hashKey = pointsObj.map(p => `${p.Lat},${p.Long}`).join('|');
+                        const hashKey = pointsObj.map(p => `${Number(p.Lat).toFixed(5)},${Number(p.Long).toFixed(5)}`).join('|') + (isAdjusted ? '-adj' : '-orig');
                         const stopsCoords = sortedVisits.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long }));
                         const circuit = calcCircuitMetrics({ lat: colab?.LatitudeBase || 0, lng: colab?.LongitudeBase || 0 }, stopsCoords, optEndAtLastClient);
                         const lineMeta = {
-                            id: `${sellerId}-${day}`,
+                            id: routeKey,
                             color: lineColor,
                             day,
                             sellerId,
                             sellerName: formatSellerDisplayName(sellerId, colab?.Nome || visits[0]?.Nome_Vendedor),
                             stopsCount: sortedVisits.length,
                             distKm: circuit.totalKm,
-                            durationMin: circuit.travelMinutes
+                            durationMin: circuit.travelMinutes,
+                            alternatives: [] as Array<{ distance: number; geometry: [number, number][] }>
                         };
                         
                         if (osrmCacheRef.current.has(hashKey)) {
                             lines.push({ ...lineMeta, points: osrmCacheRef.current.get(hashKey)! });
                         } else {
                             try {
-                                const osrm = await getOSRMData(pointsObj, false);
+                                const osrm = await getOSRMData(pointsObj, false, 1, isAdjusted ? { alternatives: true } : undefined);
                                 if (osrm && osrm.geometry && osrm.geometry.length > 0) {
                                     osrmCacheRef.current.set(hashKey, osrm.geometry);
-                                    lines.push({ ...lineMeta, points: osrm.geometry });
+                                    lines.push({ 
+                                        ...lineMeta, 
+                                        points: osrm.geometry,
+                                        distKm: osrm.distance ? Number(osrm.distance.toFixed(1)) : circuit.totalKm,
+                                        alternatives: isAdjusted ? (osrm.alternatives || []) : []
+                                    });
                                 } else {
                                     const straightCoords = pointsObj.map(c => [c.Lat, c.Long] as [number, number]);
                                     osrmCacheRef.current.set(hashKey, straightCoords);
@@ -7013,14 +7173,14 @@ export const AjusteRota: React.FC = () => {
             });
 
             if (filteredOriginal.length > 0) {
-                const orig = await traceAsync(filteredOriginal);
+                const orig = await traceAsync(filteredOriginal, false);
                 if (isMounted) setOriginalPolylines(orig);
             } else {
                 if (isMounted) setOriginalPolylines([]);
             }
 
             if (filteredRoutes.length > 0) {
-                const adj = await traceAsync(filteredRoutes);
+                const adj = await traceAsync(filteredRoutes, true);
                 if (isMounted) setAdjustedPolylines(adj);
             } else {
                 if (isMounted) setAdjustedPolylines([]);
@@ -7030,7 +7190,7 @@ export const AjusteRota: React.FC = () => {
         updateLines();
         
         return () => { isMounted = false; };
-    }, [filteredRoutes, scopedOriginalRoutes, selectedDaysFilter, selectedQuinzenaFilter, selectedPromoter, promoterColorMap, colaboradores, isSingleSellerView, effectiveMapColorMode, optEndAtLastClient]);
+    }, [filteredRoutes, scopedOriginalRoutes, selectedDaysFilter, selectedQuinzenaFilter, selectedPromoter, promoterColorMap, colaboradores, isSingleSellerView, effectiveMapColorMode, optEndAtLastClient, customRouteWaypoints]);
 
     // Mapa da ordem/sequência de atendimento diário de cada cliente por Quinzena 1/3 e 2/4
     const visitOrderMap = useMemo(() => {
@@ -7757,7 +7917,8 @@ export const AjusteRota: React.FC = () => {
                         Sequencia_13: c.Sequencia_13,
                         Sequencia_24: c.Sequencia_24
                     }))
-                }))
+                })),
+                customWaypoints: Array.from(customRouteWaypoints.entries())
             };
 
             const payload = {
@@ -8107,6 +8268,12 @@ export const AjusteRota: React.FC = () => {
             setScopeMode('geral');
             setSelectedSeller('');
             setSelectedSupervisor('');
+
+            if (snapshot.customWaypoints && Array.isArray(snapshot.customWaypoints)) {
+                setCustomRouteWaypoints(new Map(snapshot.customWaypoints));
+            } else {
+                setCustomRouteWaypoints(new Map());
+            }
 
             const firstValidVisit = finalVisits.find(v => v.Lat && v.Long && v.Lat !== 0 && v.Long !== 0);
             if (firstValidVisit) {
@@ -9807,6 +9974,54 @@ export const AjusteRota: React.FC = () => {
                                     );
                                 })}
 
+                                {/* Polilinhas das rotas alternativas sugeridas pelo OSRM (Clique para desviar de estrada de terra) */}
+                                {!isDrawingZone && (focusedMapSellerId ? adjustedPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : adjustedPolylines).map((line: any) => {
+                                    if (!line.alternatives || line.alternatives.length === 0) return null;
+                                    return line.alternatives.map((alt: any, altIdx: number) => (
+                                        <Polyline 
+                                            key={`alt-poly-${line.id}-${altIdx}`} 
+                                            positions={alt.geometry} 
+                                            color="#64748b" 
+                                            weight={4} 
+                                            dashArray="6, 8" 
+                                            opacity={0.65} 
+                                            pathOptions={{
+                                                className: 'cursor-pointer hover:opacity-100 transition-opacity'
+                                            }}
+                                        >
+                                            <Tooltip sticky>
+                                                <div className="text-xs font-sans">
+                                                    <span className="font-bold text-slate-800">🛣️ Rota Alternativa {altIdx + 1}</span>
+                                                    <span className="text-slate-500 ml-1">({alt.distance.toFixed(1)} km)</span>
+                                                    <div className="text-[10px] text-indigo-600 font-semibold mt-0.5">Clique para aplicar este trajeto</div>
+                                                </div>
+                                            </Tooltip>
+                                            <Popup>
+                                                <div className="p-2 min-w-[210px] text-xs font-sans">
+                                                    <div className="font-bold text-slate-800 mb-1 flex items-center">
+                                                        <span className="w-2.5 h-2.5 rounded-full bg-slate-500 mr-1.5 inline-block"></span>
+                                                        Rota Alternativa Sugerida {altIdx + 1}
+                                                    </div>
+                                                    <div className="text-slate-600 mb-2">
+                                                        Extensão: <strong className="text-slate-800">{alt.distance.toFixed(1)} km</strong>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-500 mb-2">
+                                                        Esta rota alternativa evita o traçado mais curto padrão (útil para desviar de estradas de terra ou vias vicinais).
+                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleApplyAlternativeRoute(line.id, line.sellerId, line.day, alt.geometry)}
+                                                        className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] flex items-center justify-center transition cursor-pointer"
+                                                    >
+                                                        <CheckCircleIcon className="w-3.5 h-3.5 mr-1" />
+                                                        Fixar Esta Rota Alternativa
+                                                    </button>
+                                                </div>
+                                            </Popup>
+                                        </Polyline>
+                                    ));
+                                })}
+
                                 {/* Polilinhas das rotas otimizadas com transição visual animada e Popup Interativo */}
                                 {!isDrawingZone && (focusedMapSellerId ? adjustedPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : adjustedPolylines).map((line: any, idx) => {
                                     const polyColor = (effectiveMapColorMode === 'DIA' && line.day && DAY_COLORS[line.day]) ? DAY_COLORS[line.day].hex : line.color;
@@ -9819,6 +10034,17 @@ export const AjusteRota: React.FC = () => {
                                             opacity={showHeatmap ? 0.35 : 0.85} 
                                             pathOptions={{
                                                 className: 'transition-all duration-500 ease-in-out cursor-pointer'
+                                            }}
+                                            eventHandlers={{
+                                                click: (e) => {
+                                                    setActivePolylineClick({
+                                                        routeKey: line.id,
+                                                        sellerId: line.sellerId,
+                                                        day: line.day,
+                                                        lat: e.latlng.lat,
+                                                        lng: e.latlng.lng
+                                                    });
+                                                }
                                             }}
                                         >
                                             <Popup>
@@ -9853,21 +10079,94 @@ export const AjusteRota: React.FC = () => {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            if (line.day) setItineraryDay(line.day);
-                                                            if (line.sellerId) setItinerarySeller(String(line.sellerId));
-                                                            setShowItineraryModal(true);
-                                                        }}
-                                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] flex items-center justify-center transition cursor-pointer"
-                                                    >
-                                                        <ClipboardListIcon className="w-3.5 h-3.5 mr-1" /> Ver Itinerário Detalhado
-                                                    </button>
+                                                    <div className="space-y-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const clickCoord = (activePolylineClick?.routeKey === line.id)
+                                                                    ? { lat: activePolylineClick.lat, lng: activePolylineClick.lng }
+                                                                    : (line.points && line.points.length > 0 ? { lat: line.points[Math.floor(line.points.length / 2)][0], lng: line.points[Math.floor(line.points.length / 2)][1] } : null);
+                                                                if (clickCoord) {
+                                                                    handleAddDeviationWaypoint(line.id, line.sellerId, line.day, clickCoord.lat, clickCoord.lng);
+                                                                }
+                                                            }}
+                                                            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] flex items-center justify-center transition cursor-pointer shadow-sm"
+                                                        >
+                                                            <LocationMarkerIcon className="w-3.5 h-3.5 mr-1" /> Inserir Desvio Manual (Arrastar no Mapa)
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (line.day) setItineraryDay(line.day);
+                                                                if (line.sellerId) setItinerarySeller(String(line.sellerId));
+                                                                setShowItineraryModal(true);
+                                                            }}
+                                                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] flex items-center justify-center transition cursor-pointer"
+                                                        >
+                                                            <ClipboardListIcon className="w-3.5 h-3.5 mr-1" /> Ver Itinerário Detalhado
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </Popup>
                                         </Polyline>
                                     );
+                                })}
+
+                                {/* Marcadores de Waypoints de Desvio Manual Arrastáveis (Estilo Google Maps) */}
+                                {!isDrawingZone && Array.from(customRouteWaypoints.entries()).map(([routeKey, waypoints]) => {
+                                    const [sellerIdStr, day] = routeKey.split('-');
+                                    const sellerId = Number(sellerIdStr);
+                                    if (focusedMapSellerId && sellerId !== focusedMapSellerId) return null;
+                                    const dayColor = (effectiveMapColorMode === 'DIA' && day && DAY_COLORS[day]) ? DAY_COLORS[day].hex : (promoterColorMap.get(String(sellerId)) || '#f59e0b');
+
+                                    return waypoints.map((wp, wpIdx) => (
+                                        <Marker
+                                            key={`wp-${wp.id}`}
+                                            position={[wp.lat, wp.lng]}
+                                            draggable={true}
+                                            icon={createDeviationWaypointIcon(wpIdx, dayColor)}
+                                            zIndexOffset={2000}
+                                            eventHandlers={{
+                                                dragend: (e) => {
+                                                    const marker = e.target;
+                                                    const position = marker.getLatLng();
+                                                    handleWaypointDragEnd(routeKey, wp.id, position.lat, position.lng);
+                                                }
+                                            }}
+                                        >
+                                            <Tooltip permanent={false} direction="top">
+                                                <div className="text-xs font-sans">
+                                                    <strong>Ponto de Desvio #{wpIdx + 1}</strong>
+                                                    <div className="text-[10px] text-slate-500">Arraste para mudar o trajeto</div>
+                                                </div>
+                                            </Tooltip>
+                                            <Popup>
+                                                <div className="p-2 min-w-[210px] text-xs font-sans">
+                                                    <div className="flex items-center justify-between border-b border-amber-200 pb-1.5 mb-2">
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500 text-white">
+                                                            DESVIO #{wpIdx + 1}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-slate-500">
+                                                            {day}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-slate-700 text-[11px] mb-2">
+                                                        <strong>Como usar:</strong> Arraste este marcador no mapa para forçar a rota a passar pela via pavimentada desejada.
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400 font-mono mb-2">
+                                                        {wp.lat.toFixed(5)}, {wp.lng.toFixed(5)}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveDeviationWaypoint(routeKey, wp.id)}
+                                                        className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] flex items-center justify-center transition cursor-pointer"
+                                                    >
+                                                        <TrashIcon className="w-3.5 h-3.5 mr-1" /> Remover Desvio
+                                                    </button>
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    ));
                                 })}
 
                                 {/* Clientes Marcados (com distinção cromática por dia da semana e quinzena - ocultados durante desenho de zona) */}

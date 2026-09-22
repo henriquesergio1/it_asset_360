@@ -555,7 +555,7 @@ const RealService = {
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         return R * c;
     },
-    getOSRMData: async (points: any[], isRoundTrip: boolean, attempt = 1): Promise<any> => {
+    getOSRMData: async (points: any[], isRoundTrip: boolean = false, attempt = 1, options?: { alternatives?: boolean }): Promise<{ distance: number; geometry: [number, number][]; alternatives?: Array<{ distance: number; geometry: [number, number][] }> } | null> => {
         if (points.length < 2) return null;
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
         
@@ -571,7 +571,8 @@ const RealService = {
         const finalCoordsStr = coordsStr + (isRoundTrip ? ';' + firstLon + ',' + firstLat : '');
 
         // Utiliza o proxy HTTPS seguro em /api/fuel360/osrm para evitar Mixed Content (HTTP x HTTPS)
-        const url = `${API_BASE_URL}/osrm?coords=${encodeURIComponent(finalCoordsStr)}`;
+        const altQuery = options?.alternatives ? '&alternatives=true' : '';
+        const url = `${API_BASE_URL}/osrm?coords=${encodeURIComponent(finalCoordsStr)}${altQuery}`;
 
         try {
             const controller = new AbortController();
@@ -584,7 +585,7 @@ const RealService = {
                 if (attempt <= 3) {
                     const waitTime = attempt * 2000;
                     await sleep(waitTime);
-                    return RealService.getOSRMData(points, isRoundTrip, attempt + 1);
+                    return RealService.getOSRMData(points, isRoundTrip, attempt + 1, options);
                 }
                 return null;
             }
@@ -593,16 +594,27 @@ const RealService = {
 
             const data = await resp.json();
             if (data.code === 'Ok' && data.routes?.[0]) {
-                return {
+                const primary = {
                     distance: data.routes[0].distance / 1000,
-                    geometry: data.routes[0].geometry.coordinates.map((c: any) => [c[1], c[0]])
+                    geometry: data.routes[0].geometry.coordinates.map((c: any) => [c[1], c[0]] as [number, number])
+                };
+                const alternatives = (data.routes.length > 1)
+                    ? data.routes.slice(1).map((r: any) => ({
+                        distance: r.distance / 1000,
+                        geometry: r.geometry.coordinates.map((c: any) => [c[1], c[0]] as [number, number])
+                    }))
+                    : [];
+
+                return {
+                    ...primary,
+                    alternatives
                 };
             }
             return null;
         } catch (e) {
             if (attempt <= 2) {
                 await sleep(1000);
-                return RealService.getOSRMData(points, isRoundTrip, attempt + 1);
+                return RealService.getOSRMData(points, isRoundTrip, attempt + 1, options);
             }
             return null; 
         }
@@ -756,9 +768,9 @@ const MockService = {
     calcDistance: (lat1: number, lon1: number, lat2: number, lon2: number): number => {
         return Math.sqrt(Math.pow(lat2 - lat1, 2) + Math.pow(lon2 - lon1, 2)) * 111; // Simplificado para mock
     },
-    getOSRMData: async (points: any[], isRoundTrip: boolean) => {
+    getOSRMData: async (points: any[], isRoundTrip: boolean = false, attempt = 1, options?: { alternatives?: boolean }): Promise<{ distance: number; geometry: [number, number][]; alternatives?: Array<{ distance: number; geometry: [number, number][] }> }> => {
         await new Promise(r => setTimeout(r, 500));
-        return { distance: 10.5, geometry: [] };
+        return { distance: 10.5, geometry: [], alternatives: [] };
     },
     getOSRMTable: async (points: { lat: number; lng: number }[]) => {
         await new Promise(r => setTimeout(r, 200));
