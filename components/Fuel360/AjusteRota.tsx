@@ -1593,6 +1593,15 @@ export const AjusteRota: React.FC = () => {
     // Parâmetros de Roteirização
     const [optMaxClients, setOptMaxClients] = useState(15);
     const [optLimitClients, setOptLimitClients] = useState(false);
+    const [optRoutingBalanceMode, setOptRoutingBalanceMode] = useState<'MEIO_TERMO' | 'MENOR_KM' | 'HOMOGENEO'>(() => {
+        const saved = localStorage.getItem('fuel_opt_routing_balance_mode');
+        return (saved as 'MEIO_TERMO' | 'MENOR_KM' | 'HOMOGENEO') || 'MEIO_TERMO';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_routing_balance_mode', optRoutingBalanceMode);
+    }, [optRoutingBalanceMode]);
+
     const [optMaxKm, setOptMaxKm] = useState(60);
     const [optLimitKm, setOptLimitKm] = useState(false);
     const [optMaxHours, setOptMaxHours] = useState<number>(() => {
@@ -1797,6 +1806,7 @@ export const AjusteRota: React.FC = () => {
                 if (p.OptSmallCityThreshold !== undefined && p.OptSmallCityThreshold !== null) setOptSmallCityThreshold(Number(p.OptSmallCityThreshold));
                 if (p.OptAutoResectorizeSellers !== undefined && p.OptAutoResectorizeSellers !== null) setOptAutoResectorizeSellers(Boolean(p.OptAutoResectorizeSellers));
                 if (p.OptResectorizeMode) setOptResectorizeMode(p.OptResectorizeMode as 'BALANCED' | 'MINIMIZE_SELLERS');
+                if (p.OptRoutingBalanceMode) setOptRoutingBalanceMode(p.OptRoutingBalanceMode as 'MEIO_TERMO' | 'MENOR_KM' | 'HOMOGENEO');
                 if (p.RegioesCidadesJson) {
                     try {
                         const parsed = JSON.parse(p.RegioesCidadesJson);
@@ -1844,6 +1854,7 @@ export const AjusteRota: React.FC = () => {
                 optSmallCityThreshold,
                 optAutoResectorizeSellers,
                 optResectorizeMode,
+                optRoutingBalanceMode,
                 regioesCidadesJson: JSON.stringify(regioesCidades),
                 zonasPoligonaisJson: JSON.stringify(zonasPoligonais),
                 optGroupCitiesByRegion,
@@ -5293,17 +5304,35 @@ export const AjusteRota: React.FC = () => {
                     prefixWeights.push(prefixWeights[i] + clusterWeights[i]);
                 }
 
+                const clusterCounts = sweep.map(cl => cl.clients.length);
+                const prefixCounts: number[] = [0];
+                for (let i = 0; i < M_len; i++) {
+                    prefixCounts.push(prefixCounts[i] + clusterCounts[i]);
+                }
+
                 for (let d = 1; d <= K; d++) {
                     const targetVal = criterion === 'WORKLOAD' 
                         ? targetWorkloadPerDayMins * getDayWeight(activeDays[d - 1])
                         : dayQuotas[d - 1];
 
+                    const dayCap = optLimitClients
+                        ? ((activeDays[d - 1] === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients)
+                        : Infinity;
+
                     for (let i = d; i <= M_len; i++) {
                         for (let j = d - 1; j < i; j++) {
                             if (dp[d - 1][j] === Infinity) continue;
                             const valInDay = prefixWeights[i] - prefixWeights[j];
+                            const countInDay = prefixCounts[i] - prefixCounts[j];
                             const diff = valInDay - targetVal;
-                            const cost = dp[d - 1][j] + (diff * diff) + (valInDay === 0 ? 50000 : 0);
+
+                            // Penalidade severa se ultrapassar o limite de clientes configurado
+                            let capPenalty = 0;
+                            if (optLimitClients && countInDay > dayCap) {
+                                capPenalty = Math.pow(countInDay - dayCap, 2) * 50000;
+                            }
+
+                            const cost = dp[d - 1][j] + (diff * diff) + (valInDay === 0 ? 50000 : 0) + capPenalty;
                             if (cost < dp[d][i]) {
                                 dp[d][i] = cost;
                                 parent[d][i] = j;
@@ -5451,6 +5480,9 @@ export const AjusteRota: React.FC = () => {
                         if (mainDayIdx !== -1) {
                             const mainDayName = activeDays[mainDayIdx];
                             const mainDayLimitMins = ((mainDayName === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours) * 60;
+                            const mainDayCap = optLimitClients 
+                                ? ((mainDayName === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients)
+                                : maxAllowedClientsPerDay;
 
                             dayDistribution.forEach((cnt, otherDayIdx) => {
                                 if (otherDayIdx === mainDayIdx) return;
@@ -5460,6 +5492,9 @@ export const AjusteRota: React.FC = () => {
                                     const c = otherDayClients[i];
                                     if ((c.sampleVisit.Cidade || '').trim().toUpperCase() !== cCity) continue;
                                     if (!isDayAllowedForClient(c, mainDayName)) continue;
+
+                                    // Salvaguarda: Não puxar se o dia principal já atingiu o teto de clientes configurado
+                                    if (optLimitClients && currentPart[mainDayIdx].length >= mainDayCap) continue;
 
                                     const testClients = [...currentPart[mainDayIdx], c];
                                     const testMetrics = getOrderedDayMetrics(testClients);
@@ -5473,6 +5508,78 @@ export const AjusteRota: React.FC = () => {
                         }
                     }
                 });
+
+                // 2.5. Equalizador Inteligente de Meio Termo: Redistribui clientes da cidade base
+                // Quando um dia acolhe clientes de uma cidade secundária (ex: Caçapava), esse dia pode ficar com muitos PDVs
+                // enquanto outros dias (ex: Sexta-feira) ficam ociosos.
+                // Aqui, pegamos clientes da CIDADE BASE dos dias mais cheios e transferimos para os dias mais vazios,
+                // NUNCA desmembrando clientes de cidades secundárias já agrupadas!
+                if (optRoutingBalanceMode !== 'MENOR_KM' && K > 1) {
+                    for (let eqIter = 0; eqIter < 15; eqIter++) {
+                        let maxDayIdx = -1;
+                        let maxDayCount = -1;
+                        let minDayIdx = -1;
+                        let minDayCount = Infinity;
+
+                        for (let d = 0; d < K; d++) {
+                            const count = currentPart[d].length;
+                            if (count > maxDayCount) {
+                                maxDayCount = count;
+                                maxDayIdx = d;
+                            }
+                            if (count < minDayCount) {
+                                minDayCount = count;
+                                minDayIdx = d;
+                            }
+                        }
+
+                        if (maxDayIdx === -1 || minDayIdx === -1 || maxDayIdx === minDayIdx) break;
+
+                        const maxCap = optLimitClients 
+                            ? ((activeDays[maxDayIdx] === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients)
+                            : maxAllowedClientsPerDay;
+                        const minCap = optLimitClients 
+                            ? ((activeDays[minDayIdx] === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients)
+                            : maxAllowedClientsPerDay;
+
+                        const needsRebalance = (optLimitClients && maxDayCount > maxCap) || (maxDayCount - minDayCount >= 3);
+                        if (!needsRebalance) break;
+                        if (minDayCount >= minCap) break;
+
+                        const highDayClients = currentPart[maxDayIdx];
+                        const targetDayName = activeDays[minDayIdx];
+                        let moved = false;
+
+                        const minDayCoords = currentPart[minDayIdx].filter(c => c.lat && c.lng);
+                        const targetCenterLat = minDayCoords.length > 0 ? minDayCoords.reduce((s, c) => s + c.lat, 0) / minDayCoords.length : baseLat;
+                        const targetCenterLng = minDayCoords.length > 0 ? minDayCoords.reduce((s, c) => s + c.lng, 0) / minDayCoords.length : baseLng;
+
+                        let bestCandIdx = -1;
+                        let bestCandDist = Infinity;
+
+                        for (let i = highDayClients.length - 1; i >= 0; i--) {
+                            const cand = highDayClients[i];
+                            const candCity = (cand.sampleVisit.Cidade || '').trim().toUpperCase();
+                            // Só move clientes da cidade base ou de cidades com grande volume (nunca de cidades secundárias compactas)
+                            if (candCity !== sellerBaseCity && isCitySatellite(cand)) continue;
+                            if (!isDayAllowedForClient(cand, targetDayName)) continue;
+
+                            const distToTarget = (cand.lat && cand.lng) ? calcDist(cand.lat, cand.lng, targetCenterLat, targetCenterLng) : 0;
+                            if (distToTarget < bestCandDist) {
+                                bestCandDist = distToTarget;
+                                bestCandIdx = i;
+                            }
+                        }
+
+                        if (bestCandIdx !== -1) {
+                            const [transferred] = highDayClients.splice(bestCandIdx, 1);
+                            currentPart[minDayIdx].push(transferred);
+                            moved = true;
+                        }
+
+                        if (!moved) break;
+                    }
+                }
 
                 // 3. Otimização de Sexta-feira
                 if (optAvoidFridayDistant && activeDays.includes('SEXTA-FEIRA')) {
@@ -5598,6 +5705,26 @@ export const AjusteRota: React.FC = () => {
                     }
                 });
 
+                // Penalidade severa para estouro do limite diário de clientes (optLimitClients / optMaxClients)
+                let clientLimitExcessTotal = 0;
+                let maxClientLimitExcess = 0;
+                let clientDisparityPenalty = 0;
+
+                for (let d = 0; d < K; d++) {
+                    const dayCount = currentPart[d].length;
+                    const dayCap = (activeDays[d] === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients;
+                    if (optLimitClients && dayCount > dayCap) {
+                        const excess = dayCount - dayCap;
+                        clientLimitExcessTotal += excess;
+                        if (excess > maxClientLimitExcess) maxClientLimitExcess = excess;
+                    }
+                    if (optRoutingBalanceMode !== 'MENOR_KM') {
+                        if (dayCount < minAllowedClientsPerDay) {
+                            clientDisparityPenalty += Math.pow(minAllowedClientsPerDay - dayCount, 2) * 80;
+                        }
+                    }
+                }
+
                 for (let d = 0; d < K; d++) {
                     const t = finalMetrics[d].totalMins;
                     times.push(t);
@@ -5615,16 +5742,35 @@ export const AjusteRota: React.FC = () => {
                 const varianceT = times.reduce((acc, t) => acc + Math.pow(t - meanT, 2), 0) / (times.length || 1);
                 const stdDevT = Math.sqrt(varianceT);
 
-                // Score de qualidade alinhado com o operador:
-                // 1. Respeito ao limite máximo de jornada (peso 1500 / 150)
-                // 2. Penalidade altíssima para viagens repetidas a cidades secundárias (800 por dia duplicado)
-                // 3. Eficiência de quilometragem percorrida (peso 12 por km total)
-                // 4. Suavização de balanceamento de tempo (peso 5, permitindo folgas onde o operador decide)
-                const score = (maxDayOverload * 1500) + 
-                              (scenarioOverloadMins * 150) + 
-                              (repeatedIntercityDays * 800) + 
-                              (totalKmSum * 12) + 
-                              (stdDevT * 5);
+                let score = 0;
+                if (optRoutingBalanceMode === 'MENOR_KM') {
+                    score = (maxClientLimitExcess * 50000) +
+                            (clientLimitExcessTotal * 10000) +
+                            (maxDayOverload * 1500) + 
+                            (scenarioOverloadMins * 150) + 
+                            (repeatedIntercityDays * 1200) + 
+                            (totalKmSum * 25) + 
+                            (stdDevT * 2);
+                } else if (optRoutingBalanceMode === 'HOMOGENEO') {
+                    score = (maxClientLimitExcess * 50000) +
+                            (clientLimitExcessTotal * 10000) +
+                            (maxDayOverload * 2000) + 
+                            (scenarioOverloadMins * 300) + 
+                            (repeatedIntercityDays * 400) + 
+                            (totalKmSum * 5) + 
+                            (stdDevT * 30) + 
+                            (clientDisparityPenalty * 2);
+                } else {
+                    // MEIO_TERMO (Padrão Inteligente)
+                    score = (maxClientLimitExcess * 50000) +
+                            (clientLimitExcessTotal * 10000) +
+                            (maxDayOverload * 1500) + 
+                            (scenarioOverloadMins * 150) + 
+                            (repeatedIntercityDays * 800) + 
+                            (totalKmSum * 10) + 
+                            (stdDevT * 12) +
+                            clientDisparityPenalty;
+                }
 
                 if (score < bestScenarioScore) {
                     bestScenarioScore = score;
@@ -11549,6 +11695,88 @@ export const AjusteRota: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* ESTRATÉGIA DE EQUILÍBRIO DE ROTAS (MEIO TERMO / MENOR KM / HOMOGÊNEO) */}
+                            <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 block flex items-center gap-1.5">
+                                        <span>⚖️</span> Modo de Equilíbrio das Rotas
+                                    </span>
+                                    <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-bold uppercase">
+                                        {optRoutingBalanceMode === 'MEIO_TERMO' ? 'Meio Termo Inteligente' : optRoutingBalanceMode === 'MENOR_KM' ? 'Menor KM Absoluto' : 'Homogêneo Estrito'}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                    <label className={`flex items-start p-3 rounded-xl border cursor-pointer transition ${
+                                        optRoutingBalanceMode === 'MEIO_TERMO'
+                                            ? 'bg-indigo-50/70 dark:bg-indigo-950/50 border-indigo-500 shadow-xs ring-1 ring-indigo-500/30'
+                                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                                    }`}>
+                                        <input
+                                            type="radio"
+                                            name="routingBalanceMode"
+                                            value="MEIO_TERMO"
+                                            checked={optRoutingBalanceMode === 'MEIO_TERMO'}
+                                            onChange={() => setOptRoutingBalanceMode('MEIO_TERMO')}
+                                            className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        <div className="ml-2">
+                                            <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">
+                                                ⚖️ Meio Termo (Recomendado)
+                                            </span>
+                                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5 leading-tight">
+                                                Agrupa cidades externas (ex: Caçapava) no mesmo dia, redistribuindo clientes da cidade base para equalizar a carga e respeitar o teto diário de clientes.
+                                            </span>
+                                        </div>
+                                    </label>
+
+                                    <label className={`flex items-start p-3 rounded-xl border cursor-pointer transition ${
+                                        optRoutingBalanceMode === 'MENOR_KM'
+                                            ? 'bg-indigo-50/70 dark:bg-indigo-950/50 border-indigo-500 shadow-xs ring-1 ring-indigo-500/30'
+                                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                                    }`}>
+                                        <input
+                                            type="radio"
+                                            name="routingBalanceMode"
+                                            value="MENOR_KM"
+                                            checked={optRoutingBalanceMode === 'MENOR_KM'}
+                                            onChange={() => setOptRoutingBalanceMode('MENOR_KM')}
+                                            className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        <div className="ml-2">
+                                            <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">
+                                                ⚡ Menor KM (Agrupado)
+                                            </span>
+                                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5 leading-tight">
+                                                Prioriza a menor quilometragem percorrida e máxima compactação espacial, aceitando dias com menos horas ou clientes livres.
+                                            </span>
+                                        </div>
+                                    </label>
+
+                                    <label className={`flex items-start p-3 rounded-xl border cursor-pointer transition ${
+                                        optRoutingBalanceMode === 'HOMOGENEO'
+                                            ? 'bg-indigo-50/70 dark:bg-indigo-950/50 border-indigo-500 shadow-xs ring-1 ring-indigo-500/30'
+                                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                                    }`}>
+                                        <input
+                                            type="radio"
+                                            name="routingBalanceMode"
+                                            value="HOMOGENEO"
+                                            checked={optRoutingBalanceMode === 'HOMOGENEO'}
+                                            onChange={() => setOptRoutingBalanceMode('HOMOGENEO')}
+                                            className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        <div className="ml-2">
+                                            <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">
+                                                📏 Homogêneo Estrito
+                                            </span>
+                                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5 leading-tight">
+                                                Força quantidades de clientes e jornadas diárias rigorosamente niveladas entre todos os dias úteis da semana.
+                                            </span>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
 

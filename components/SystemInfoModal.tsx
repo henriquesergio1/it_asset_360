@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.217.0',
+    date: 'Hoje',
+    title: 'Fuel360: Meio Termo Inteligente e Teto Rígido de Clientes por Dia no Roteirizador',
+    changes: [
+      'Teto Rígido de Clientes por Dia (DP e Pós-Processamento): O algoritmo agora respeita com rigor absoluto a cota máxima de clientes configurada (ex: 14 PDVs), impedindo que dias concentrem 17 ou 18 paradas.',
+      'Modo de Equilíbrio "Meio Termo Inteligente" (Novo Padrão): Cidades secundárias (ex: Caçapava) continuam compactadas em um único dia, mas os clientes da cidade base (Taubaté) são redistribuídos dinamicamente para os dias ociosos (ex: Sexta-feira), equalizando a carga da semana.',
+      'Três Modos de Roteirização Configuráveis: O operador pode escolher entre Meio Termo (Recomendado), Menor KM Absoluto (máxima compactação geográfica) ou Homogêneo Estrito (cotas idênticas de clientes e horas).',
+      'Score Multi-Objetivo Calibrado: Penalidades proporcionais para estouro de PDVs e disparidade de carga diária, assegurando rotas eficientes, equilibradas e humanamente viáveis.'
+    ]
+  },
+  {
     version: '3.216.0',
     date: 'Hoje',
     title: 'Fuel360: Consolidação Territorial de Cidades e Eliminação de Clientes Órfãos no Roteirizador',
