@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.212.0',
+    date: 'Hoje',
+    title: 'Fuel360: Periodicidade Atual do ERP na Planilha e Sincronização em Tempo Real de Coordenadas',
+    changes: [
+      'Manter Periodicidade Atual do Cliente (Query ERP): No Assistente de Destino da Planilha, adicionada a opção para preservar a frequência/periodicidade cadastrada no ERP para cada cliente importado sem frequência definida.',
+      'Sincronização em Tempo Real do ERP por Cliente: Criado endpoint dedicado e botão "Sincronizar do ERP" no modal de coordenadas para consultar e atualizar instantaneamente as coordenadas oficiais de qualquer cliente diretamente do ERP.',
+      'Normalização Avançada de Coordenadas e Hemisfério Sul: Tratamento numérico robusto com detecção automática de escala (inteiros > 1000) e inversão automática de sinal para o hemisfério Sul/Oeste no Brasil.',
+      'Persistência SQL Automática de Ajustes Manuais: Ao salvar coordenadas manuais no modal, a coordenada é gravada tanto no cache local quanto na tabela FuelClienteCoordenadas do SQL Server.'
+    ]
+  },
+  {
     version: '3.211.1',
     date: 'Hoje',
     title: 'Fuel360: Priorização e Sincronização de Coordenadas de Clientes do ERP',

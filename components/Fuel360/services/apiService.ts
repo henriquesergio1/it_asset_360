@@ -256,6 +256,7 @@ const RealService = {
     saveClienteRestricoesBatch: (restricoes: ClienteRestricao[]): Promise<{ success: boolean; message: string; restricoes: ClienteRestricao[]; lastAudit?: any }> => apiRequest('/cliente-restricoes/batch', 'POST', { restricoes }),
     deleteClienteRestricao: (id: number): Promise<{ success: boolean; message: string; restricoes: ClienteRestricao[]; lastAudit?: any }> => apiRequest(`/cliente-restricoes/${id}`, 'DELETE'),
     getClienteCoordenadas: (): Promise<{ success: boolean; coordenadas: Record<number, { lat: number; lon: number; status: string; at: string }> }> => apiRequest('/cliente-coordenadas'),
+    getClienteERPCoords: (codCliente: number): Promise<{ success: boolean; codCliente: number; hasValidCoord: boolean; lat: number; long: number; razaoSocial: string; endereco: string; cidade: string; periodicidade: string; message: string }> => apiRequest(`/cliente/${codCliente}/erp-coords`),
     saveClienteCoordenada: (payload: { codCliente: number; lat: number; lon: number; status?: string; usuario?: string }): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-coordenadas', 'POST', payload),
     lookupPlanilhaSimulacao: (itens: Array<{ Cod_Cliente: number; Cod_Vend: number; Dia_Semana?: string; Periodicidade?: string }>): Promise<{ success: boolean; data: any[]; summary: any }> => apiRequest('/lookup-planilha-simulacao', 'POST', { itens }),
     geocodeAddress: async (input: string | { address?: string; street?: string; number?: string; neighborhood?: string; city?: string; state?: string; cep?: string; forceCepOnly?: boolean }): Promise<{lat: number, lon: number}> => {
@@ -729,6 +730,7 @@ const MockService = {
     saveClienteRestricoesBatch: async (restricoes: ClienteRestricao[]): Promise<{ success: boolean; message: string; restricoes: ClienteRestricao[]; lastAudit?: any }> => ({ success: true, message: 'Salvo com sucesso', restricoes }),
     deleteClienteRestricao: async (id: number): Promise<{ success: boolean; message: string; restricoes: ClienteRestricao[]; lastAudit?: any }> => ({ success: true, message: 'Excluído com sucesso', restricoes: [] }),
     getClienteCoordenadas: async (): Promise<{ success: boolean; coordenadas: Record<number, { lat: number; lon: number; status: string; at: string }> }> => ({ success: true, coordenadas: {} }),
+    getClienteERPCoords: async (codCliente: number) => ({ success: true, codCliente, hasValidCoord: true, lat: -23.8543, long: -46.1345, razaoSocial: 'Cliente Mock', endereco: '', cidade: '', periodicidade: 'SEMANAL', message: 'OK' }),
     saveClienteCoordenada: async (payload: any): Promise<{ success: boolean; message: string }> => ({ success: true, message: 'Salvo com sucesso' }),
     lookupPlanilhaSimulacao: async (itens: any[]) => ({ success: true, data: itens, summary: { total: itens.length, uniqueClients: itens.length, foundCoords: itens.length, missingCoords: 0, matchedSellers: itens.length } }),
     getCidadesERP: async (): Promise<string[]> => [
@@ -769,6 +771,6 @@ export const {
     getSimulacaoPublica, getSimulacaoSugestoes, saveSimulacaoSugestao, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount,
     moveColaboradoresToGroup, bulkUpdateColaboradores, corrigirAusenciasHistorico, getSugestoesVinculo, batchUpdateColaboradoresAddress,
     getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao,
-    getClienteCoordenadas, saveClienteCoordenada, lookupPlanilhaSimulacao, getCidadesERP,
+    getClienteCoordenadas, getClienteERPCoords, saveClienteCoordenada, lookupPlanilhaSimulacao, getCidadesERP,
     geocodeAddress, getOSRMData, getOSRMTable, calcDistance
 } = Service;

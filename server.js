@@ -3502,17 +3502,21 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
 
             let lat = 0;
             let lon = 0;
-            if (coord && coord.Lat && coord.Long && !isNaN(coord.Lat) && !isNaN(coord.Long)) {
-                lat = Number(coord.Lat);
-                lon = Number(coord.Long);
-                foundCoords++;
-            } else if (clientDetail && clientDetail.Lat && clientDetail.Long) {
+            const erpHasCoord = clientDetail && clientDetail.Lat && clientDetail.Long && (Math.abs(clientDetail.Lat) > 0.001 || Math.abs(clientDetail.Long) > 0.001);
+            const itemHasCoord = item.Lat && item.Long && (Math.abs(item.Lat) > 0.001 || Math.abs(item.Long) > 0.001);
+            const dbHasCoord = coord && coord.Lat && coord.Long && !isNaN(coord.Lat) && !isNaN(coord.Long);
+
+            if (erpHasCoord) {
                 lat = Number(clientDetail.Lat);
                 lon = Number(clientDetail.Long);
                 foundCoords++;
-            } else if (item.Lat && item.Long) {
+            } else if (itemHasCoord) {
                 lat = Number(item.Lat);
                 lon = Number(item.Long);
+                foundCoords++;
+            } else if (dbHasCoord) {
+                lat = Number(coord.Lat);
+                lon = Number(coord.Long);
                 foundCoords++;
             } else {
                 missingCoords++;
@@ -3533,7 +3537,8 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
                 Nome_Supervisor: item.Nome_Supervisor || clientDetail?.Nome_Supervisor || '',
                 Cod_Supervisor: item.Cod_Supervisor || clientDetail?.Cod_Supervisor || 0,
                 Dia_Semana: item.Dia_Semana || '',
-                Periodicidade: item.Periodicidade || 'SEMANAL',
+                Periodicidade: item.Periodicidade || clientDetail?.Periodicidade || '',
+                Periodicidade_ERP: clientDetail?.Periodicidade || '',
                 Data_da_Visita: item.Data_da_Visita || '',
                 Origem: 'PLANILHA'
             };
@@ -3554,6 +3559,111 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
     } catch (err) {
         console.error('[Fuel360 ERROR] Falha no lookup da planilha de simulacao:', err.message);
         res.status(500).json({ success: false, error: err.message });
+    }
+// Endpoint para consulta e sincronização em tempo real das coordenadas de um cliente específico no ERP
+app.get('/api/fuel360/cliente/:codCliente/erp-coords', async (req, res) => {
+    try {
+        const codCliente = parseInt(req.params.codCliente, 10);
+        if (!codCliente || isNaN(codCliente)) {
+            return res.status(400).json({ success: false, error: 'Código de cliente inválido.' });
+        }
+
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+
+        const settingsRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
+        const s = settingsRes.recordset ? settingsRes.recordset[0] : null;
+
+        if (!s || !s.ExtRoute_Host || !s.ExtRoute_Query || s.ExtRoute_Host.trim() === '' || s.ExtRoute_Query.trim() === '') {
+            return res.status(400).json({ success: false, error: 'Configurações de integração ERP não preenchidas.' });
+        }
+
+        let extPool = null;
+        try {
+            extPool = new sql.ConnectionPool({
+                server: s.ExtRoute_Host,
+                port: parseInt(s.ExtRoute_Port || 1433),
+                user: s.ExtRoute_User,
+                password: s.ExtRoute_Pass,
+                database: s.ExtRoute_Database,
+                options: { encrypt: false, trustServerCertificate: true, requestTimeout: 60000 }
+            });
+            await extPool.connect();
+
+            const now = new Date();
+            const y = now.getFullYear();
+            const pStart = `${y}-01-01`;
+            const pEnd = `${y}-12-31`;
+
+            const extRes = await extPool.request()
+                .input('pStartDate', sql.NVarChar, pStart)
+                .input('pEndDate', sql.NVarChar, pEnd)
+                .query(s.ExtRoute_Query);
+            await extPool.close();
+
+            let matchedClient = null;
+            if (extRes.recordset && extRes.recordset.length > 0) {
+                for (const row of extRes.recordset) {
+                    const norm = normalizeVisitaData(row);
+                    if (Number(norm.Cod_Cliente) === codCliente) {
+                        matchedClient = norm;
+                        break;
+                    }
+                }
+            }
+
+            if (!matchedClient) {
+                return res.json({
+                    success: false,
+                    message: `Cliente ${codCliente} não localizado na query vigente do ERP.`
+                });
+            }
+
+            const hasValidCoord = matchedClient.Lat && matchedClient.Long && (Math.abs(matchedClient.Lat) > 0.001 || Math.abs(matchedClient.Long) > 0.001);
+
+            if (hasValidCoord) {
+                // Sincronizar imediatamente no banco FuelClienteCoordenadas
+                await pool.request()
+                    .input('Cod_Cliente', sql.Int, codCliente)
+                    .input('Lat', sql.Float, matchedClient.Lat)
+                    .input('Long', sql.Float, matchedClient.Long)
+                    .input('Status', sql.NVarChar(50), 'ATUALIZADO_ERP')
+                    .input('Usuario', sql.NVarChar(255), 'Sincronização Manual ERP')
+                    .query(`
+                        IF EXISTS (SELECT 1 FROM FuelClienteCoordenadas WHERE Cod_Cliente = @Cod_Cliente)
+                        BEGIN
+                            UPDATE FuelClienteCoordenadas
+                            SET Lat = @Lat, Long = @Long, Status = @Status, Usuario = @Usuario, DataAtualizacao = GETDATE()
+                            WHERE Cod_Cliente = @Cod_Cliente;
+                        END
+                        ELSE
+                        BEGIN
+                            INSERT INTO FuelClienteCoordenadas (Cod_Cliente, Lat, Long, Status, Usuario, DataAtualizacao)
+                            VALUES (@Cod_Cliente, @Lat, @Long, @Status, @Usuario, GETDATE());
+                        END
+                    `);
+            }
+
+            return res.json({
+                success: true,
+                codCliente,
+                hasValidCoord,
+                lat: matchedClient.Lat || 0,
+                long: matchedClient.Long || 0,
+                razaoSocial: matchedClient.Razao_Social || '',
+                endereco: matchedClient.Endereco || '',
+                cidade: matchedClient.Cidade || '',
+                periodicidade: matchedClient.Periodicidade || '',
+                message: hasValidCoord
+                    ? 'Coordenadas atualizadas do ERP localizadas e sincronizadas com sucesso!'
+                    : 'Cliente localizado no ERP, porém com coordenadas zeradas ou ausentes.'
+            });
+        } catch (extErr) {
+            if (extPool) try { await extPool.close(); } catch(e) {}
+            return res.status(500).json({ success: false, error: 'Falha ao consultar ERP: ' + extErr.message });
+        }
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
     }
 });
 
@@ -4096,12 +4206,22 @@ function normalizeVisitaData(row) {
         rawEndereco = rawEndereco ? `${rawEndereco}, ${numeroStr}` : numeroStr;
     }
 
-    const parseCoord = (val) => {
+    const parseLat = (val) => {
         if (val === null || val === undefined || val === '') return 0;
-        if (typeof val === 'number') return isNaN(val) ? 0 : val;
-        const s = String(val).trim().replace(',', '.');
-        const n = parseFloat(s);
-        return isNaN(n) ? 0 : n;
+        let n = typeof val === 'number' ? val : parseFloat(String(val).trim().replace(',', '.'));
+        if (isNaN(n) || n === 0) return 0;
+        if (Math.abs(n) > 1000) n = n / 1000000;
+        if (n > 0 && n <= 35) n = -n;
+        return (n >= -90 && n <= 90) ? n : 0;
+    };
+
+    const parseLong = (val) => {
+        if (val === null || val === undefined || val === '') return 0;
+        let n = typeof val === 'number' ? val : parseFloat(String(val).trim().replace(',', '.'));
+        if (isNaN(n) || n === 0) return 0;
+        if (Math.abs(n) > 1000) n = n / 1000000;
+        if (n > 0 && n >= 30 && n <= 75) n = -n;
+        return (n >= -180 && n <= 180) ? n : 0;
     };
 
     return {
@@ -4112,15 +4232,15 @@ function normalizeVisitaData(row) {
         Cod_Cliente: findValue(['CodCliente', 'Cod. Cliente', 'CODCET', 'IDCLIENTE']),
         Razao_Social: findValue(['RazaoSocial', 'Razão Social', 'NOMRAZSCLCET', 'CLIENTE']),
         Dia_Semana: parseDiaSemana(rawDia, rawDataVisita),
-        Periodicidade: findValue(['Periodicidade', 'DESCCOVSTCET', 'FREQ']),
+        Periodicidade: findValue(['Periodicidade', 'DESCCOVSTCET', 'FREQ', 'FREQUENCIA', 'A1_FREQ', 'A1_PERIOD', 'CODOVSTCET', 'PERIOD', 'PERIODICIDADE_VISITA', 'FREQ_VISITA']),
         Data_da_Visita: rawDataVisita,
         Endereco: rawEndereco,
         Numero: numeroStr,
         Bairro: (findValue(['Bairro', 'desbro', 'BAIRRO']) != null) ? String(findValue(['Bairro', 'desbro', 'BAIRRO'])).trim() : '',
         Cidade: (findValue(['Cidade', 'descdd', 'CIDADE']) != null) ? String(findValue(['Cidade', 'descdd', 'CIDADE'])).trim() : '',
         CEP: (findValue(['CEP', 'codcepcet', 'CEP_CLIENTE']) != null) ? String(findValue(['CEP', 'codcepcet', 'CEP_CLIENTE'])).trim() : '',
-        Lat: parseCoord(findValue(['Lat', 'Latitude', 'LATCET', 'LATITUDE', 'A1_LAT', 'A1LAT', 'LAT_CLIENTE', 'LATITUDE_CLIENTE', 'VLR_LAT', 'LAT'])),
-        Long: parseCoord(findValue(['Long', 'Longitude', 'LONCET', 'Lng', 'LONGITUDE', 'LON', 'A1_LONG', 'A1_LON', 'A1LONG', 'LON_CLIENTE', 'LONGITUDE_CLIENTE', 'VLR_LONG', 'LONG'])),
+        Lat: parseLat(findValue(['Lat', 'Latitude', 'LATCET', 'LATITUDE', 'A1_LAT', 'A1LAT', 'LAT_CLIENTE', 'LATITUDE_CLIENTE', 'VLR_LAT', 'VLRLATITUDE', 'NUMEROLATITUDE', 'COORDENADAY', 'LATITUDEDECIMAL', 'LATITUDECLI', 'GPS_LAT', 'Y', 'LAT'])),
+        Long: parseLong(findValue(['Long', 'Longitude', 'LONCET', 'Lng', 'LONGITUDE', 'LON', 'A1_LONG', 'A1_LON', 'A1LONG', 'LON_CLIENTE', 'LONGITUDE_CLIENTE', 'VLR_LONG', 'VLRLONGITUDE', 'NUMEROLONGITUDE', 'COORDENADAX', 'LONGITUDEDECIMAL', 'LONGITUDECLI', 'GPS_LONG', 'GPS_LNG', 'X', 'LONG'])),
         Canal_Remuneracao: findValue(['Canal_Remuneracao', 'CanalRemuneracao', 'Canal_Remuneração', 'Canal', 'desfad']) || ''
     };
 }

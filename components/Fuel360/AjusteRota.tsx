@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
-import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount, lookupPlanilhaSimulacao, getCidadesERP } from './services/apiService';
+import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount, lookupPlanilhaSimulacao, getCidadesERP, getClienteERPCoords, saveClienteCoordenada } from './services/apiService';
 import { VisitaPrevista, Colaborador, SequenceStrategy, ClienteRestricao } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, Tooltip, useMap, Polygon, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -1765,7 +1765,7 @@ export const AjusteRota: React.FC = () => {
     const [planilhaDestSupervisor, setPlanilhaDestSupervisor] = useState<string>('');
     const [planilhaDestSeller, setPlanilhaDestSeller] = useState<number>(0);
     const [planilhaDestNewSectorsCount, setPlanilhaDestNewSectorsCount] = useState<number>(2);
-    const [planilhaDestDefaultPeriodicidade, setPlanilhaDestDefaultPeriodicidade] = useState<'SEMANAL' | 'QUINZENAL'>('SEMANAL');
+    const [planilhaDestDefaultPeriodicidade, setPlanilhaDestDefaultPeriodicidade] = useState<'MANTER_ERP' | 'SEMANAL' | 'QUINZENAL'>('MANTER_ERP');
 
     // Persistência corporativa dos Parâmetros do Otimizador no SQL Server
     const [savingParamsToDb, setSavingParamsToDb] = useState(false);
@@ -2116,6 +2116,21 @@ export const AjusteRota: React.FC = () => {
 
         let processedData = [...planilhaEnrichedData];
 
+        // Helper para resolver periodicidade respeitando a opção do assistente
+        const resolvePeriodicidade = (item: any) => {
+            if (item.Periodicidade && String(item.Periodicidade).trim() !== '') {
+                return item.Periodicidade;
+            }
+            if (planilhaDestDefaultPeriodicidade === 'MANTER_ERP') {
+                const erpFreq = item.Periodicidade_ERP || '';
+                if (erpFreq && String(erpFreq).trim() !== '') {
+                    return erpFreq;
+                }
+                return 'SEMANAL';
+            }
+            return planilhaDestDefaultPeriodicidade;
+        };
+
         if (planilhaDestMode === 'equipe') {
             // Identificar vendedores da equipe/supervisor selecionado
             const targetSellers = teamColaboradores.filter(c => {
@@ -2158,7 +2173,7 @@ export const AjusteRota: React.FC = () => {
                     ...item,
                     Cod_Vend: finalCodVend,
                     Nome_Vendedor: finalNomeVend,
-                    Periodicidade: item.Periodicidade || planilhaDestDefaultPeriodicidade,
+                    Periodicidade: resolvePeriodicidade(item),
                     Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
                 };
             });
@@ -2171,7 +2186,7 @@ export const AjusteRota: React.FC = () => {
                 ...item,
                 Cod_Vend: finalCodVend,
                 Nome_Vendedor: sellerName,
-                Periodicidade: item.Periodicidade || planilhaDestDefaultPeriodicidade,
+                Periodicidade: resolvePeriodicidade(item),
                 Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
             }));
         } else if (planilhaDestMode === 'novos_setores') {
@@ -2187,7 +2202,7 @@ export const AjusteRota: React.FC = () => {
                     ...item,
                     Cod_Vend: assigned.code,
                     Nome_Vendedor: assigned.name,
-                    Periodicidade: item.Periodicidade || planilhaDestDefaultPeriodicidade,
+                    Periodicidade: resolvePeriodicidade(item),
                     Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
                 };
             });
@@ -2203,7 +2218,7 @@ export const AjusteRota: React.FC = () => {
                     ...item,
                     Cod_Vend: finalCodVend,
                     Nome_Vendedor: finalNomeVend,
-                    Periodicidade: item.Periodicidade || planilhaDestDefaultPeriodicidade,
+                    Periodicidade: resolvePeriodicidade(item),
                     Dia_Semana: item.Dia_Semana || optDays[0] || 'SEGUNDA-FEIRA'
                 };
             });
@@ -2270,6 +2285,7 @@ export const AjusteRota: React.FC = () => {
     const [coordModalLng, setCoordModalLng] = useState<string>('');
     const [coordNeighborSearch, setCoordNeighborSearch] = useState<string>('');
     const [isGeocodingCoord, setIsGeocodingCoord] = useState<boolean>(false);
+    const [isSyncingCoordFromErp, setIsSyncingCoordFromErp] = useState<boolean>(false);
     const [coordGeocodeFeedback, setCoordGeocodeFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
     // Tratamento de Capacidade Excedida / Tempo Limite na Otimização
@@ -4252,7 +4268,16 @@ export const AjusteRota: React.FC = () => {
             console.error("Erro ao salvar coordenada no localStorage:", err);
         }
 
-        // 2. Atualizar adjustedRoutes
+        // 2. Persistir no SQL corporativo (FuelClienteCoordenadas)
+        saveClienteCoordenada({
+            codCliente,
+            lat: latNum,
+            lon: lngNum,
+            status: 'MANUAL',
+            usuario: authUser?.Nome || (authUser as any)?.FullName || 'Usuário Sistema'
+        }).catch(e => console.warn("Aviso ao salvar coordenada no SQL corporativo:", e));
+
+        // 3. Atualizar adjustedRoutes
         setAdjustedRoutes(prev => prev.map(r => {
             if (r.Cod_Cliente === codCliente) {
                 return { ...r, Lat: latNum, Long: lngNum };
@@ -4260,7 +4285,7 @@ export const AjusteRota: React.FC = () => {
             return r;
         }));
 
-        // 3. Atualizar originalRoutes
+        // 4. Atualizar originalRoutes
         setOriginalRoutes(prev => prev.map(r => {
             if (r.Cod_Cliente === codCliente) {
                 return { ...r, Lat: latNum, Long: lngNum };
@@ -4269,7 +4294,53 @@ export const AjusteRota: React.FC = () => {
         }));
 
         handleCloseCoordinateModal();
-    }, [coordinateModalClient, coordModalLat, coordModalLng, handleCloseCoordinateModal]);
+    }, [coordinateModalClient, coordModalLat, coordModalLng, handleCloseCoordinateModal, authUser]);
+
+    // Consultar e sincronizar coordenadas oficiais diretamente do ERP
+    const handleSyncClientFromErp = useCallback(async () => {
+        if (!coordinateModalClient) return;
+        setIsSyncingCoordFromErp(true);
+        setCoordGeocodeFeedback(null);
+
+        try {
+            const res = await getClienteERPCoords(coordinateModalClient.Cod_Cliente);
+            if (res && res.success && res.hasValidCoord) {
+                setCoordModalLat(String(res.lat));
+                setCoordModalLng(String(res.long));
+                setCoordGeocodeFeedback({
+                    type: 'success',
+                    message: `✅ Coordenadas atualizadas obtidas do ERP: Lat ${res.lat.toFixed(6)}, Long ${res.long.toFixed(6)}`
+                });
+
+                const codCliente = coordinateModalClient.Cod_Cliente;
+                setAdjustedRoutes(prev => prev.map(r => r.Cod_Cliente === codCliente ? { ...r, Lat: res.lat, Long: res.long } : r));
+                setOriginalRoutes(prev => prev.map(r => r.Cod_Cliente === codCliente ? { ...r, Lat: res.lat, Long: res.long } : r));
+
+                try {
+                    const raw = localStorage.getItem('FUEL360_CUSTOM_CLIENT_COORDS');
+                    if (raw) {
+                        const customMap = JSON.parse(raw);
+                        if (customMap[String(codCliente)]) {
+                            delete customMap[String(codCliente)];
+                            localStorage.setItem('FUEL360_CUSTOM_CLIENT_COORDS', JSON.stringify(customMap));
+                        }
+                    }
+                } catch (e) {}
+            } else {
+                setCoordGeocodeFeedback({
+                    type: 'error',
+                    message: res?.message || 'Coordenadas não localizadas no ERP para este cliente.'
+                });
+            }
+        } catch (err: any) {
+            setCoordGeocodeFeedback({
+                type: 'error',
+                message: 'Erro ao consultar ERP: ' + (err.message || err)
+            });
+        } finally {
+            setIsSyncingCoordFromErp(false);
+        }
+    }, [coordinateModalClient]);
 
     // Buscar geocodificação do endereço do cliente
     const handleGeocodeClientAddress = useCallback(async () => {
@@ -12327,7 +12398,17 @@ export const AjusteRota: React.FC = () => {
                                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
                                         Periodicidade Padrão (quando não informada no Excel):
                                     </label>
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex flex-wrap items-center gap-4">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="periodicidade_padrao"
+                                                checked={planilhaDestDefaultPeriodicidade === 'MANTER_ERP'}
+                                                onChange={() => setPlanilhaDestDefaultPeriodicidade('MANTER_ERP')}
+                                                className="text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            Manter Atual do Cliente (Query ERP)
+                                        </label>
                                         <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
                                             <input
                                                 type="radio"
@@ -14860,24 +14941,45 @@ export const AjusteRota: React.FC = () => {
                                         <span>🌐</span>
                                         <span>Coordenadas Geográficas (GPS)</span>
                                     </label>
-                                    <button
-                                        type="button"
-                                        onClick={handleGeocodeClientAddress}
-                                        disabled={isGeocodingCoord}
-                                        className="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
-                                    >
-                                        {isGeocodingCoord ? (
-                                            <>
-                                                <SpinnerIcon className="w-3.5 h-3.5 animate-spin"/>
-                                                <span>Buscando...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <SearchIcon className="w-3.5 h-3.5"/>
-                                                <span>Buscar por Endereço (Google/CEP)</span>
-                                            </>
-                                        )}
-                                    </button>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleSyncClientFromErp}
+                                            disabled={isSyncingCoordFromErp}
+                                            className="px-3 py-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-2xs"
+                                            title="Consultar coordenadas atuais do cliente diretamente na base do ERP"
+                                        >
+                                            {isSyncingCoordFromErp ? (
+                                                <>
+                                                    <SpinnerIcon className="w-3.5 h-3.5 animate-spin"/>
+                                                    <span>Consultando ERP...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <RefreshIcon className="w-3.5 h-3.5"/>
+                                                    <span>Sincronizar do ERP</span>
+                                                </>
+                                            )}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleGeocodeClientAddress}
+                                            disabled={isGeocodingCoord}
+                                            className="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                                        >
+                                            {isGeocodingCoord ? (
+                                                <>
+                                                    <SpinnerIcon className="w-3.5 h-3.5 animate-spin"/>
+                                                    <span>Buscando...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <SearchIcon className="w-3.5 h-3.5"/>
+                                                    <span>Buscar por Endereço (Google/CEP)</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {coordGeocodeFeedback && (
