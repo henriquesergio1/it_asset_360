@@ -1,13 +1,13 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
-import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount } from './services/apiService';
+import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount, lookupPlanilhaSimulacao } from './services/apiService';
 import { VisitaPrevista, Colaborador, SequenceStrategy, ClienteRestricao } from './types';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, Tooltip, useMap, Polygon, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import * as XLSX from 'xlsx';
 import { ShareSimulationModal } from './ShareSimulationModal';
-import { Calendar, Sun, Sunset, AlertCircle, Info, Edit3, Trash2, Plus, Check, FolderOpen, Share2, MessageSquare } from 'lucide-react';
+import { Calendar, Sun, Sunset, AlertCircle, Info, Edit3, Trash2, Plus, Check, FolderOpen, Share2, MessageSquare, FileSpreadsheet, Map as MapIconLucide, Layers, Download, Palette, CheckSquare, X } from 'lucide-react';
 import {
     CogIcon,
     SpinnerIcon,
@@ -35,6 +35,37 @@ import {
     XCircleIcon,
     ChartBarIcon
 } from './icons';
+
+export interface RegiaoCidade {
+    id: string;
+    nome: string;
+    cidades: string[];
+    cor: string;
+    ativo?: boolean;
+}
+
+export interface ZonaPoligonal {
+    id: string;
+    nome: string;
+    cor: string;
+    pontos: Array<[number, number]>;
+    ativo?: boolean;
+}
+
+// Componente para capturar cliques no mapa durante o modo de desenho de zona poligonal
+const ZoneDrawingHandler: React.FC<{
+    isDrawing: boolean;
+    onAddPoint: (lat: number, lng: number) => void;
+}> = ({ isDrawing, onAddPoint }) => {
+    useMapEvents({
+        click(e) {
+            if (isDrawing) {
+                onAddPoint(e.latlng.lat, e.latlng.lng);
+            }
+        }
+    });
+    return null;
+};
 
 // --- CONFIGURAÇÃO DE ÍCONES ---
 const PROMOTER_COLORS = [
@@ -1659,6 +1690,62 @@ export const AjusteRota: React.FC = () => {
     const [assigningVacantSector, setAssigningVacantSector] = useState<number | null>(null);
     const [manualVacantSellerName, setManualVacantSellerName] = useState<string>('');
 
+    // --- ESTADOS DAS ABAS DE PARÂMETROS E SIMULAÇÃO ---
+    const [paramsActiveTab, setParamsActiveTab] = useState<'algoritmo' | 'regioes' | 'planilha'>('algoritmo');
+
+    // --- GESTÃO DE REGIÕES / GRUPOS DE CIDADES ---
+    const [regioesCidades, setRegioesCidades] = useState<RegiaoCidade[]>(() => {
+        try {
+            const s = localStorage.getItem('fuel_regioes_cidades');
+            return s ? JSON.parse(s) : [];
+        } catch { return []; }
+    });
+    const [optGroupCitiesByRegion, setOptGroupCitiesByRegion] = useState<boolean>(() => {
+        return localStorage.getItem('fuel_opt_group_cities_by_region') === 'true';
+    });
+    const [newRegionName, setNewRegionName] = useState<string>('');
+    const [newRegionColor, setNewRegionColor] = useState<string>('#3b82f6');
+    const [newRegionSelectedCities, setNewRegionSelectedCities] = useState<string[]>([]);
+
+    useEffect(() => {
+        localStorage.setItem('fuel_regioes_cidades', JSON.stringify(regioesCidades));
+    }, [regioesCidades]);
+
+    useEffect(() => {
+        localStorage.setItem('fuel_opt_group_cities_by_region', String(optGroupCitiesByRegion));
+    }, [optGroupCitiesByRegion]);
+
+    // --- GESTÃO DE ZONAS POLIGONAIS ---
+    const [zonasPoligonais, setZonasPoligonais] = useState<ZonaPoligonal[]>(() => {
+        try {
+            const s = localStorage.getItem('fuel_zonas_poligonais');
+            return s ? JSON.parse(s) : [];
+        } catch { return []; }
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fuel_zonas_poligonais', JSON.stringify(zonasPoligonais));
+    }, [zonasPoligonais]);
+
+    // Modo de desenho interativo de zona poligonal
+    const [isDrawingZone, setIsDrawingZone] = useState<boolean>(false);
+    const [drawingZonePoints, setDrawingZonePoints] = useState<Array<[number, number]>>([]);
+    const [showSaveZoneModal, setShowSaveZoneModal] = useState<boolean>(false);
+    const [newZoneName, setNewZoneName] = useState<string>('');
+    const [newZoneColor, setNewZoneColor] = useState<string>('#3b82f6');
+
+    // --- GESTÃO DE SIMULAÇÃO POR PLANILHA (SOLD X VENDEDOR) ---
+    const [isPlanilhaSimulationActive, setIsPlanilhaSimulationActive] = useState<boolean>(false);
+    const [planilhaSimulationFileName, setPlanilhaSimulationFileName] = useState<string>('');
+    const [planilhaSimulationSummary, setPlanilhaSimulationSummary] = useState<any | null>(null);
+    const [planilhaLoading, setPlanilhaLoading] = useState<boolean>(false);
+    const [planilhaError, setPlanilhaError] = useState<string | null>(null);
+    const [planilhaSuccess, setPlanilhaSuccess] = useState<string | null>(null);
+    const [planilhaRawItens, setPlanilhaRawItens] = useState<any[]>([]);
+    const [planilhaEnrichedData, setPlanilhaEnrichedData] = useState<any[]>([]);
+    const [planilhaSummary, setPlanilhaSummary] = useState<any | null>(null);
+    const [planilhaFileName, setPlanilhaFileName] = useState<string>('');
+
     // Persistência corporativa dos Parâmetros do Otimizador no SQL Server
     const [savingParamsToDb, setSavingParamsToDb] = useState(false);
     const [paramsSaveFeedback, setParamsSaveFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -1688,6 +1775,21 @@ export const AjusteRota: React.FC = () => {
                 if (p.OptSmallCityThreshold !== undefined && p.OptSmallCityThreshold !== null) setOptSmallCityThreshold(Number(p.OptSmallCityThreshold));
                 if (p.OptAutoResectorizeSellers !== undefined && p.OptAutoResectorizeSellers !== null) setOptAutoResectorizeSellers(Boolean(p.OptAutoResectorizeSellers));
                 if (p.OptResectorizeMode) setOptResectorizeMode(p.OptResectorizeMode as 'BALANCED' | 'MINIMIZE_SELLERS');
+                if (p.RegioesCidadesJson) {
+                    try {
+                        const parsed = JSON.parse(p.RegioesCidadesJson);
+                        if (Array.isArray(parsed)) setRegioesCidades(parsed);
+                    } catch (e) {}
+                }
+                if (p.ZonasPoligonaisJson) {
+                    try {
+                        const parsedZ = JSON.parse(p.ZonasPoligonaisJson);
+                        if (Array.isArray(parsedZ)) setZonasPoligonais(parsedZ);
+                    } catch (e) {}
+                }
+                if (p.OptGroupCitiesByRegion !== undefined && p.OptGroupCitiesByRegion !== null) {
+                    setOptGroupCitiesByRegion(Boolean(p.OptGroupCitiesByRegion));
+                }
             }
         } catch (e) {
             console.warn('[Fuel360] Falha ao carregar parâmetros do otimizador do banco:', e);
@@ -1720,6 +1822,9 @@ export const AjusteRota: React.FC = () => {
                 optSmallCityThreshold,
                 optAutoResectorizeSellers,
                 optResectorizeMode,
+                regioesCidadesJson: JSON.stringify(regioesCidades),
+                zonasPoligonaisJson: JSON.stringify(zonasPoligonais),
+                optGroupCitiesByRegion,
                 usuario: currentUser
             };
 
@@ -1741,6 +1846,218 @@ export const AjusteRota: React.FC = () => {
             setParamsSaveFeedback({ type: 'error', message: err.message || 'Falha de comunicação com o servidor.' });
         } finally {
             setSavingParamsToDb(false);
+        }
+    };
+
+    // --- HANDLERS DE REGIÕES E CIDADES ---
+    const availableCities = useMemo(() => {
+        const citiesSet = new Set<string>();
+        (adjustedRoutes || []).forEach(r => {
+            if (r.Cidade && r.Cidade.trim()) {
+                citiesSet.add(r.Cidade.trim().toUpperCase());
+            }
+        });
+        return Array.from(citiesSet).sort();
+    }, [adjustedRoutes]);
+
+    const handleAddRegiaoCidade = (nome: string, cor: string, cidadesIniciais: string[] = []) => {
+        if (!nome.trim()) return;
+        const newReg: RegiaoCidade = {
+            id: 'reg_' + Date.now(),
+            nome: nome.trim(),
+            cidades: cidadesIniciais,
+            cor: cor || '#3b82f6'
+        };
+        setRegioesCidades(prev => [...prev, newReg]);
+    };
+
+    const handleRemoveRegiaoCidade = (id: string) => {
+        setRegioesCidades(prev => prev.filter(r => r.id !== id));
+    };
+
+    const handleToggleCidadeInRegiao = (regiaoId: string, cidade: string) => {
+        setRegioesCidades(prev => prev.map(r => {
+            if (r.id !== regiaoId) return r;
+            const exists = r.cidades.includes(cidade);
+            return {
+                ...r,
+                cidades: exists ? r.cidades.filter(c => c !== cidade) : [...r.cidades, cidade]
+            };
+        }));
+    };
+
+    // --- HANDLERS DE ZONAS POLIGONAIS ---
+    const handleToggleZonaAtiva = (id: string) => {
+        setZonasPoligonais(prev => prev.map(z => z.id === id ? { ...z, ativo: !z.ativo } : z));
+    };
+
+    const handleRemoveZonaPoligonal = (id: string) => {
+        setZonasPoligonais(prev => prev.filter(z => z.id !== id));
+    };
+
+    const handleStartDrawingZone = () => {
+        setShowParamsModal(false);
+        setIsDrawingZone(true);
+        setDrawingZonePoints([]);
+    };
+
+    const handleAddDrawingZonePoint = (lat: number, lng: number) => {
+        setDrawingZonePoints(prev => [...prev, [lat, lng]]);
+    };
+
+    const handleOpenSaveZoneModal = () => {
+        if (drawingZonePoints.length < 3) {
+            alert('Um polígono de zona precisa de pelo menos 3 pontos no mapa.');
+            return;
+        }
+        setNewZoneName(`Zona ${zonasPoligonais.length + 1}`);
+        setNewZoneColor('#3b82f6');
+        setShowSaveZoneModal(true);
+    };
+
+    const handleConfirmSaveZone = () => {
+        if (!newZoneName.trim()) {
+            alert('Informe um nome para a zona.');
+            return;
+        }
+        const novaZona: ZonaPoligonal = {
+            id: 'zona_' + Date.now(),
+            nome: newZoneName.trim(),
+            cor: newZoneColor,
+            pontos: drawingZonePoints,
+            ativo: true
+        };
+        setZonasPoligonais(prev => [...prev, novaZona]);
+        setIsDrawingZone(false);
+        setDrawingZonePoints([]);
+        setShowSaveZoneModal(false);
+        setShowParamsModal(true);
+        setParamsActiveTab('regioes');
+    };
+
+    const handleCancelDrawingZone = () => {
+        setIsDrawingZone(false);
+        setDrawingZonePoints([]);
+        setShowSaveZoneModal(false);
+        setShowParamsModal(true);
+        setParamsActiveTab('regioes');
+    };
+
+    // --- HANDLERS DE SIMULAÇÃO POR PLANILHA ---
+    const handleDownloadTemplatePlanilha = () => {
+        const templateData = [
+            {
+                'Cod_Cliente': 2790697,
+                'Cod_Vend': 101,
+                'Dia_Semana': 'SEGUNDA-FEIRA',
+                'Periodicidade': 'SEMANAL'
+            },
+            {
+                'Cod_Cliente': 3387217,
+                'Cod_Vend': 101,
+                'Dia_Semana': 'TERÇA-FEIRA',
+                'Periodicidade': 'QUINZENAL'
+            },
+            {
+                'Cod_Cliente': 1658167,
+                'Cod_Vend': 102,
+                'Dia_Semana': 'QUARTA-FEIRA',
+                'Periodicidade': 'SEMANAL'
+            },
+            {
+                'Cod_Cliente': 5883176,
+                'Cod_Vend': 102,
+                'Dia_Semana': 'QUINTA-FEIRA',
+                'Periodicidade': 'SEMANAL'
+            }
+        ];
+
+        const ws = XLSX.utils.json_to_sheet(templateData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Simulacao_Rotas');
+        XLSX.writeFile(wb, 'modelo_simulacao_roteirizador_sold_vendedores.xlsx');
+    };
+
+    const handleUploadPlanilha = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setPlanilhaLoading(true);
+        setPlanilhaError(null);
+        setPlanilhaSuccess(null);
+        setPlanilhaEnrichedData([]);
+        setPlanilhaSummary(null);
+
+        try {
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+            if (!rawJson || rawJson.length === 0) {
+                throw new Error('A planilha está vazia ou ilegível.');
+            }
+
+            const parsedItens = rawJson.map((row: any) => {
+                const codCliente = row.Cod_Cliente || row.COD_CLIENTE || row.cod_cliente || row['Código Cliente'] || row.Sold || row.SOLD || row.Cliente || row.CLIENTE;
+                const codVend = row.Cod_Vend || row.COD_VEND || row.cod_vend || row['Código Vendedor'] || row.Vendedor || row.VENDEDOR || row.Setor || row.SETOR;
+                const diaSemana = row.Dia_Semana || row.DIA_SEMANA || row.dia_semana || row['Dia da Semana'] || row.Dia || '';
+                const periodicidade = row.Periodicidade || row.PERIODICIDADE || row.periodicidade || row.Freq || 'SEMANAL';
+
+                return {
+                    Cod_Cliente: parseInt(codCliente, 10),
+                    Cod_Vend: parseInt(codVend, 10),
+                    Dia_Semana: String(diaSemana || '').trim(),
+                    Periodicidade: String(periodicidade || 'SEMANAL').trim().toUpperCase()
+                };
+            }).filter(item => item.Cod_Cliente > 0 && item.Cod_Vend > 0);
+
+            if (parsedItens.length === 0) {
+                throw new Error('Nenhuma linha válida com Código de Cliente e Código de Vendedor encontrada na planilha. Verifique os nomes das colunas.');
+            }
+
+            setPlanilhaFileName(file.name);
+            setPlanilhaRawItens(parsedItens);
+
+            // Consulta API de Lookup
+            const lookupRes = await lookupPlanilhaSimulacao(parsedItens);
+            if (lookupRes && lookupRes.success && lookupRes.data) {
+                setPlanilhaEnrichedData(lookupRes.data);
+                setPlanilhaSummary(lookupRes.summary);
+                setPlanilhaSuccess(`Planilha '${file.name}' validada! ${lookupRes.summary.total} registros identificados.`);
+            } else {
+                throw new Error('Falha ao consultar banco para enriquecimento dos dados da planilha.');
+            }
+        } catch (err: any) {
+            setPlanilhaError(err.message || 'Erro ao processar planilha.');
+        } finally {
+            setPlanilhaLoading(false);
+        }
+    };
+
+    const handleApplyPlanilhaSimulation = () => {
+        if (!planilhaEnrichedData || planilhaEnrichedData.length === 0) return;
+
+        const uniqueData = consolidateUniqueClients(planilhaEnrichedData);
+        const dataWithCustomCoords = applyCustomCoordinates(uniqueData);
+
+        setOriginalRoutes(dataWithCustomCoords);
+        setAdjustedRoutes(JSON.parse(JSON.stringify(dataWithCustomCoords)));
+        setIsPlanilhaSimulationActive(true);
+        setPlanilhaSimulationFileName(planilhaFileName);
+        setPlanilhaSimulationSummary(planilhaSummary);
+        setShowParamsModal(false);
+
+        alert(`✅ Simulação Carregada com Sucesso!\n\nForam carregados ${uniqueData.length} clientes a partir da planilha '${planilhaFileName}'.\nVocê pode visualizar os pontos no mapa e rodar a roteirização agora.`);
+    };
+
+    const handleResetPlanilhaSimulation = async () => {
+        if (confirm('Deseja sair da simulação por planilha e recarregar os dados vigentes do ERP?')) {
+            setIsPlanilhaSimulationActive(false);
+            setPlanilhaSimulationFileName('');
+            setPlanilhaSimulationSummary(null);
+            await handleLoadCurrentRoutes();
         }
     };
 
@@ -4404,11 +4721,17 @@ export const AjusteRota: React.FC = () => {
                 };
             });
 
-            // 2.2. Agrupamento Geográfico Municipal e Setorial
+            // 2.2. Agrupamento Geográfico Municipal e Setorial (com suporte a Regiões Customizadas)
             const cityGroups = new Map<string, typeof uniqueClients>();
             uniqueClients.forEach(c => {
                 const rawCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
-                const cityKey = rawCity || 'GERAL';
+                let cityKey = rawCity || 'GERAL';
+                if (optGroupCitiesByRegion && rawCity) {
+                    const matchedRegion = regioesCidades.find(r => r.ativo !== false && r.cidades.some(cid => cid.toUpperCase() === rawCity));
+                    if (matchedRegion) {
+                        cityKey = `REGIAO_${matchedRegion.id}_${matchedRegion.nome}`;
+                    }
+                }
                 if (!cityGroups.has(cityKey)) {
                     cityGroups.set(cityKey, []);
                 }
@@ -7821,6 +8144,43 @@ export const AjusteRota: React.FC = () => {
                     </div>
                 </div>
             )}
+            {/* Banner de Simulação Ativa por Planilha */}
+            {isPlanilhaSimulationActive && (
+                <div className="bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 rounded-3xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-emerald-800 dark:text-emerald-200 shadow-sm animate-in fade-in">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-md shrink-0">
+                            <FileSpreadsheet className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <span className="font-black text-sm block">
+                                📊 Simulação Ativa por Planilha: &quot;{planilhaSimulationFileName}&quot;
+                            </span>
+                            <span className="text-xs opacity-80 block">
+                                O roteirizador, mapas, circuitos OSRM e balanceamento estão operando sobre os dados importados ({scopedAdjustedRoutes.length} clientes).
+                            </span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setParamsActiveTab('planilha');
+                                setShowParamsModal(true);
+                            }}
+                            className="px-4 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 transition cursor-pointer"
+                        >
+                            Ver Diagnóstico
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleResetPlanilhaSimulation}
+                            className="px-4 py-2 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-md transition cursor-pointer"
+                        >
+                            Restaurar Dados do ERP
+                        </button>
+                    </div>
+                </div>
+            )}
             {/* BARRA DE COMANDO UNIFICADA: EQUIPE, ESCOPO, SELETORES E AÇÕES DE CARGA */}
             <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-3 transition-colors">
                 {/* LADO ESQUERDO: TÍTULO, SELETOR DE EQUIPE E SELETOR DE ESCOPO */}
@@ -8502,6 +8862,36 @@ export const AjusteRota: React.FC = () => {
                             );
                         })()}
 
+                        {/* Barra Flutuante Durante Desenho de Zona Poligonal */}
+                        {isDrawingZone && (
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4 animate-in fade-in">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-base animate-bounce">📍</span>
+                                    <div className="text-xs">
+                                        <span className="font-black block">Modo Desenho de Zona: Clique no mapa para adicionar vértices</span>
+                                        <span className="text-slate-400 text-[10px]">{drawingZonePoints.length} ponto(s) demarcado(s)</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleOpenSaveZoneModal}
+                                        disabled={drawingZonePoints.length < 3}
+                                        className="px-4 py-1.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-md disabled:opacity-40 transition cursor-pointer"
+                                    >
+                                        Concluir e Salvar Zona
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleCancelDrawingZone}
+                                        className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 transition cursor-pointer"
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {scopedAdjustedRoutes.length === 0 ? (
                             <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500">
                                 <LocationMarkerIcon className="w-12 h-12 mb-2 text-slate-300"/>
@@ -8522,10 +8912,53 @@ export const AjusteRota: React.FC = () => {
                                         setSelectedLassoClients(codes);
                                     }}
                                 />
+                                <ZoneDrawingHandler
+                                    isDrawing={isDrawingZone}
+                                    onAddPoint={handleAddDrawingZonePoint}
+                                />
                                 <TileLayer
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     attribution='&copy; OpenStreetMap contributors'
                                 />
+
+                                {/* Renderização de Zonas Poligonais Salvas */}
+                                {zonasPoligonais.filter(z => z.ativo && z.pontos.length > 2).map(zona => (
+                                    <Polygon
+                                        key={zona.id}
+                                        positions={zona.pontos}
+                                        pathOptions={{
+                                            color: zona.cor,
+                                            fillColor: zona.cor,
+                                            fillOpacity: 0.18,
+                                            weight: 2,
+                                            dashArray: '4, 4'
+                                        }}
+                                    >
+                                        <Tooltip sticky>
+                                            <span className="font-bold text-xs">{zona.nome}</span>
+                                        </Tooltip>
+                                    </Polygon>
+                                ))}
+
+                                {/* Polígono em Construção Durante o Modo de Desenho */}
+                                {isDrawingZone && drawingZonePoints.length > 0 && (
+                                    <>
+                                        <Polyline
+                                            positions={drawingZonePoints}
+                                            color="#ef4444"
+                                            weight={3}
+                                            dashArray="6, 6"
+                                        />
+                                        {drawingZonePoints.map((pt, pIdx) => (
+                                            <CircleMarker
+                                                key={pIdx}
+                                                center={pt}
+                                                radius={5}
+                                                pathOptions={{ color: '#ef4444', fillColor: '#ffffff', fillOpacity: 1, weight: 2 }}
+                                            />
+                                        ))}
+                                    </>
+                                )}
 
                                 {/* Camada de Mapa de Calor (Heatmap de Concentração de Visitas) */}
                                 {showHeatmap && <HeatmapLayer points={heatmapPoints} />}
@@ -10326,10 +10759,10 @@ export const AjusteRota: React.FC = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
-                                        Parâmetros do Otimizador de Rotas
+                                        Parâmetros do Otimizador & Simulações
                                     </h3>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        Defina limites diários, tempos de atendimento por canal e regras de sequenciamento viário.
+                                        Regras de algoritmo, zoneamento regional/poligonal e simulações por planilha.
                                     </p>
                                 </div>
                             </div>
@@ -10342,9 +10775,60 @@ export const AjusteRota: React.FC = () => {
                             </button>
                         </div>
 
+                        {/* NAVEGAÇÃO POR ABAS */}
+                        <div className="flex items-center border-b border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-800/40 px-6 pt-2 gap-2 overflow-x-auto">
+                            <button
+                                type="button"
+                                onClick={() => setParamsActiveTab('algoritmo')}
+                                className={`px-4 py-2.5 text-xs font-black border-b-2 transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                                    paramsActiveTab === 'algoritmo'
+                                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-900 rounded-t-xl shadow-xs'
+                                        : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                }`}
+                            >
+                                <CogIcon className="w-4 h-4" />
+                                <span>⚙️ Algoritmo & Regras</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setParamsActiveTab('regioes')}
+                                className={`px-4 py-2.5 text-xs font-black border-b-2 transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                                    paramsActiveTab === 'regioes'
+                                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-900 rounded-t-xl shadow-xs'
+                                        : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                }`}
+                            >
+                                <MapIconLucide className="w-4 h-4" />
+                                <span>🗺️ Regiões & Zoneamento</span>
+                                {(regioesCidades.length > 0 || zonasPoligonais.length > 0) && (
+                                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                                        {regioesCidades.length + zonasPoligonais.length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setParamsActiveTab('planilha')}
+                                className={`px-4 py-2.5 text-xs font-black border-b-2 transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                                    paramsActiveTab === 'planilha'
+                                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-900 rounded-t-xl shadow-xs'
+                                        : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                }`}
+                            >
+                                <FileSpreadsheet className="w-4 h-4" />
+                                <span>📊 Simulação por Planilha</span>
+                                {isPlanilhaSimulationActive && (
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                )}
+                            </button>
+                        </div>
+
                         {/* Conteúdo com Scroll Suave */}
                         <div className="p-6 overflow-y-auto custom-scrollbar space-y-4 flex-1">
-                            {/* BLINDAGEM DE CARTEIRA */}
+                            {/* ABA 1: ALGORITMO & REGRAS */}
+                            {paramsActiveTab === 'algoritmo' && (
+                                <>
+                                    {/* BLINDAGEM DE CARTEIRA */}
                             <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-2xl p-3.5 text-xs text-indigo-700 dark:text-indigo-300 flex items-start space-x-2.5 shadow-2xs">
                                 <CheckCircleIcon className="w-4 h-4 mt-0.5 text-indigo-600 dark:text-indigo-400 shrink-0"/>
                                 <div>
@@ -10823,6 +11307,436 @@ export const AjusteRota: React.FC = () => {
                                     />
                                 </label>
                             </div>
+                                </>
+                            )}
+
+                            {/* ABA 2: REGIÕES & ZONEAMENTO */}
+                            {paramsActiveTab === 'regioes' && (
+                                <div className="space-y-5">
+                                    {/* CARD 1: AGRUPAMENTO MUNICIPAL POR REGIÕES */}
+                                    <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 space-y-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/70 dark:border-slate-700/70 pb-3">
+                                            <div>
+                                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
+                                                    <span>🏙️</span> Agrupamento de Cidades por Região
+                                                </h4>
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                                                    Agrupe cidades vizinhas (ex: Grupo A = Caçapava e Taubaté; Grupo B = São José e Jacareí) para que o particionador aloque visitas da mesma região juntas.
+                                                </p>
+                                            </div>
+                                            <label className="flex items-center gap-2 cursor-pointer shrink-0 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={optGroupCitiesByRegion}
+                                                    onChange={(e) => setOptGroupCitiesByRegion(e.target.checked)}
+                                                    className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                                />
+                                                <span className="text-xs font-black text-slate-700 dark:text-slate-300">
+                                                    Ativar Agrupamento Regional
+                                                </span>
+                                            </label>
+                                        </div>
+
+                                        {/* Formulário para Adicionar Nova Região */}
+                                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/70 rounded-2xl p-4 space-y-3 shadow-xs">
+                                            <span className="text-xs font-black text-slate-700 dark:text-slate-300 block">
+                                                + Adicionar Novo Grupo de Cidades / Região
+                                            </span>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                <div className="sm:col-span-2">
+                                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-1">
+                                                        Nome da Região / Grupo:
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={newRegionName}
+                                                        onChange={(e) => setNewRegionName(e.target.value)}
+                                                        placeholder="Ex: Grupo A - Caçapava e Taubaté"
+                                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white outline-none"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-1">
+                                                        Cor de Destaque:
+                                                    </label>
+                                                    <div className="flex items-center gap-1.5 pt-1">
+                                                        {['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'].map(c => (
+                                                            <button
+                                                                key={c}
+                                                                type="button"
+                                                                onClick={() => setNewRegionColor(c)}
+                                                                className={`w-6 h-6 rounded-full border-2 transition cursor-pointer ${newRegionColor === c ? 'border-slate-900 dark:border-white scale-110 shadow-xs' : 'border-transparent'}`}
+                                                                style={{ backgroundColor: c }}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Seleção de Cidades da Carteira */}
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mb-1.5">
+                                                    Selecione as Cidades deste Grupo ({newRegionSelectedCities.length} selecionadas):
+                                                </label>
+                                                {availableCities.length === 0 ? (
+                                                    <p className="text-[11px] text-slate-400 italic">Carregue ou importe uma rota para listar as cidades atendidas.</p>
+                                                ) : (
+                                                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto custom-scrollbar p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                                                        {availableCities.map(city => {
+                                                            const isSel = newRegionSelectedCities.includes(city);
+                                                            return (
+                                                                <button
+                                                                    key={city}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setNewRegionSelectedCities(prev => 
+                                                                            prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]
+                                                                        );
+                                                                    }}
+                                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                                                                        isSel
+                                                                            ? 'bg-indigo-600 text-white shadow-xs'
+                                                                            : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-300'
+                                                                    }`}
+                                                                >
+                                                                    {city} {isSel ? '✓' : '+'}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="flex justify-end pt-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (!newRegionName.trim()) {
+                                                            alert('Informe o nome da região.');
+                                                            return;
+                                                        }
+                                                        if (newRegionSelectedCities.length === 0) {
+                                                            alert('Selecione ao menos 1 cidade para compor o grupo.');
+                                                            return;
+                                                        }
+                                                        handleAddRegiaoCidade(newRegionName, newRegionColor, newRegionSelectedCities);
+                                                        setNewRegionName('');
+                                                        setNewRegionSelectedCities([]);
+                                                    }}
+                                                    className="px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition cursor-pointer"
+                                                >
+                                                    Adicionar Região
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Lista de Grupos Cadastrados */}
+                                        <div className="space-y-2.5">
+                                            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 block">
+                                                Regiões Cadastradas ({regioesCidades.length}):
+                                            </span>
+                                            {regioesCidades.length === 0 ? (
+                                                <p className="text-xs text-slate-400 dark:text-slate-500 italic p-3 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center">
+                                                    Nenhum grupo de cidades cadastrado até o momento.
+                                                </p>
+                                            ) : (
+                                                regioesCidades.map(reg => (
+                                                    <div 
+                                                        key={reg.id}
+                                                        className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+                                                    >
+                                                        <div className="space-y-1.5 flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span 
+                                                                    className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs" 
+                                                                    style={{ backgroundColor: reg.cor }} 
+                                                                />
+                                                                <span className="text-xs font-black text-slate-800 dark:text-white">
+                                                                    {reg.nome}
+                                                                </span>
+                                                                <span className="text-[10px] font-bold text-slate-400">
+                                                                    ({reg.cidades.length} cidades)
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {reg.cidades.map(cid => (
+                                                                    <span 
+                                                                        key={cid}
+                                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                                                                    >
+                                                                        {cid}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleToggleCidadeInRegiao(reg.id, cid)}
+                                                                            className="text-slate-400 hover:text-rose-500 cursor-pointer"
+                                                                            title="Remover cidade desta região"
+                                                                        >
+                                                                            ×
+                                                                        </button>
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveRegiaoCidade(reg.id)}
+                                                                className="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                                                            >
+                                                                Excluir
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* CARD 2: ZONAS POLIGONAIS DEMARCADAS NO MAPA */}
+                                    <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 space-y-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/70 dark:border-slate-700/70 pb-3">
+                                            <div>
+                                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
+                                                    <span>📍</span> Zoneamento Poligonal no Mapa
+                                                </h4>
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                                                    Desenhe polígonos livres no mapa para isolar bairros ou áreas de atendimento exclusivo.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleStartDrawingZone}
+                                                className="px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-md flex items-center gap-2 transition cursor-pointer shrink-0"
+                                            >
+                                                <span>✏️</span>
+                                                <span>Desenhar Zona no Mapa</span>
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <span className="text-[11px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 block">
+                                                Zonas Poligonais Salvas ({zonasPoligonais.length}):
+                                            </span>
+                                            {zonasPoligonais.length === 0 ? (
+                                                <p className="text-xs text-slate-400 dark:text-slate-500 italic p-3 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center">
+                                                    Nenhuma zona poligonal desenhada ainda. Clique em &quot;Desenhar Zona no Mapa&quot; para demarcar um polígono.
+                                                </p>
+                                            ) : (
+                                                zonasPoligonais.map(zona => (
+                                                    <div 
+                                                        key={zona.id}
+                                                        className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between gap-3 shadow-2xs"
+                                                    >
+                                                        <div className="flex items-center gap-2.5">
+                                                            <span 
+                                                                className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs" 
+                                                                style={{ backgroundColor: zona.cor }} 
+                                                            />
+                                                            <div>
+                                                                <span className="text-xs font-black text-slate-800 dark:text-white block">
+                                                                    {zona.nome}
+                                                                </span>
+                                                                <span className="text-[10px] text-slate-400 block">
+                                                                    {zona.pontos.length} vértices demarcados no mapa
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleZonaAtiva(zona.id)}
+                                                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                                                    zona.ativo 
+                                                                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                                                                }`}
+                                                            >
+                                                                {zona.ativo ? 'Visível no Mapa' : 'Oculto'}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveZonaPoligonal(zona.id)}
+                                                                className="px-2.5 py-1 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                                                            >
+                                                                Excluir
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ABA 3: SIMULAÇÃO POR PLANILHA */}
+                            {paramsActiveTab === 'planilha' && (
+                                <div className="space-y-5">
+                                    {/* CARD 1: APRESENTAÇÃO E DOWNLOAD DO MODELO */}
+                                    <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 space-y-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/70 dark:border-slate-700/70 pb-3">
+                                            <div>
+                                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
+                                                    <span>📊</span> Simulação por Planilha de Carteira (Sold x Vendedor)
+                                                </h4>
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                                                    Suba uma planilha com os códigos dos clientes e vendedores para rodar a simulação no mapa, sem alterar os dados oficiais do ERP.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleDownloadTemplatePlanilha}
+                                                className="px-4 py-2 rounded-xl text-xs font-black bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 shadow-xs transition cursor-pointer shrink-0"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                <span>Baixar Modelo Excel (.xlsx)</span>
+                                            </button>
+                                        </div>
+
+                                        {/* Detalhes das Colunas Esperadas */}
+                                        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+                                            <span className="font-black text-slate-700 dark:text-slate-300 block">
+                                                Colunas aceitas no arquivo:
+                                            </span>
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                                                <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                                    <span className="font-bold block text-indigo-600 dark:text-indigo-400">Cod_Cliente</span>
+                                                    <span className="text-slate-400 text-[10px]">ou Código Cliente, Sold</span>
+                                                </div>
+                                                <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                                    <span className="font-bold block text-indigo-600 dark:text-indigo-400">Cod_Vend</span>
+                                                    <span className="text-slate-400 text-[10px]">ou Código Vendedor, Setor</span>
+                                                </div>
+                                                <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                                    <span className="font-bold block text-indigo-600 dark:text-indigo-400">Dia_Semana</span>
+                                                    <span className="text-slate-400 text-[10px]">SEGUNDA, TERCA, etc.</span>
+                                                </div>
+                                                <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                                    <span className="font-bold block text-indigo-600 dark:text-indigo-400">Periodicidade</span>
+                                                    <span className="text-slate-400 text-[10px]">SEMANAL ou QUINZENAL</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Input de Upload */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                                                Selecionar Arquivo da Simulação:
+                                            </label>
+                                            <div className="flex items-center gap-3">
+                                                <label className="flex-1 border-2 border-dashed border-indigo-300 dark:border-indigo-800 hover:border-indigo-500 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer bg-indigo-50/40 dark:bg-indigo-950/20 transition">
+                                                    <FileSpreadsheet className="w-8 h-8 text-indigo-500 mb-1" />
+                                                    <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
+                                                        {planilhaFileName || 'Clique para escolher arquivo (.xlsx, .xls, .csv)'}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400 mt-0.5">
+                                                        O sistema fará o lookup automático de coordenadas e dados no SQL corporativo
+                                                    </span>
+                                                    <input
+                                                        type="file"
+                                                        accept=".xlsx,.xls,.csv"
+                                                        onChange={handleUploadPlanilha}
+                                                        className="hidden"
+                                                    />
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        {/* Feedback de Loading e Mensagens */}
+                                        {planilhaLoading && (
+                                            <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl flex items-center gap-3 text-xs font-bold text-indigo-700 dark:text-indigo-300 animate-pulse">
+                                                <SpinnerIcon className="w-5 h-5 animate-spin" />
+                                                <span>Processando planilha e consultando banco de dados corporativo...</span>
+                                            </div>
+                                        )}
+
+                                        {planilhaError && (
+                                            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+                                                <span>❌</span>
+                                                <span>{planilhaError}</span>
+                                            </div>
+                                        )}
+
+                                        {planilhaSuccess && (
+                                            <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                                                <span>✅</span>
+                                                <span>{planilhaSuccess}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* CARD 2: DIAGNÓSTICO DO LOOKUP E APLICAÇÃO */}
+                                    {planilhaSummary && (
+                                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
+                                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
+                                                <span>🔍</span> Diagnóstico do Lookup no SQL Corporativo
+                                            </h4>
+
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                                                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Total de Linhas</span>
+                                                    <span className="text-lg font-black text-slate-900 dark:text-white">
+                                                        {planilhaSummary.total}
+                                                    </span>
+                                                </div>
+                                                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                                                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block uppercase">Geolocalizados</span>
+                                                    <span className="text-lg font-black text-emerald-700 dark:text-emerald-300">
+                                                        {planilhaSummary.comCoordenadas}
+                                                    </span>
+                                                </div>
+                                                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800">
+                                                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 block uppercase">Sem Lat/Long</span>
+                                                    <span className="text-lg font-black text-amber-700 dark:text-amber-300">
+                                                        {planilhaSummary.semCoordenadas}
+                                                    </span>
+                                                </div>
+                                                <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800">
+                                                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 block uppercase">Bases Vendedores</span>
+                                                    <span className="text-lg font-black text-blue-700 dark:text-blue-300">
+                                                        {planilhaSummary.vendedoresComBase}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                    Pronto para carregar no mapa e executar circuitos e particionamento.
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleApplyPlanilhaSimulation}
+                                                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg transition cursor-pointer flex items-center justify-center gap-2"
+                                                >
+                                                    <span>🚀</span>
+                                                    <span>Carregar Simulação no Roteirizador</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* CARD 3: STATUS ATUAL DA SIMULAÇÃO */}
+                                    {isPlanilhaSimulationActive && (
+                                        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-700 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div>
+                                                <span className="text-xs font-black text-emerald-800 dark:text-emerald-200 block">
+                                                    Simulação em Andamento: &quot;{planilhaSimulationFileName}&quot;
+                                                </span>
+                                                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                                                    Os mapas e cálculos estão operando sobre esta planilha.
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleResetPlanilhaSimulation}
+                                                className="px-4 py-2 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-md transition cursor-pointer shrink-0"
+                                            >
+                                                Restaurar Dados do ERP
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Rodapé com Ações */}
@@ -10864,6 +11778,66 @@ export const AjusteRota: React.FC = () => {
                                         <span>Salvar Parâmetros no Banco</span>
                                     </>
                                 )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE CONFIRMAÇÃO E SALVAMENTO DE ZONA POLIGONAL */}
+            {showSaveZoneModal && (
+                <div className="fixed inset-0 z-[3000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
+                        <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                            <span>📍</span> Salvar Zona Poligonal
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                            O polígono desenhado no mapa possui {drawingZonePoints.length} vértices demarcados. Defina um nome e cor de destaque para identificá-lo no mapa.
+                        </p>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                    Nome da Zona:
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newZoneName}
+                                    onChange={(e) => setNewZoneName(e.target.value)}
+                                    placeholder="Ex: Zona Leste, Setor Taubaté Sul, etc."
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                    Cor da Demarcação:
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    {['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'].map(color => (
+                                        <button
+                                            key={color}
+                                            type="button"
+                                            onClick={() => setNewZoneColor(color)}
+                                            className={`w-7 h-7 rounded-full border-2 transition cursor-pointer ${newZoneColor === color ? 'border-slate-900 dark:border-white scale-110 shadow-sm' : 'border-transparent'}`}
+                                            style={{ backgroundColor: color }}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <button
+                                type="button"
+                                onClick={handleCancelDrawingZone}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmSaveZone}
+                                className="px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition cursor-pointer"
+                            >
+                                Salvar Zona
                             </button>
                         </div>
                     </div>

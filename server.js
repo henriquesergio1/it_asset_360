@@ -2491,6 +2491,18 @@ async function ensureFuelTablesExist(pool) {
             if (checkColResectMode.recordset.length === 0) {
                 await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD OptResectorizeMode NVARCHAR(50) NOT NULL DEFAULT 'BALANCED';");
             }
+            const checkColRegioes = await pool.request().query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelParametrosOtimizacao' AND COLUMN_NAME = 'RegioesCidadesJson'");
+            if (checkColRegioes.recordset.length === 0) {
+                await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD RegioesCidadesJson NVARCHAR(MAX) NULL;");
+            }
+            const checkColZonas = await pool.request().query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelParametrosOtimizacao' AND COLUMN_NAME = 'ZonasPoligonaisJson'");
+            if (checkColZonas.recordset.length === 0) {
+                await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD ZonasPoligonaisJson NVARCHAR(MAX) NULL;");
+            }
+            const checkColGroupReg = await pool.request().query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelParametrosOtimizacao' AND COLUMN_NAME = 'OptGroupCitiesByRegion'");
+            if (checkColGroupReg.recordset.length === 0) {
+                await pool.request().query("ALTER TABLE FuelParametrosOtimizacao ADD OptGroupCitiesByRegion BIT NOT NULL DEFAULT 0;");
+            }
         }
 
         const checkClienteCoord = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelClienteCoordenadas'");
@@ -3297,6 +3309,9 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
         const optSmallCityThreshold = parseInt(b.optSmallCityThreshold, 10) || 15;
         const optAutoResectorizeSellers = b.optAutoResectorizeSellers ? 1 : 0;
         const optResectorizeMode = b.optResectorizeMode === 'MINIMIZE_SELLERS' ? 'MINIMIZE_SELLERS' : 'BALANCED';
+        const regioesCidadesJson = typeof b.regioesCidadesJson === 'string' ? b.regioesCidadesJson : JSON.stringify(b.regioesCidades || []);
+        const zonasPoligonaisJson = typeof b.zonasPoligonaisJson === 'string' ? b.zonasPoligonaisJson : JSON.stringify(b.zonasPoligonais || []);
+        const optGroupCitiesByRegion = b.optGroupCitiesByRegion ? 1 : 0;
         const userName = b.usuario || req.user?.Nome || req.user?.Usuario || 'Operador Fuel';
 
         await pool.request()
@@ -3317,6 +3332,9 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
             .input('OptSmallCityThreshold', sql.Int, optSmallCityThreshold)
             .input('OptAutoResectorizeSellers', sql.Bit, optAutoResectorizeSellers)
             .input('OptResectorizeMode', sql.NVarChar(50), optResectorizeMode)
+            .input('RegioesCidadesJson', sql.NVarChar(sql.MAX), regioesCidadesJson)
+            .input('ZonasPoligonaisJson', sql.NVarChar(sql.MAX), zonasPoligonaisJson)
+            .input('OptGroupCitiesByRegion', sql.Bit, optGroupCitiesByRegion)
             .input('UsuarioAtualizacao', sql.NVarChar(255), userName)
             .query(`
                 IF EXISTS (SELECT 1 FROM FuelParametrosOtimizacao WHERE Chave = @Chave)
@@ -3338,6 +3356,9 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         OptSmallCityThreshold = @OptSmallCityThreshold,
                         OptAutoResectorizeSellers = @OptAutoResectorizeSellers,
                         OptResectorizeMode = @OptResectorizeMode,
+                        RegioesCidadesJson = @RegioesCidadesJson,
+                        ZonasPoligonaisJson = @ZonasPoligonaisJson,
+                        OptGroupCitiesByRegion = @OptGroupCitiesByRegion,
                         DataAtualizacao = GETDATE(),
                         UsuarioAtualizacao = @UsuarioAtualizacao
                     WHERE Chave = @Chave;
@@ -3350,6 +3371,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         OptBalanceWorkload, OptAvoidFridayDistant, OptSequenceStrategy,
                         OptEndAtLastClient, OptGroupSmallCitiesInSingleCycle, OptSmallCityThreshold,
                         OptAutoResectorizeSellers, OptResectorizeMode,
+                        RegioesCidadesJson, ZonasPoligonaisJson, OptGroupCitiesByRegion,
                         DataAtualizacao, UsuarioAtualizacao
                     )
                     VALUES (
@@ -3358,6 +3380,7 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
                         @OptBalanceWorkload, @OptAvoidFridayDistant, @OptSequenceStrategy,
                         @OptEndAtLastClient, @OptGroupSmallCitiesInSingleCycle, @OptSmallCityThreshold,
                         @OptAutoResectorizeSellers, @OptResectorizeMode,
+                        @RegioesCidadesJson, @ZonasPoligonaisJson, @OptGroupCitiesByRegion,
                         GETDATE(), @UsuarioAtualizacao
                     );
                 END
@@ -3376,6 +3399,160 @@ app.post('/api/fuel360/parametros-otimizacao', async (req, res) => {
         res.json({ success: true, message: 'Parâmetros de otimização salvos com sucesso no banco de dados corporativo.', parametros: updated.recordset[0] || null });
     } catch (err) {
         console.error('[Fuel360 ERROR] Falha ao salvar parametros de otimizacao:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Endpoint de Enriquecimento/Lookup de Planilha de Simulação (Sold/Cliente x Vendedor)
+app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const { itens } = req.body || {};
+        if (!Array.isArray(itens) || itens.length === 0) {
+            return res.status(400).json({ success: false, error: 'Nenhum item fornecido na planilha.' });
+        }
+
+        // 1. Extrair códigos únicos
+        const rawCodsClientes = itens.map(i => parseInt(i.Cod_Cliente, 10)).filter(n => !isNaN(n) && n > 0);
+        const codsClientes = [...new Set(rawCodsClientes)];
+        const rawCodsVendedores = itens.map(i => parseInt(i.Cod_Vend, 10)).filter(n => !isNaN(n) && n > 0);
+        const codsVendedores = [...new Set(rawCodsVendedores)];
+
+        // 2. Buscar coordenadas homologadas/aprovadas em FuelClienteCoordenadas
+        const coordsMap = new Map();
+        if (codsClientes.length > 0) {
+            const chunkSize = 1000;
+            for (let i = 0; i < codsClientes.length; i += chunkSize) {
+                const chunk = codsClientes.slice(i, i + chunkSize);
+                const queryCoords = `SELECT Cod_Cliente, Lat, Long, Status FROM FuelClienteCoordenadas WHERE Cod_Cliente IN (${chunk.join(',')})`;
+                const coordsRes = await pool.request().query(queryCoords);
+                if (coordsRes.recordset) {
+                    coordsRes.recordset.forEach(c => coordsMap.set(c.Cod_Cliente, c));
+                }
+            }
+        }
+
+        // 3. Buscar colaboradores/vendedores e suas bases em FuelColaboradores
+        const sellersMap = new Map();
+        if (codsVendedores.length > 0) {
+            const querySellers = `SELECT ID_Colaborador, CodigoSetor, Nome, Grupo, LatitudeBase, LongitudeBase, EnderecoBase, Ativo FROM FuelColaboradores WHERE CodigoSetor IN (${codsVendedores.join(',')})`;
+            const sellersRes = await pool.request().query(querySellers);
+            if (sellersRes.recordset) {
+                sellersRes.recordset.forEach(s => sellersMap.set(Number(s.CodigoSetor), s));
+            }
+        }
+
+        // 4. Buscar dados cadastrais de clientes no ERP (se configurado)
+        const clientDetailsMap = new Map();
+        const settingsRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
+        const s = settingsRes.recordset ? settingsRes.recordset[0] : null;
+
+        if (s && s.ExtRoute_Host && s.ExtRoute_Query && s.ExtRoute_Host.trim() !== '' && s.ExtRoute_Query.trim() !== '' && codsClientes.length > 0) {
+            let extPool = null;
+            try {
+                extPool = new sql.ConnectionPool({
+                    server: s.ExtRoute_Host,
+                    port: parseInt(s.ExtRoute_Port || 1433),
+                    user: s.ExtRoute_User,
+                    password: s.ExtRoute_Pass,
+                    database: s.ExtRoute_Database,
+                    options: { encrypt: false, trustServerCertificate: true, requestTimeout: 60000 }
+                });
+                await extPool.connect();
+
+                const now = new Date();
+                const y = now.getFullYear();
+                const pStart = `${y}-01-01`;
+                const pEnd = `${y}-12-31`;
+
+                const extRes = await extPool.request()
+                    .input('pStartDate', sql.NVarChar, pStart)
+                    .input('pEndDate', sql.NVarChar, pEnd)
+                    .query(s.ExtRoute_Query);
+                await extPool.close();
+
+                if (extRes.recordset) {
+                    extRes.recordset.forEach(row => {
+                        const norm = normalizeVisitaData(row);
+                        if (norm.Cod_Cliente && !clientDetailsMap.has(norm.Cod_Cliente)) {
+                            clientDetailsMap.set(norm.Cod_Cliente, norm);
+                        }
+                    });
+                }
+            } catch (extErr) {
+                if (extPool) try { await extPool.close(); } catch(e) {}
+                console.warn('[Lookup Planilha] Falha ao consultar detalhes no ERP, usando dados disponíveis:', extErr.message);
+            }
+        }
+
+        // 5. Montar resultado normalizado para cada item da planilha
+        let foundCoords = 0;
+        let missingCoords = 0;
+        let matchedSellers = 0;
+
+        const normalized = itens.map(item => {
+            const codCliente = parseInt(item.Cod_Cliente, 10) || 0;
+            const codVend = parseInt(item.Cod_Vend, 10) || 0;
+            const coord = coordsMap.get(codCliente);
+            const clientDetail = clientDetailsMap.get(codCliente);
+            const seller = sellersMap.get(codVend);
+
+            if (seller) matchedSellers++;
+
+            let lat = 0;
+            let lon = 0;
+            if (coord && coord.Lat && coord.Long && !isNaN(coord.Lat) && !isNaN(coord.Long)) {
+                lat = Number(coord.Lat);
+                lon = Number(coord.Long);
+                foundCoords++;
+            } else if (clientDetail && clientDetail.Lat && clientDetail.Long) {
+                lat = Number(clientDetail.Lat);
+                lon = Number(clientDetail.Long);
+                foundCoords++;
+            } else if (item.Lat && item.Long) {
+                lat = Number(item.Lat);
+                lon = Number(item.Long);
+                foundCoords++;
+            } else {
+                missingCoords++;
+            }
+
+            return {
+                Cod_Cliente: codCliente,
+                Razao_Social: item.Razao_Social || clientDetail?.Razao_Social || `Cliente ${codCliente}`,
+                Endereco: item.Endereco || clientDetail?.Endereco || '',
+                Bairro: item.Bairro || clientDetail?.Bairro || '',
+                Cidade: item.Cidade || clientDetail?.Cidade || '',
+                CEP: item.CEP || clientDetail?.CEP || '',
+                Canal_Remuneracao: item.Canal_Remuneracao || clientDetail?.Canal_Remuneracao || 'PADRÃO',
+                Lat: lat,
+                Long: lon,
+                Cod_Vend: codVend,
+                Nome_Vendedor: seller?.Nome || item.Nome_Vendedor || `Vendedor ${codVend}`,
+                Nome_Supervisor: item.Nome_Supervisor || clientDetail?.Nome_Supervisor || '',
+                Cod_Supervisor: item.Cod_Supervisor || clientDetail?.Cod_Supervisor || 0,
+                Dia_Semana: item.Dia_Semana || '',
+                Periodicidade: item.Periodicidade || 'SEMANAL',
+                Data_da_Visita: item.Data_da_Visita || '',
+                Origem: 'PLANILHA'
+            };
+        });
+
+        res.json({
+            success: true,
+            data: normalized,
+            summary: {
+                total: itens.length,
+                uniqueClients: codsClientes.length,
+                uniqueSellers: codsVendedores.length,
+                foundCoords,
+                missingCoords,
+                matchedSellers
+            }
+        });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha no lookup da planilha de simulacao:', err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });
