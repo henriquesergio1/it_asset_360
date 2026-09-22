@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.218.0',
+    date: 'Hoje',
+    title: 'Fuel360: Bloqueio e Exclusão de Clientes Inativos no ERP / Planilha da Roteirização',
+    changes: [
+      'Validação de Clientes Inativos no ERP (TPOSTUCET <> A): Clientes inativos no ERP (que não constam na query ativa ou possuem status divergente de ativo) são identificados automaticamente no processamento da planilha.',
+      'Exclusão Automática do Mapa e Roteirizador: Nenhum cliente inativo é plotado no mapa nem considerado pelo motor de roteirização, evitando deslocamentos indevidos e geração de rotas para PDVs desativados.',
+      'Alerta Visual Destacado para o Operador: Exibição de banner de alerta no Assistente de Destino da Planilha com a listagem completa dos clientes inativos desconsiderados (código, razão social e motivo).',
+      'Compatibilidade com Colunas de Status da Planilha: Leitura de colunas como Status, Situação, Ativo e Inativo na planilha para detecção imediata de clientes inativos.'
+    ]
+  },
+  {
     version: '3.217.0',
     date: 'Hoje',
     title: 'Fuel360: Meio Termo Inteligente e Teto Rígido de Clientes por Dia no Roteirizador',

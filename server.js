@@ -3827,6 +3827,8 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
 
         // 4. Buscar dados cadastrais de clientes no ERP (se configurado)
         const clientDetailsMap = new Map();
+        const inactiveClientsMap = new Map();
+        let erpQueryExecuted = false;
         const settingsRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
         const s = settingsRes.recordset ? settingsRes.recordset[0] : null;
 
@@ -3852,9 +3854,9 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
                     .input('pStartDate', sql.NVarChar, pStart)
                     .input('pEndDate', sql.NVarChar, pEnd)
                     .query(s.ExtRoute_Query);
-                await extPool.close();
 
                 if (extRes.recordset) {
+                    erpQueryExecuted = true;
                     extRes.recordset.forEach(row => {
                         const norm = normalizeVisitaData(row);
                         if (norm.Cod_Cliente && !clientDetailsMap.has(norm.Cod_Cliente)) {
@@ -3862,6 +3864,33 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
                         }
                     });
                 }
+
+                // Se houver clientes da planilha que não vieram na query de ativos do ERP (WHERE d.TPOSTUCET = 'A'),
+                // busca na tabela IBETCET para obter Razão Social e status cadastral
+                const missingInActiveQuery = codsClientes.filter(c => !clientDetailsMap.has(c));
+                if (missingInActiveQuery.length > 0) {
+                    try {
+                        const chunkSize = 1000;
+                        for (let i = 0; i < missingInActiveQuery.length; i += chunkSize) {
+                            const chunk = missingInActiveQuery.slice(i, i + chunkSize);
+                            const queryInactive = `SELECT CODCET, NOMRAZSCLCET, TPOSTUCET FROM dbo.IBETCET WHERE CODCET IN (${chunk.join(',')})`;
+                            const inactRes = await extPool.request().query(queryInactive);
+                            if (inactRes.recordset) {
+                                inactRes.recordset.forEach(r => {
+                                    inactiveClientsMap.set(Number(r.CODCET), {
+                                        Cod_Cliente: Number(r.CODCET),
+                                        Razao_Social: r.NOMRAZSCLCET || `Cliente ${r.CODCET}`,
+                                        TPOSTUCET: r.TPOSTUCET
+                                    });
+                                });
+                            }
+                        }
+                    } catch (inactErr) {
+                        console.warn('[Lookup Planilha] Falha ao consultar IBETCET para clientes ausentes da query:', inactErr.message);
+                    }
+                }
+
+                await extPool.close();
             } catch (extErr) {
                 if (extPool) try { await extPool.close(); } catch(e) {}
                 console.warn('[Lookup Planilha] Falha ao consultar detalhes no ERP, usando dados disponíveis:', extErr.message);
@@ -3872,12 +3901,14 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
         let foundCoords = 0;
         let missingCoords = 0;
         let matchedSellers = 0;
+        const inactiveClientsList = [];
 
         const normalized = itens.map(item => {
             const codCliente = parseInt(item.Cod_Cliente, 10) || 0;
             const codVend = parseInt(item.Cod_Vend, 10) || 0;
             const coord = coordsMap.get(codCliente);
             const clientDetail = clientDetailsMap.get(codCliente);
+            const inactiveDetail = inactiveClientsMap.get(codCliente);
             const seller = sellersMap.get(codVend);
 
             if (seller) matchedSellers++;
@@ -3904,9 +3935,36 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
                 missingCoords++;
             }
 
+            // Identificação de cliente inativo:
+            // 1. Veio marcado como inativo na própria planilha
+            const rawSheetStatus = String(item.Status || item.Situacao || item.Ativo || item.Inativo || '').trim().toUpperCase();
+            const isSheetInactive = ['INATIVO', 'I', 'N', 'NAO', 'NÃO', 'BLOQUEADO', '0', 'FALSE'].includes(rawSheetStatus);
+
+            // 2. Se a query do ERP rodou com sucesso e o cliente NÃO veio nela (pois a query possui WHERE d.TPOSTUCET = 'A')
+            //    OU se foi encontrado na IBETCET com TPOSTUCET <> 'A'
+            const isErpInactive = erpQueryExecuted && (!clientDetail || (inactiveDetail && inactiveDetail.TPOSTUCET !== 'A'));
+
+            const isInativo = isSheetInactive || isErpInactive;
+            const motivoInativo = isErpInactive 
+                ? 'Inativo no ERP (não consta na base de ativos WHERE TPOSTUCET = A)' 
+                : (isSheetInactive ? 'Marcado como inativo na planilha' : '');
+
+            const razaoSocial = item.Razao_Social || inactiveDetail?.Razao_Social || clientDetail?.Razao_Social || `Cliente ${codCliente}`;
+
+            if (isInativo) {
+                // Adiciona à lista de inativos única para alerta do operador
+                if (!inactiveClientsList.some(ic => ic.Cod_Cliente === codCliente)) {
+                    inactiveClientsList.push({
+                        Cod_Cliente: codCliente,
+                        Razao_Social: razaoSocial,
+                        Motivo: motivoInativo
+                    });
+                }
+            }
+
             return {
                 Cod_Cliente: codCliente,
-                Razao_Social: item.Razao_Social || clientDetail?.Razao_Social || `Cliente ${codCliente}`,
+                Razao_Social: razaoSocial,
                 Endereco: item.Endereco || clientDetail?.Endereco || '',
                 Bairro: item.Bairro || clientDetail?.Bairro || '',
                 Cidade: item.Cidade || clientDetail?.Cidade || '',
@@ -3925,6 +3983,8 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
                 Periodicidade: item.Periodicidade || clientDetail?.Periodicidade || '',
                 Periodicidade_ERP: clientDetail?.Periodicidade || '',
                 Data_da_Visita: item.Data_da_Visita || clientDetail?.Data_da_Visita || '',
+                IsInativo: isInativo,
+                MotivoInativo: motivoInativo,
                 Origem: 'PLANILHA'
             };
         });
@@ -3938,7 +3998,9 @@ app.post('/api/fuel360/lookup-planilha-simulacao', async (req, res) => {
                 uniqueSellers: codsVendedores.length,
                 foundCoords,
                 missingCoords,
-                matchedSellers
+                matchedSellers,
+                inactiveCount: inactiveClientsList.length,
+                inactiveClients: inactiveClientsList
             }
         });
     } catch (err) {

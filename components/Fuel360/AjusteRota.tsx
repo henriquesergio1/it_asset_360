@@ -1767,6 +1767,7 @@ export const AjusteRota: React.FC = () => {
     const [planilhaEnrichedData, setPlanilhaEnrichedData] = useState<any[]>([]);
     const [planilhaSummary, setPlanilhaSummary] = useState<any | null>(null);
     const [planilhaFileName, setPlanilhaFileName] = useState<string>('');
+    const [planilhaInactiveClients, setPlanilhaInactiveClients] = useState<Array<{ Cod_Cliente: number; Razao_Social: string; Motivo: string }>>([]);
 
     // Assistente de Destino / Roteirização dos Clientes da Planilha
     const [showPlanilhaDestinationModal, setShowPlanilhaDestinationModal] = useState<boolean>(false);
@@ -2060,6 +2061,7 @@ export const AjusteRota: React.FC = () => {
         setPlanilhaSuccess(null);
         setPlanilhaEnrichedData([]);
         setPlanilhaSummary(null);
+        setPlanilhaInactiveClients([]);
 
         try {
             const data = await file.arrayBuffer();
@@ -2077,6 +2079,7 @@ export const AjusteRota: React.FC = () => {
                 const codVend = row.Cod_Vend || row.COD_VEND || row.cod_vend || row['Código Vendedor'] || row['Codigo Vendedor'] || row.Vendedor || row.VENDEDOR || row.Setor || row.SETOR || row.CD_VENDEDOR || 0;
                 const diaSemana = row.Dia_Semana || row.DIA_SEMANA || row.dia_semana || row['Dia da Semana'] || row['Dia Semana'] || row.Dia || '';
                 const periodicidade = row.Periodicidade || row.PERIODICIDADE || row.periodicidade || row.Freq || row.Frequencia || '';
+                const status = row.Status || row.STATUS || row.status || row.Situacao || row.SITUACAO || row['Situação'] || row.Ativo || row.ATIVO || row.Inativo || row.INATIVO || row.Bloqueado || row.BLOQUEADO || '';
 
                 const parsedCodCliente = parseInt(codCliente, 10);
                 const parsedCodVend = parseInt(codVend, 10) || 0;
@@ -2085,7 +2088,8 @@ export const AjusteRota: React.FC = () => {
                     Cod_Cliente: parsedCodCliente,
                     Cod_Vend: parsedCodVend,
                     Dia_Semana: String(diaSemana || '').trim(),
-                    Periodicidade: String(periodicidade || '').trim().toUpperCase()
+                    Periodicidade: String(periodicidade || '').trim().toUpperCase(),
+                    Status: String(status || '').trim()
                 };
             }).filter(item => !isNaN(item.Cod_Cliente) && item.Cod_Cliente > 0);
 
@@ -2101,7 +2105,16 @@ export const AjusteRota: React.FC = () => {
             if (lookupRes && lookupRes.success && lookupRes.data) {
                 setPlanilhaEnrichedData(lookupRes.data);
                 setPlanilhaSummary(lookupRes.summary);
-                setPlanilhaSuccess(`Planilha '${file.name}' validada! ${lookupRes.summary.total} registros identificados.`);
+
+                const inactList = lookupRes.summary?.inactiveClients || [];
+                setPlanilhaInactiveClients(inactList);
+
+                const activeCount = (lookupRes.summary?.total || 0) - (lookupRes.summary?.inactiveCount || 0);
+                if (inactList.length > 0) {
+                    setPlanilhaSuccess(`Planilha '${file.name}' processada! ${activeCount} clientes ativos. ⚠️ ${inactList.length} cliente(s) inativo(s) no ERP foram identificados e NÃO serão plotados nem roteirizados.`);
+                } else {
+                    setPlanilhaSuccess(`Planilha '${file.name}' validada! ${lookupRes.summary?.total || 0} registros identificados.`);
+                }
 
                 // Pré-selecionar modo de destino inteligente
                 const hasSellers = lookupRes.data.some((d: any) => d.Cod_Vend > 0);
@@ -2268,7 +2281,16 @@ export const AjusteRota: React.FC = () => {
             });
         }
 
-        const uniqueData = consolidateUniqueClients(processedData);
+        // EXCLUSÃO RÍGIDA DE CLIENTES INATIVOS:
+        // Clientes inativos no ERP ou planilha NÃO entram nas rotas nem no mapa nem na roteirização
+        const activeOnlyData = processedData.filter((item: any) => !item.IsInativo);
+
+        if (activeOnlyData.length === 0) {
+            alert('⚠️ Todos os clientes da planilha foram identificados como inativos no ERP. Nenhuma rota foi carregada no mapa.');
+            return;
+        }
+
+        const uniqueData = consolidateUniqueClients(activeOnlyData);
         const dataWithCustomCoords = applyCustomCoordinates(uniqueData);
 
         setOriginalRoutes(dataWithCustomCoords);
@@ -2279,7 +2301,13 @@ export const AjusteRota: React.FC = () => {
         setShowPlanilhaDestinationModal(false);
         setShowParamsModal(false);
 
-        alert(`✅ Simulação Carregada com Sucesso!\n\nForam carregados ${uniqueData.length} clientes a partir da planilha '${planilhaFileName}'.\nVocê pode visualizar os pontos no mapa e rodar a roteirização agora.`);
+        let alertMsg = `✅ Simulação Carregada com Sucesso!\n\nForam carregados ${uniqueData.length} clientes ativos a partir da planilha '${planilhaFileName}'.\nVocê pode visualizar os pontos no mapa e rodar a roteirização agora.`;
+        if (planilhaInactiveClients.length > 0) {
+            alertMsg += `\n\n⚠️ ${planilhaInactiveClients.length} cliente(s) inativo(s) no ERP foram desconsiderados e NÃO foram plotados no mapa:\n` +
+                planilhaInactiveClients.slice(0, 8).map(c => `- ${c.Cod_Cliente}: ${c.Razao_Social}`).join('\n') +
+                (planilhaInactiveClients.length > 8 ? `\n... e mais ${planilhaInactiveClients.length - 8} cliente(s).` : '');
+        }
+        alert(alertMsg);
     };
 
     const handleApplyPlanilhaSimulation = () => {
@@ -12600,6 +12628,37 @@ export const AjusteRota: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* ALERTA DE CLIENTES INATIVOS NO ERP */}
+                            {planilhaInactiveClients.length > 0 && (
+                                <div className="bg-red-50/80 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-800/70 rounded-2xl p-4 space-y-2.5 shadow-sm">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-red-800 dark:text-red-200 font-black text-xs">
+                                            <span className="text-base">⚠️</span>
+                                            <span>{planilhaInactiveClients.length} Cliente(s) Inativo(s) no ERP Desconsiderado(s)</span>
+                                        </div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-0.5 rounded-full">
+                                            Não serão roteirizados
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-red-700 dark:text-red-300 leading-relaxed">
+                                        Os seguintes clientes constam como <strong>inativos no ERP</strong> (ou foram marcados como inativos na planilha). Por segurança, eles <strong>NÃO serão plotados no mapa nem roteirizados</strong>:
+                                    </p>
+                                    <div className="max-h-32 overflow-y-auto space-y-1.5 bg-white/90 dark:bg-slate-900/80 p-2.5 rounded-xl border border-red-200 dark:border-red-900/40 text-xs">
+                                        {planilhaInactiveClients.map(c => (
+                                            <div key={c.Cod_Cliente} className="flex items-center justify-between text-slate-700 dark:text-slate-300 py-0.5 border-b border-slate-100 dark:border-slate-800/50 last:border-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono font-black text-red-600 dark:text-red-400">{c.Cod_Cliente}</span>
+                                                    <span className="truncate max-w-[280px] font-bold text-slate-800 dark:text-slate-200">{c.Razao_Social}</span>
+                                                </div>
+                                                <span className="text-[10px] bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 px-2 py-0.5 rounded font-bold">
+                                                    {c.Motivo || 'INATIVO ERP'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Seleção do Modo de Destino */}
                             <div className="space-y-3">
