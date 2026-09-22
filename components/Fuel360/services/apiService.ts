@@ -82,6 +82,57 @@ async function apiRequest<T>(endpoint: string, method: string = 'GET', body?: an
     }
 }
 
+// Função para sanitizar e normalizar endereços brasileiros, removendo complementos prediais
+export function cleanAddressForGeocoding(streetRaw: string, numberRaw?: string): { cleanStreet: string; cleanNumber: string } {
+    let s = (streetRaw || '').trim();
+    let num = (numberRaw || '').trim();
+
+    // Se o numberRaw tiver complemento colado (ex: '80, Sl J Slj' ou '80 Sl J')
+    if (num) {
+        const numPartMatch = num.match(/^(\d{1,6})/);
+        if (numPartMatch) {
+            num = numPartMatch[1];
+        }
+    }
+
+    // Se o número não veio separado, tenta extrair da string de rua
+    if (!num) {
+        const matchNum = s.match(/(?:,|\s)\s*(?:nº|n°|num|número)?\s*(\d{1,6})\b/i);
+        if (matchNum) {
+            num = matchNum[1];
+            s = s.substring(0, matchNum.index).trim();
+        }
+    } else {
+        const regexNum = new RegExp(`(?:,|\\s|^)\\s*(?:nº|n°|num|número)?\\s*${num}\\b.*$`, 'i');
+        s = s.replace(regexNum, '').trim();
+    }
+
+    // Remove complementos residenciais/comerciais comuns
+    const complementPatterns = [
+        /\b(?:sl|sala|slj|sobreloja|apto|apartamento|ap|bloco|bl|fundos|fdt|frente|casa|cs|loja|lj|galpao|gp|box|bx|andar|and|pavimento|pav|quadra|qd|lote|lt|cj|conjunto|anexo)\b.*$/i,
+        /,\s*.*$/i
+    ];
+    for (const pat of complementPatterns) {
+        s = s.replace(pat, '').trim();
+    }
+
+    // Normalização de prefixos
+    s = s.replace(/^r\b\.?/i, 'Rua')
+         .replace(/^av\b\.?/i, 'Avenida')
+         .replace(/^al\b\.?/i, 'Alameda')
+         .replace(/^tr\b\.?|^trav\b\.?/i, 'Travessa')
+         .replace(/^pc\b\.?|^pca\b\.?/i, 'Praça')
+         .replace(/^est\b\.?/i, 'Estrada')
+         .replace(/^rod\b\.?/i, 'Rodovia')
+         .replace(/^jd\b\.?/i, 'Jardim')
+         .replace(/^vl\b\.?/i, 'Vila')
+         .trim();
+
+    s = s.replace(/[-,\/]+$/, '').trim();
+
+    return { cleanStreet: s, cleanNumber: num };
+}
+
 const RealService = {
     login: (usuario: string, senha: string): Promise<AuthResponse> => apiRequest('/login', 'POST', { usuario, senha }),
     getSystemStatus: (): Promise<LicenseStatus> => apiRequest('/system/status'),
@@ -228,20 +279,16 @@ const RealService = {
             zip = (input.cep || '').replace(/\D/g, '');
             overrideAddress = (input.address || '').trim();
             forceCep = Boolean(input.forceCepOnly);
-            rawStr = overrideAddress || (street && city ? `${street}${num ? `, ${num}` : ''}${neighborhood ? ` - ${neighborhood}` : ''}, ${city}${state ? ` - ${state}` : ''}` : '');
         }
 
-        // Extração auxiliar de número predial caso não tenha vindo em campo específico
-        if (!num && rawStr) {
-            const numMatch = rawStr.match(/(?:,|\b)\s*(?:nº|n°|num|número)?\s*(\d{1,6})\s*(?:,|\b|$)/i);
-            if (numMatch) {
-                num = numMatch[1];
-            }
-        }
+        // Sanitização e normalização inteligente de logradouro e número predial
+        const cleaned = cleanAddressForGeocoding(street || overrideAddress || rawStr, num);
+        if (cleaned.cleanStreet) street = cleaned.cleanStreet;
+        if (cleaned.cleanNumber) num = cleaned.cleanNumber;
 
         // Extração auxiliar de CEP caso não tenha vindo em campo específico
-        if (!zip && rawStr) {
-            const cepMatch = rawStr.match(/(?:CEP\s*[:\-]?\s*|\b)(\d{5})[\s\-]?(\d{3})\b/i);
+        if (!zip && (overrideAddress || rawStr)) {
+            const cepMatch = (overrideAddress || rawStr).match(/(?:CEP\s*[:\-]?\s*|\b)(\d{5})[\s\-]?(\d{3})\b/i);
             if (cepMatch) {
                 zip = `${cepMatch[1]}${cepMatch[2]}`;
             }
@@ -328,23 +375,28 @@ const RealService = {
             if (cepResult) return cepResult;
         }
 
-        // Montagem da query completa de alta precisão (Logradouro, Número, Bairro, Cidade, CEP)
-        let fullQuery = overrideAddress?.trim() || (street && city ? `${street}${num ? `, ${num}` : ''}${neighborhood ? ` - ${neighborhood}` : ''}, ${city}${state ? ` - ${state}` : ''}` : '');
-        if (!fullQuery) fullQuery = rawStr;
-
-        // Se o número existir e ainda não estiver na query, incorpora para precisão máxima
-        if (num && !fullQuery.match(new RegExp(`(?:^|\\D)${num}(?:$|\\D)`))) {
-            fullQuery = `${fullQuery}, ${num}`;
+        // Montagem das queries escalonadas de alta precisão
+        const queriesToTry: string[] = [];
+        if (street && city) {
+            const streetWithNum = num ? `${street}, ${num}` : street;
+            if (neighborhood) {
+                queriesToTry.push(`${streetWithNum}, ${neighborhood}, ${city}${state ? ` - ${state}` : ''}`);
+            }
+            queriesToTry.push(`${streetWithNum}, ${city}${state ? ` - ${state}` : ''}`);
+            queriesToTry.push(`${street}, ${city}${state ? ` - ${state}` : ''}`);
+        } else if (overrideAddress) {
+            queriesToTry.push(overrideAddress);
+        } else if (rawStr) {
+            queriesToTry.push(rawStr);
         }
 
         // 1ª Prioridade Absoluta: Google Maps Engine via Backend Proxy (/api/fuel360/geocode ou /api/geocode)
-        if (fullQuery) {
+        for (const fullQuery of queriesToTry) {
             try {
                 let gRes: { success: boolean; lat: number; lon: number } | null = null;
                 try {
                     gRes = await apiRequest<{ success: boolean; lat: number; lon: number }>('/geocode', 'POST', { address: fullQuery });
                 } catch (eRel) {
-                    // Fallback para rota direta no proxy caso o endpoint com prefixo não responda
                     const fallbackRes = await fetch('/api/geocode', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -360,14 +412,13 @@ const RealService = {
                     const lon = Number(gRes.lon);
                     if (!isNaN(lat) && !isNaN(lon)) {
                         // Guarda Universal de Consistência Geográfica Municipal:
-                        // Evita falsos positivos intermunicipais quando nomes de ruas contêm nomes de outras cidades (ex: Av Sao Jose dos Campos em Paraibuna)
                         if (cleanZip.length === 8 || city) {
                             const cepPoint = cleanZip.length === 8 ? await resolveCoordsByCep(cleanZip) : null;
                             if (cepPoint) {
                                 const distFromCep = RealService.calcDistance(lat, lon, cepPoint.lat, cepPoint.lon);
                                 if (distFromCep > 12) {
-                                    console.warn(`[Fuel360] Ponto do Google Maps divergiu ${distFromCep.toFixed(1)}km do centróide de ${city || cleanZip}. Rejeitando falso positivo intermunicipal e adotando coordenada de alta precisão do CEP.`);
-                                    return cepPoint;
+                                    console.warn(`[Fuel360] Ponto do Google Maps divergiu ${distFromCep.toFixed(1)}km do centróide de ${city || cleanZip}. Rejeitando falso positivo intermunicipal.`);
+                                    continue;
                                 }
                             }
                         }
@@ -376,7 +427,7 @@ const RealService = {
                     }
                 }
             } catch (eGoogle) {
-                console.warn('[Fuel360] Geocodificação Google Maps falhou, iniciando contingência por camadas:', eGoogle);
+                console.warn('[Fuel360] Geocodificação Google Maps falhou na tentativa:', fullQuery, eGoogle);
             }
         }
 
@@ -396,8 +447,9 @@ const RealService = {
             attempts.push({ label: 'Centro da Cidade', query: `Centro, ${city}${state ? ` - ${state}` : ''}, Brasil` });
         }
 
-        if (fullQuery && !attempts.some(a => a.query === fullQuery)) {
-            attempts.unshift({ label: 'Endereço Completo', query: fullQuery });
+        const primaryQuery = queriesToTry[0] || overrideAddress || rawStr;
+        if (primaryQuery && !attempts.some(a => a.query === primaryQuery)) {
+            attempts.unshift({ label: 'Endereço Completo', query: primaryQuery });
         }
 
         const numVal = parseInt(num, 10);

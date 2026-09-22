@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.208.2',
+    date: 'Hoje',
+    title: 'Fuel360: Sanitizador Inteligente de Endereços e Geocodificação Predial Escalonada',
+    changes: [
+      'Sanitizador de Complementos Prediais: Implementado filtro automático para remover termos cadastrais que poluíam a busca nos motores geográficos (ex.: Sl, Sala, Slj, Sobreloja, Apto, Bloco, Fundos, Loja, Galpão, etc.), preservando com precisão o logradouro e o número predial exatos.',
+      'Geocodificação em 5 Camadas Escalonadas: Estratégia de resolução progressiva que tenta primeiro a numeração predial exata com bairro, em seguida sem bairro, logradouro isolado, CEP direto da via via BrasilAPI e centróide do bairro, alcançando exatidão métrica com as coordenadas do ERP.',
+      'Normalização de Logradouros: Expansão automática de abreviações brasileiras comuns (R -> Rua, Av -> Avenida, Pc -> Praça, Al -> Alameda, Tv -> Travessa).'
+    ]
+  },
+  {
     version: '3.208.1',
     date: 'Hoje',
     title: 'Fuel360: Blindagem Municipal do Geolocalizador ERP e Integração BrasilAPI',
