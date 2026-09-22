@@ -48,12 +48,14 @@ const RouteParamsCard: React.FC = () => {
     const { systemConfig, updateSystemConfig } = useContext(DataContext);
     const [alertMaxDailyKM, setAlertMaxDailyKM] = useState(systemConfig.alertMaxDailyKM || 400);
     const [alertMaxClientDist, setAlertMaxClientDist] = useState(systemConfig.alertMaxClientDist || 100);
+    const [routingPreference, setRoutingPreference] = useState<'PRIORIZAR_RODOVIAS' | 'MENOR_DISTANCIA'>(systemConfig.routingPreference || 'MENOR_DISTANCIA');
     const [isSavingRouteParams, setIsSavingRouteParams] = useState(false);
     const [routeParamMsg, setRouteParamMsg] = useState('');
 
     useEffect(() => {
         setAlertMaxDailyKM(systemConfig.alertMaxDailyKM || 400);
         setAlertMaxClientDist(systemConfig.alertMaxClientDist || 100);
+        setRoutingPreference(systemConfig.routingPreference || 'MENOR_DISTANCIA');
     }, [systemConfig]);
 
     const handleSaveRouteParams = async () => {
@@ -63,7 +65,8 @@ const RouteParamsCard: React.FC = () => {
             await updateSystemConfig({
                 ...systemConfig,
                 alertMaxDailyKM,
-                alertMaxClientDist
+                alertMaxClientDist,
+                routingPreference
             });
             setRouteParamMsg('Parâmetros de rota atualizados com sucesso!');
         } catch (e: any) {
@@ -81,8 +84,60 @@ const RouteParamsCard: React.FC = () => {
                     <ChartBarIcon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                    <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Parâmetros de Alerta de Rota</h2>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">Defina os limites para exibição de alertas no Roteirizador.</p>
+                    <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Parâmetros de Rota e Roteirizador</h2>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Defina os limites de alerta e a preferência de traçado viário (pavimentação vs distância).</p>
+                </div>
+            </div>
+
+            {/* Preferência Global de Roteamento */}
+            <div className="mb-6 p-5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-3">
+                    Preferência de Traçado Viário (Anti-Estradas de Terra)
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                        type="button"
+                        onClick={() => setRoutingPreference('PRIORIZAR_RODOVIAS')}
+                        className={`p-4 rounded-xl border text-left transition flex items-start space-x-3 cursor-pointer ${
+                            routingPreference === 'PRIORIZAR_RODOVIAS'
+                                ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/20'
+                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                        }`}
+                    >
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg text-lg">
+                            🛣️
+                        </div>
+                        <div>
+                            <div className="font-bold text-slate-900 dark:text-white text-sm">
+                                Priorizar Rodovias Principais e Asfalto
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                                Evita estradas vicinais e caminhos de terra de difícil acesso, preferindo vias pavimentadas mesmo que a quilometragem seja ligeiramente superior.
+                            </p>
+                        </div>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setRoutingPreference('MENOR_DISTANCIA')}
+                        className={`p-4 rounded-xl border text-left transition flex items-start space-x-3 cursor-pointer ${
+                            routingPreference === 'MENOR_DISTANCIA'
+                                ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/20'
+                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                        }`}
+                    >
+                        <div className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-lg">
+                            📏
+                        </div>
+                        <div>
+                            <div className="font-bold text-slate-900 dark:text-white text-sm">
+                                Menor Distância Absoluta (Padrão)
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                                Escolhe sempre o caminho matematicamente mais curto entre os clientes, considerando qualquer via transitável mapeada no OSRM.
+                            </p>
+                        </div>
+                    </button>
                 </div>
             </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
-import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount, lookupPlanilhaSimulacao, getCidadesERP, getClienteERPCoords, saveClienteCoordenada, getCoordenadasBaseCentral } from './services/apiService';
+import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable, geocodeAddress, getClienteRestricoes, saveClienteRestricoesBatch, deleteClienteRestricao, getRotaPrevistaHistory, getSimulacaoPublica, deleteRotaPrevista, getSimulacaoSugestoes, updateSugestaoStatus, aplicarSugestao, getSimulacoesPendentesCount, lookupPlanilhaSimulacao, getCidadesERP, getClienteERPCoords, saveClienteCoordenada, getCoordenadasBaseCentral, getRoadSurface } from './services/apiService';
 import { VisitaPrevista, Colaborador, SequenceStrategy, ClienteRestricao } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, Tooltip, useMap, Polygon, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -1569,9 +1569,10 @@ const LassoSelectionHandler: React.FC<{
 };
 
 export const AjusteRota: React.FC = () => {
-    const { colaboradores } = useContext(DataContext);
+    const { colaboradores, systemConfig } = useContext(DataContext);
     const { user: authUser } = useAuth();
     const [teamType, setTeamType] = useState<'vendedores' | 'promotores'>('vendedores');
+    const [surfaceInfoMap, setSurfaceInfoMap] = useState<Map<string, { isPaved: boolean; label: string }>>(new Map());
     
     // Rota original carregada vs Rota sendo simulada / ajustada
     const [originalRoutes, setOriginalRoutes] = useState<VisitaPrevista[]>([]);
@@ -6980,6 +6981,22 @@ export const AjusteRota: React.FC = () => {
         alert("Redistribuição desfeita com sucesso! O setor e todas as suas visitas foram restaurados.");
     };
 
+    // Consulta metadados de superfície/pavimentação da via (OpenStreetMap)
+    const fetchSurfaceInfo = useCallback(async (wpId: string, lat: number, lng: number) => {
+        try {
+            const res = await getRoadSurface(lat, lng);
+            if (res && res.success) {
+                setSurfaceInfoMap(prev => {
+                    const next = new Map(prev);
+                    next.set(wpId, { isPaved: res.isPaved, label: res.label });
+                    return next;
+                });
+            }
+        } catch (e) {
+            console.warn('Erro ao consultar superfície viária:', e);
+        }
+    }, []);
+
     // Inserir Waypoint de Desvio Manual (Arrastável no mapa estilo Google Maps)
     const handleAddDeviationWaypoint = useCallback((routeKey: string, sellerId: number, day: string, lat: number, lng: number) => {
         const newWp: RouteDeviationWaypoint = {
@@ -6997,7 +7014,8 @@ export const AjusteRota: React.FC = () => {
             return next;
         });
         setActivePolylineClick(null);
-    }, []);
+        fetchSurfaceInfo(newWp.id, lat, lng);
+    }, [fetchSurfaceInfo]);
 
     // Remover Waypoint de Desvio Manual
     const handleRemoveDeviationWaypoint = useCallback((routeKey: string, wpId: string) => {
@@ -7023,7 +7041,8 @@ export const AjusteRota: React.FC = () => {
             next.set(routeKey, updated);
             return next;
         });
-    }, []);
+        fetchSurfaceInfo(wpId, lat, lng);
+    }, [fetchSurfaceInfo]);
 
     // Aplicar rota alternativa clicada no mapa
     const handleApplyAlternativeRoute = useCallback((routeKey: string, sellerId: number, day: string, altGeometry: [number, number][]) => {
@@ -7190,7 +7209,7 @@ export const AjusteRota: React.FC = () => {
         updateLines();
         
         return () => { isMounted = false; };
-    }, [filteredRoutes, scopedOriginalRoutes, selectedDaysFilter, selectedQuinzenaFilter, selectedPromoter, promoterColorMap, colaboradores, isSingleSellerView, effectiveMapColorMode, optEndAtLastClient, customRouteWaypoints]);
+    }, [filteredRoutes, scopedOriginalRoutes, selectedDaysFilter, selectedQuinzenaFilter, selectedPromoter, promoterColorMap, colaboradores, isSingleSellerView, effectiveMapColorMode, optEndAtLastClient, customRouteWaypoints, systemConfig?.routingPreference]);
 
     // Mapa da ordem/sequência de atendimento diário de cada cliente por Quinzena 1/3 e 2/4
     const visitOrderMap = useMemo(() => {
@@ -10153,6 +10172,31 @@ export const AjusteRota: React.FC = () => {
                                                     <div className="text-slate-700 text-[11px] mb-2">
                                                         <strong>Como usar:</strong> Arraste este marcador no mapa para forçar a rota a passar pela via pavimentada desejada.
                                                     </div>
+                                                    
+                                                    {/* Indicador de Tipo de Pavimento (OpenStreetMap) */}
+                                                    {(() => {
+                                                        const surface = surfaceInfoMap.get(wp.id);
+                                                        return (
+                                                            <div className={`p-2 rounded-lg border mb-2.5 flex items-start gap-2 ${
+                                                                surface 
+                                                                    ? (surface.isPaved 
+                                                                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200' 
+                                                                        : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200')
+                                                                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                                                            }`}>
+                                                                <span className="text-sm">{surface ? (surface.isPaved ? '🛣️' : '⚠️') : '🔍'}</span>
+                                                                <div>
+                                                                    <div className="font-extrabold text-[10px] uppercase tracking-wider">
+                                                                        {surface ? (surface.isPaved ? 'Via Pavimentada' : 'Não Pavimentada') : 'Consultando Pavimento...'}
+                                                                    </div>
+                                                                    <div className="text-[10px] mt-0.5 leading-tight opacity-90">
+                                                                        {surface ? surface.label : 'Identificando tipo de via no OpenStreetMap...'}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+
                                                     <div className="text-[10px] text-slate-400 font-mono mb-2">
                                                         {wp.lat.toFixed(5)}, {wp.lng.toFixed(5)}
                                                     </div>

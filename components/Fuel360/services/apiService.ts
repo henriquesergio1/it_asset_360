@@ -263,6 +263,8 @@ const RealService = {
     saveClienteAuditoria: (cliente: any): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-auditoria/salvar', 'POST', cliente),
     saveClienteAuditoriaLote: (clientes: any[], usuario?: string): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-auditoria/salvar-lote', 'POST', { clientes, usuario }),
     syncClienteAuditoriaERP: (clientes: any[], usuario?: string): Promise<{ success: boolean; message: string }> => apiRequest('/cliente-auditoria/sincronizar-erp', 'POST', { clientes, usuario }),
+    getClienteBackgroundStatus: (): Promise<{ success: boolean; lastSync: string | null; isRunning: boolean; lastCount: number; intervalHours: number; nextSyncInMinutes: number; error?: string }> => apiRequest('/cliente-coordenadas/background-status'),
+    getRoadSurface: (lat: number, lon: number): Promise<{ success: boolean; isPaved: boolean; label: string; surface: string; highway: string }> => apiRequest(`/road-surface?lat=${lat}&lon=${lon}`),
     lookupPlanilhaSimulacao: (itens: Array<{ Cod_Cliente: number; Cod_Vend: number; Dia_Semana?: string; Periodicidade?: string }>): Promise<{ success: boolean; data: any[]; summary: any }> => apiRequest('/lookup-planilha-simulacao', 'POST', { itens }),
     geocodeAddress: async (input: string | { address?: string; street?: string; number?: string; neighborhood?: string; city?: string; state?: string; cep?: string; forceCepOnly?: boolean }): Promise<{lat: number, lon: number}> => {
         let street = '';
@@ -775,7 +777,9 @@ const MockService = {
     getOSRMTable: async (points: { lat: number; lng: number }[]) => {
         await new Promise(r => setTimeout(r, 200));
         return null;
-    }
+    },
+    getClienteBackgroundStatus: async () => ({ success: true, lastSync: new Date().toISOString(), isRunning: false, lastCount: 150, intervalHours: 5, nextSyncInMinutes: 240 }),
+    getRoadSurface: async (lat: number, lon: number) => ({ success: true, isPaved: true, label: 'Asfalto / Pavimentado', surface: 'asphalt', highway: 'primary' })
 };
 
 const Service = USE_MOCK ? MockService : RealService;
@@ -796,5 +800,6 @@ export const {
     getClienteCoordenadas, getClienteERPCoords, saveClienteCoordenada, 
     getClienteAuditoriaBase, getCoordenadasBaseCentral, saveClienteAuditoria, saveClienteAuditoriaLote, syncClienteAuditoriaERP,
     lookupPlanilhaSimulacao, getCidadesERP,
-    geocodeAddress, getOSRMData, getOSRMTable, calcDistance
+    geocodeAddress, getOSRMData, getOSRMTable, calcDistance,
+    getClienteBackgroundStatus, getRoadSurface
 } = Service;

@@ -8,7 +8,8 @@ import {
     getClienteAuditoriaBase,
     saveClienteAuditoria,
     saveClienteAuditoriaLote,
-    syncClienteAuditoriaERP
+    syncClienteAuditoriaERP,
+    getClienteBackgroundStatus
 } from './services/apiService';
 import { VisitaPrevista } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
@@ -233,9 +234,25 @@ export const GeolocalizadorERP: React.FC = () => {
     const isPausedRef = useRef<boolean>(false);
     const isCancelledRef = useRef<boolean>(false);
 
-    // --- ESTADO DO MODAL DE MAPA ---
     const [selectedClientModal, setSelectedClientModal] = useState<ClienteAuditado | null>(null);
     const [copiedCoord, setCopiedCoord] = useState<boolean>(false);
+
+    // Estado da sincronização automática em segundo plano (background)
+    const [bgStatus, setBgStatus] = useState<{
+        lastSync: string | null;
+        isRunning: boolean;
+        lastCount: number;
+        intervalHours: number;
+        nextSyncInMinutes: number;
+    } | null>(null);
+
+    useEffect(() => {
+        getClienteBackgroundStatus().then(res => {
+            if (res && res.success) {
+                setBgStatus(res);
+            }
+        }).catch(() => {});
+    }, []);
 
     // --- PAGINAÇÃO DA TABELA ---
     const [currentPage, setCurrentPage] = useState<number>(1);
@@ -1041,6 +1058,34 @@ export const GeolocalizadorERP: React.FC = () => {
                                 Exportar Excel
                             </button>
                         </>
+                    )}
+                </div>
+            </div>
+
+            {/* STATUS DO AGENDADOR EM SEGUNDO PLANO (BACKGROUND A CADA 5H) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 text-xs text-indigo-950 dark:text-indigo-200 shadow-xs">
+                <div className="flex items-center gap-2 font-bold">
+                    <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-600"></span>
+                    </span>
+                    <span>Sincronização em Segundo Plano (Background):</span>
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 font-black text-indigo-700 dark:text-indigo-300 text-[10px]">
+                        Ativa a cada 5 horas
+                    </span>
+                </div>
+                <div className="flex items-center gap-4 text-[11px] font-medium text-indigo-700 dark:text-indigo-300">
+                    {bgStatus?.lastSync ? (
+                        <span>
+                            Última execução: <strong>{new Date(bgStatus.lastSync).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} ({bgStatus.lastCount} PDVs atualizados)</strong>
+                        </span>
+                    ) : (
+                        <span>Primeira execução agendada para breve</span>
+                    )}
+                    {bgStatus?.nextSyncInMinutes !== undefined && bgStatus.nextSyncInMinutes > 0 && (
+                        <span>
+                            Próxima busca: <strong>em ~{Math.round(bgStatus.nextSyncInMinutes / 60)}h ({bgStatus.nextSyncInMinutes} min)</strong>
+                        </span>
                     )}
                 </div>
             </div>

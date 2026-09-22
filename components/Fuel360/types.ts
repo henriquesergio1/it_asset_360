@@ -246,6 +246,7 @@ export interface SystemConfig {
     logoUrl: string;
     alertMaxDailyKM?: number;
     alertMaxClientDist?: number;
+    routingPreference?: 'PRIORIZAR_RODOVIAS' | 'MENOR_DISTANCIA';
     headquartersAddress?: string;
     headquartersLat?: number;
     headquartersLong?: number;

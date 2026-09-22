@@ -3760,6 +3760,104 @@ app.post('/api/fuel360/cliente-auditoria/sincronizar-erp', async (req, res) => {
     }
 });
 
+// Estado e rotina de sincronização em segundo plano (background) do Fuel360
+const fuel360BackgroundSyncState = {
+    lastSync: null,
+    isRunning: false,
+    lastCount: 0,
+    intervalHours: 5,
+    error: null
+};
+
+app.get('/api/fuel360/cliente-coordenadas/background-status', (req, res) => {
+    const now = Date.now();
+    let nextSyncInMinutes = 0;
+    if (fuel360BackgroundSyncState.lastSync) {
+        const elapsed = now - new Date(fuel360BackgroundSyncState.lastSync).getTime();
+        const remainingMs = (fuel360BackgroundSyncState.intervalHours * 60 * 60 * 1000) - elapsed;
+        nextSyncInMinutes = Math.max(0, Math.round(remainingMs / (60 * 1000)));
+    }
+    res.json({
+        success: true,
+        ...fuel360BackgroundSyncState,
+        nextSyncInMinutes
+    });
+});
+
+// Cache em memória para consulta de tipo de pavimento viário (OpenStreetMap)
+const roadSurfaceCache = new Map();
+
+app.get('/api/fuel360/road-surface', async (req, res) => {
+    const lat = parseFloat(req.query.lat);
+    const lon = parseFloat(req.query.lon);
+
+    if (isNaN(lat) || isNaN(lon)) {
+        return res.status(400).json({ success: false, message: 'Coordenadas lat/lon inválidas.' });
+    }
+
+    const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+    if (roadSurfaceCache.has(cacheKey)) {
+        return res.json({ success: true, ...roadSurfaceCache.get(cacheKey) });
+    }
+
+    try {
+        const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&extratags=1`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'ITAsset360-Fuel360/3.223.0 (contato@rainhalogistica.com.br)'
+            },
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+            const fallback = { isPaved: true, label: 'Via Pavimentada (Estimada)', type: 'paved' };
+            roadSurfaceCache.set(cacheKey, fallback);
+            return res.json({ success: true, ...fallback });
+        }
+
+        const data = await response.json();
+        const extratags = data.extratags || {};
+        const surface = (extratags.surface || '').toLowerCase();
+        const highway = (data.type || extratags.highway || '').toLowerCase();
+
+        let isPaved = true;
+        let label = 'Via Pavimentada / Asfalto';
+
+        const unpavedKeywords = ['unpaved', 'dirt', 'gravel', 'ground', 'earth', 'sand', 'mud', 'compacted', 'fine_gravel'];
+        const isExplicitlyUnpaved = unpavedKeywords.some(kw => surface.includes(kw));
+
+        if (isExplicitlyUnpaved || highway === 'track') {
+            isPaved = false;
+            label = 'Estrada de Terra / Cascalho (Não Pavimentada)';
+        } else if (surface.includes('asphalt') || surface.includes('paved') || surface.includes('concrete') || ['motorway', 'trunk', 'primary', 'secondary'].includes(highway)) {
+            isPaved = true;
+            label = 'Asfalto / Rodovia Pavimentada';
+        }
+
+        const result = {
+            isPaved,
+            label,
+            surface: surface || 'paved',
+            highway: highway || 'road'
+        };
+
+        roadSurfaceCache.set(cacheKey, result);
+        if (roadSurfaceCache.size > 2000) {
+            const firstKey = roadSurfaceCache.keys().next().value;
+            roadSurfaceCache.delete(firstKey);
+        }
+
+        res.json({ success: true, ...result });
+    } catch (e) {
+        const fallback = { isPaved: true, label: 'Via Pavimentada', type: 'paved' };
+        res.json({ success: true, ...fallback });
+    }
+});
+
 app.get('/api/fuel360/parametros-otimizacao', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -10365,6 +10463,145 @@ async function updateUserPendingStatus(pool, userId) {
         syncZabbixPrintersPageCounts(); // Execução inicial ao subir
     }
     setTimeout(initZabbixPrintersDailyScheduler, 25000);
+
+    // === AGENDADOR PERIÓDICO EM BACKGROUND DO FUEL360: SINCRONIZAÇÃO DE COORDENADAS DO ERP A CADA 5 HORAS ===
+    async function runFuel360ClienteCoordsSync() {
+        if (fuel360BackgroundSyncState.isRunning) return;
+        fuel360BackgroundSyncState.isRunning = true;
+        fuel360BackgroundSyncState.error = null;
+
+        try {
+            console.log('[Fuel360 Background Scheduler] Iniciando sincronização automática periódica de clientes com o ERP...');
+            const pool = await sql.connect(dbConfig);
+            await ensureFuelTablesExist(pool);
+
+            const settingsRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
+            const s = settingsRes.recordset ? settingsRes.recordset[0] : null;
+
+            if (s && s.ExtRoute_Host && s.ExtRoute_Query && s.ExtRoute_Host.trim() !== '' && s.ExtRoute_Query.trim() !== '') {
+                const now = new Date();
+                const y = now.getFullYear();
+                const m = now.getMonth();
+                const pad = (n) => String(n).padStart(2, '0');
+                const defaultStart = `${y}-${pad(m + 1)}-01`;
+                const lastDay = new Date(y, m + 1, 0).getDate();
+                const defaultEnd = `${y}-${pad(m + 1)}-${pad(lastDay)}`;
+
+                let extPool = null;
+                try {
+                    extPool = new sql.ConnectionPool({
+                        server: s.ExtRoute_Host,
+                        port: parseInt(s.ExtRoute_Port || 1433),
+                        user: s.ExtRoute_User,
+                        password: s.ExtRoute_Pass,
+                        database: s.ExtRoute_Database,
+                        options: {
+                            encrypt: false,
+                            trustServerCertificate: true,
+                            requestTimeout: 60000
+                        }
+                    });
+                    await extPool.connect();
+
+                    const extRes = await extPool.request()
+                        .input('pStartDate', sql.NVarChar, defaultStart)
+                        .input('pEndDate', sql.NVarChar, defaultEnd)
+                        .query(s.ExtRoute_Query);
+
+                    await extPool.close();
+
+                    if (extRes.recordset && extRes.recordset.length > 0) {
+                        const normalized = extRes.recordset.map(row => normalizeVisitaData(row));
+                        let updatedCount = 0;
+
+                        for (const v of normalized) {
+                            if (!v.Cod_Cliente) continue;
+                            const latErp = parseFloat(v.Lat || v.Latitude);
+                            const lngErp = parseFloat(v.Long || v.Longitude);
+                            if (isNaN(latErp) || isNaN(lngErp) || (Math.abs(latErp) < 0.001 && Math.abs(lngErp) < 0.001)) continue;
+
+                            await pool.request()
+                                .input('Cod_Cliente', sql.Int, v.Cod_Cliente)
+                                .input('Razao_Social', sql.NVarChar(255), v.Razao_Social || '')
+                                .input('Cod_Vend', sql.Int, v.Cod_Vend ? parseInt(v.Cod_Vend, 10) : null)
+                                .input('Nome_Vendedor', sql.NVarChar(255), v.Nome_Vendedor || '')
+                                .input('Cod_Supervisor', sql.Int, v.Cod_Supervisor ? parseInt(v.Cod_Supervisor, 10) : null)
+                                .input('Nome_Supervisor', sql.NVarChar(255), v.Nome_Supervisor || '')
+                                .input('Endereco', sql.NVarChar(500), v.Endereco || '')
+                                .input('Numero', sql.NVarChar(50), v.Numero || null)
+                                .input('Bairro', sql.NVarChar(255), v.Bairro || '')
+                                .input('Cidade', sql.NVarChar(255), v.Cidade || '')
+                                .input('CEP', sql.NVarChar(30), v.CEP || '')
+                                .input('Lat_ERP', sql.Float, latErp)
+                                .input('Long_ERP', sql.Float, lngErp)
+                                .input('UsuarioAtualizacao', sql.NVarChar(255), 'Job Segundo Plano (5h)')
+                                .query(`
+                                    MERGE INTO FuelClienteAuditoria AS target
+                                    USING (SELECT @Cod_Cliente AS Cod_Cliente) AS source
+                                    ON (target.Cod_Cliente = source.Cod_Cliente)
+                                    WHEN MATCHED THEN
+                                        UPDATE SET
+                                            Razao_Social = @Razao_Social,
+                                            Cod_Vend = @Cod_Vend,
+                                            Nome_Vendedor = @Nome_Vendedor,
+                                            Cod_Supervisor = @Cod_Supervisor,
+                                            Nome_Supervisor = @Nome_Supervisor,
+                                            Endereco = @Endereco,
+                                            Numero = @Numero,
+                                            Bairro = @Bairro,
+                                            Cidade = @Cidade,
+                                            CEP = @CEP,
+                                            Lat_ERP = @Lat_ERP,
+                                            Long_ERP = @Long_ERP,
+                                            UsuarioAtualizacao = @UsuarioAtualizacao,
+                                            DataAtualizacao = GETDATE()
+                                    WHEN NOT MATCHED THEN
+                                        INSERT (
+                                            Cod_Cliente, Razao_Social, Cod_Vend, Nome_Vendedor, Cod_Supervisor, Nome_Supervisor,
+                                            Endereco, Numero, Bairro, Cidade, CEP, Lat_ERP, Long_ERP,
+                                            Status, Aceite_ERP, UsuarioAtualizacao, DataAtualizacao
+                                        )
+                                        VALUES (
+                                            @Cod_Cliente, @Razao_Social, @Cod_Vend, @Nome_Vendedor, @Cod_Supervisor, @Nome_Supervisor,
+                                            @Endereco, @Numero, @Bairro, @Cidade, @CEP, @Lat_ERP, @Long_ERP,
+                                            'PENDENTE', 'PENDENTE', @UsuarioAtualizacao, GETDATE()
+                                        );
+                                `);
+                            updatedCount++;
+                        }
+
+                        fuel360BackgroundSyncState.lastCount = updatedCount;
+                        fuel360BackgroundSyncState.lastSync = new Date().toISOString();
+                        console.log(`[Fuel360 Background Scheduler] Sincronização concluída com sucesso! ${updatedCount} clientes atualizados na Base Central.`);
+                    }
+                } catch (erpErr) {
+                    if (extPool) await extPool.close().catch(() => {});
+                    throw erpErr;
+                }
+            } else {
+                console.log('[Fuel360 Background Scheduler] Integração ERP não configurada em SystemSettings. Ignorando ciclo.');
+            }
+        } catch (err) {
+            fuel360BackgroundSyncState.error = err.message;
+            console.error('[Fuel360 Background Scheduler] Erro durante sincronização em segundo plano:', err.message);
+        } finally {
+            fuel360BackgroundSyncState.isRunning = false;
+        }
+    }
+
+    function initFuel360ClienteCoordsScheduler() {
+        setInterval(async () => {
+            const now = Date.now();
+            const lastSyncTime = fuel360BackgroundSyncState.lastSync ? new Date(fuel360BackgroundSyncState.lastSync).getTime() : 0;
+            const fiveHoursMs = 5 * 60 * 60 * 1000;
+            if (now - lastSyncTime >= fiveHoursMs) {
+                await runFuel360ClienteCoordsSync();
+            }
+        }, 15 * 60 * 1000);
+
+        setTimeout(runFuel360ClienteCoordsSync, 30000);
+    }
+    setTimeout(initFuel360ClienteCoordsScheduler, 35000);
 
     // Vite middleware para desenvolvimento ou produção
     if (process.env.NODE_ENV !== "production") {

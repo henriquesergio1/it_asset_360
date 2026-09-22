@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.223.0',
+    date: 'Hoje',
+    title: 'Fuel360: Sincronização em Segundo Plano (5h), Indicador de Pavimento e Preferência Global de Roteamento',
+    changes: [
+      'Sincronização em Segundo Plano (Background a cada 5h): Agendador automático periódico no servidor que consulta coordenadas no ERP a cada 5 horas e atualiza a Base Central local (FuelClienteAuditoria e FuelClienteCoordenadas) de forma silenciosa e sem sobrecarga.',
+      'Monitor de Segundo Plano no Geolocalizador: Exibição no cabeçalho do Geolocalizador ERP do status do agendador automático, informando o horário da última execução e tempo restante para a próxima busca.',
+      'Indicador de Tipo de Pavimento nos Waypoints: Integração com metadados do OpenStreetMap para classificar se a via onde o desvio/waypoint foi posicionado possui pavimentação asfáltica (verde) ou se é estrada de terra/cascalho (âmbar).',
+      'Preferência Global de Roteamento: Novo seletor nas configurações do Fuel360 permitindo escolher entre "Priorizar Rodovias Principais e Asfalto" (evitando estradas de terra) ou "Menor Distância Absoluta" (padrão).'
+    ]
+  },
+  {
     version: '3.222.0',
     date: 'Hoje',
     title: 'Fuel360: Waypoints de Desvio Manual Arrastáveis e Rotas Alternativas no Mapa (Anti-Estradas de Terra)',
