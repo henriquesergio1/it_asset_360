@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.224.3',
+    date: 'Hoje',
+    title: 'Fuel360: Redistribuição Inteligente por Afinidade Territorial e K-NN na Extinção de Setor',
+    changes: [
+      'Afinidade Geográfica e Proximidade Real (K-NN): Ao extinguir um setor e selecionar múltiplos receptores, os clientes são atribuídos pela menor distância real aos clientes existentes da rota e base do vendedor, eliminando a dispersão caótica.',
+      'Continuidade e Integridade Municipal: Clientes de uma mesma cidade ou bairro são fortemente atraídos para o vendedor receptor que já atende aquele município, preservando blocos coesos de atendimento.',
+      'Partição Territorial Coesa: O balanceamento de cotas entre vendedores receptores ocorre exclusivamente nas fronteiras limítrofes com menor penalidade espacial, mantendo a coesão do núcleo de cada território.',
+      'Alinhamento Automático do Dia de Visita: Clientes redistribuídos herdam automaticamente o dia da semana em que o vendedor receptor já visita aquele município/região.'
+    ]
+  },
+  {
     version: '3.224.2',
     date: 'Hoje',
     title: 'Fuel360: Suporte a Tempo Quebrado na Jornada Diária de Otimização (HH:MM)',

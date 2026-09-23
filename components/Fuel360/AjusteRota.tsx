@@ -6976,6 +6976,10 @@ export const AjusteRota: React.FC = () => {
             initialCount: number;
             quota: number;
             assignedClients: VisitaPrevista[];
+            existingVisitsWithCoords: VisitaPrevista[];
+            citiesSet: Set<string>;
+            neighborhoodsSet: Set<string>;
+            cityDayMap: Map<string, string>;
         }
 
         const receptors: TargetReceptorInfo[] = targetSectorsSelected.map(tId => {
@@ -6995,6 +6999,38 @@ export const AjusteRota: React.FC = () => {
 
             const tUnique = deduplicateVisitasPrevistas(tVisits);
 
+            const citiesSet = new Set<string>();
+            const neighborhoodsSet = new Set<string>();
+            const cityDayCountMap = new Map<string, Map<string, number>>();
+
+            tVisits.forEach(v => {
+                if (v.Cidade) {
+                    const cNorm = v.Cidade.trim().toLowerCase();
+                    citiesSet.add(cNorm);
+                    if (v.Dia_Semana) {
+                        if (!cityDayCountMap.has(cNorm)) cityDayCountMap.set(cNorm, new Map());
+                        const dayCounts = cityDayCountMap.get(cNorm)!;
+                        dayCounts.set(v.Dia_Semana, (dayCounts.get(v.Dia_Semana) || 0) + 1);
+                    }
+                }
+                if (v.Bairro) {
+                    neighborhoodsSet.add(v.Bairro.trim().toLowerCase());
+                }
+            });
+
+            const cityDayMap = new Map<string, string>();
+            cityDayCountMap.forEach((dayCounts, cNorm) => {
+                let maxCount = -1;
+                let bestDay = '';
+                dayCounts.forEach((count, day) => {
+                    if (count > maxCount) {
+                        maxCount = count;
+                        bestDay = day;
+                    }
+                });
+                if (bestDay) cityDayMap.set(cNorm, bestDay);
+            });
+
             return {
                 id: tId,
                 name: tName,
@@ -7004,7 +7040,11 @@ export const AjusteRota: React.FC = () => {
                 centroidLng,
                 initialCount: tUnique.length,
                 quota: 0,
-                assignedClients: []
+                assignedClients: [],
+                existingVisitsWithCoords: validCoords,
+                citiesSet,
+                neighborhoodsSet,
+                cityDayMap
             };
         });
 
@@ -7021,50 +7061,168 @@ export const AjusteRota: React.FC = () => {
             receptors.forEach(r => { r.quota = totalToDistribute; });
         }
 
-        // Ordenação espacial dos clientes do setor extinto para agrupamento de proximidade
-        const refLat = receptors[0].centroidLat || receptors[0].baseLat;
-        const refLng = receptors[0].centroidLng || receptors[0].baseLng;
-
-        const sortedClients = [...uniqueClientsToMove].sort((a, b) => {
-            const distA = (a.Lat && a.Long) ? calcDist(a.Lat, a.Long, refLat, refLng) : 9999;
-            const distB = (b.Lat && b.Long) ? calcDist(b.Lat, b.Long, refLat, refLng) : 9999;
-            return distA - distB;
-        });
-
-        // Atribuição de cada cliente ao setor receptor geograficamente mais favorável respeitando a cota
-        const clientAssignment = new Map<number, TargetReceptorInfo>();
-
-        sortedClients.forEach(client => {
+        // Função de cálculo de custo/distância geográfica real entre um cliente e um receptor
+        const calcClientReceptorCost = (client: VisitaPrevista, receptor: TargetReceptorInfo): number => {
             const cLat = client.Lat || 0;
             const cLng = client.Long || 0;
+            const cCity = (client.Cidade || '').trim().toLowerCase();
+            const cNeigh = (client.Bairro || '').trim().toLowerCase();
 
-            // Filtra os receptores que ainda têm cota disponível
-            const availableReceptors = receptors.filter(r => r.assignedClients.length < r.quota);
-            const candidateList = availableReceptors.length > 0 ? availableReceptors : receptors;
+            let minDist = 999999;
 
-            candidateList.sort((r1, r2) => {
-                const d1 = (cLat && cLng && r1.centroidLat && r1.centroidLng)
-                    ? calcDist(cLat, cLng, r1.centroidLat, r1.centroidLng)
-                    : (cLat && cLng && r1.baseLat && r1.baseLng ? calcDist(cLat, cLng, r1.baseLat, r1.baseLng) : 9999);
-                const d2 = (cLat && cLng && r2.centroidLat && r2.centroidLng)
-                    ? calcDist(cLat, cLng, r2.centroidLat, r2.centroidLng)
-                    : (cLat && cLng && r2.baseLat && r2.baseLng ? calcDist(cLat, cLng, r2.baseLat, r2.baseLng) : 9999);
-                return d1 - d2;
+            if (cLat && cLng) {
+                if (receptor.existingVisitsWithCoords.length > 0) {
+                    // Encontra a menor distância até os clientes existentes do receptor (K-NN top 3)
+                    const distances: number[] = [];
+                    for (let i = 0; i < receptor.existingVisitsWithCoords.length; i++) {
+                        const v = receptor.existingVisitsWithCoords[i];
+                        const d = calcDist(cLat, cLng, v.Lat!, v.Long!);
+                        distances.push(d);
+                    }
+                    distances.sort((a, b) => a - b);
+                    const k = Math.min(3, distances.length);
+                    const avgKnn = distances.slice(0, k).reduce((acc, d) => acc + d, 0) / k;
+                    minDist = distances[0] * 0.65 + avgKnn * 0.35;
+                } else if (receptor.baseLat && receptor.baseLng) {
+                    minDist = calcDist(cLat, cLng, receptor.baseLat, receptor.baseLng);
+                } else if (receptor.centroidLat && receptor.centroidLng) {
+                    minDist = calcDist(cLat, cLng, receptor.centroidLat, receptor.centroidLng);
+                }
+
+                // Considera também a distância da base residencial do vendedor
+                if (receptor.baseLat && receptor.baseLng) {
+                    const bDist = calcDist(cLat, cLng, receptor.baseLat, receptor.baseLng);
+                    minDist = Math.min(minDist, bDist * 1.25);
+                }
+            } else {
+                // Cliente sem coordenadas
+                minDist = 1000;
+            }
+
+            // Bônus de afinidade territorial por município e bairro
+            let multiplier = 1.0;
+            if (cCity && receptor.citiesSet.has(cCity)) {
+                multiplier *= 0.35; // Forte atração para manter cidades unificadas no mesmo vendedor
+            }
+            if (cNeigh && receptor.neighborhoodsSet.has(cNeigh)) {
+                multiplier *= 0.70; // Bônus adicional de bairro
+            }
+
+            return minDist * multiplier;
+        };
+
+        // Monta a matriz de custos de atribuição
+        const costMatrix: number[][] = uniqueClientsToMove.map(client => {
+            return receptors.map(receptor => calcClientReceptorCost(client, receptor));
+        });
+
+        // Atribuição inicial baseada puramente na menor distância geográfica e afinidade municipal
+        uniqueClientsToMove.forEach((client, cIdx) => {
+            let bestRIdx = 0;
+            let minCost = Infinity;
+            receptors.forEach((r, rIdx) => {
+                const cost = costMatrix[cIdx][rIdx];
+                if (cost < minCost) {
+                    minCost = cost;
+                    bestRIdx = rIdx;
+                }
             });
+            receptors[bestRIdx].assignedClients.push(client);
+        });
 
-            const chosen = candidateList[0];
-            chosen.assignedClients.push(client);
-            clientAssignment.set(client.Cod_Cliente, chosen);
+        // Se balanceLoadEqually estiver ativo, balanceia as cotas transferindo APENAS clientes de fronteira
+        // com o menor arrependimento/penalidade de distância (preservando o núcleo contíguo de cada setor)
+        if (balanceLoadEqually && receptors.length > 1) {
+            let maxIterations = 2000;
+            while (maxIterations > 0) {
+                maxIterations--;
+
+                // Identifica receptores com sobrecarga (acima da cota alvo)
+                const overloaded = receptors.filter(r => r.assignedClients.length > r.quota);
+                if (overloaded.length === 0) break;
+
+                // Ordena receptores sobrecarregados pelo maior excesso
+                overloaded.sort((a, b) => (b.assignedClients.length - b.quota) - (a.assignedClients.length - a.quota));
+                const overR = overloaded[0];
+                const overRIdx = receptors.indexOf(overR);
+
+                // Identifica receptores com capacidade disponível (abaixo da cota alvo)
+                const underloaded = receptors.filter(r => r.assignedClients.length < r.quota);
+                if (underloaded.length === 0) break;
+
+                let bestClientInOverRIdx = -1;
+                let bestTargetUnderR: TargetReceptorInfo | null = null;
+                let minPenalty = Infinity;
+
+                // Procura o cliente cuja transferência cause a MENOR penalidade geográfica (ponto mais próximo da fronteira)
+                overR.assignedClients.forEach((client, clientPos) => {
+                    const cIdx = uniqueClientsToMove.findIndex(x => x.Cod_Cliente === client.Cod_Cliente);
+                    const currentCost = costMatrix[cIdx][overRIdx];
+
+                    underloaded.forEach(underR => {
+                        const underRIdx = receptors.indexOf(underR);
+                        const targetCost = costMatrix[cIdx][underRIdx];
+                        const penalty = targetCost - currentCost;
+
+                        if (penalty < minPenalty) {
+                            minPenalty = penalty;
+                            bestClientInOverRIdx = clientPos;
+                            bestTargetUnderR = underR;
+                        }
+                    });
+                });
+
+                if (bestClientInOverRIdx >= 0 && bestTargetUnderR) {
+                    const [moved] = overR.assignedClients.splice(bestClientInOverRIdx, 1);
+                    (bestTargetUnderR as TargetReceptorInfo).assignedClients.push(moved);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // Mapeia cada Cod_Cliente para o receptor final atribuído
+        const clientAssignment = new Map<number, TargetReceptorInfo>();
+        receptors.forEach(r => {
+            r.assignedClients.forEach(c => {
+                clientAssignment.set(c.Cod_Cliente, r);
+            });
         });
 
         // Atualização de todas as visitas dos clientes do setor extinto com os dados do novo setor receptor
+        // e alinhamento inteligente do dia da semana com a rota existente do receptor naquela região/cidade
         const updatedSourceVisits = sourceVisits.map(v => {
             const receptor = clientAssignment.get(v.Cod_Cliente);
             if (!receptor) return v;
+
+            let assignedDay = v.Dia_Semana;
+            const cCity = (v.Cidade || '').trim().toLowerCase();
+
+            // 1ª Prioridade: Dia que o vendedor receptor já atende aquela mesma cidade
+            if (cCity && receptor.cityDayMap.has(cCity)) {
+                assignedDay = receptor.cityDayMap.get(cCity)!;
+            } else if (receptor.existingVisitsWithCoords.length > 0 && v.Lat && v.Long) {
+                // 2ª Prioridade: Dia do cliente existente mais próximo do receptor
+                let closestDist = Infinity;
+                let closestDay = '';
+                for (let i = 0; i < receptor.existingVisitsWithCoords.length; i++) {
+                    const ev = receptor.existingVisitsWithCoords[i];
+                    const dist = calcDist(v.Lat, v.Long, ev.Lat!, ev.Long!);
+                    if (dist < closestDist) {
+                        closestDist = dist;
+                        closestDay = ev.Dia_Semana;
+                    }
+                }
+                if (closestDay) {
+                    assignedDay = closestDay;
+                }
+            }
+
             return {
                 ...v,
                 Cod_Vend: receptor.id,
-                Nome_Vendedor: receptor.name
+                Nome_Vendedor: receptor.name,
+                Dia_Semana: assignedDay
             };
         });
 
