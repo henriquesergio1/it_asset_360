@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.233.0',
+    date: 'Hoje',
+    title: 'Fuel360: Blindagem de Macro-Regiões, Barreira da Serra do Mar e Alinhamento Costeiro Linear',
+    changes: [
+      'Blindagem Geográfica do Litoral Norte (SP-055): Clientes de Bertioga, São Sebastião, Ilhabela, Caraguatatuba e Ubatuba são atribuídos prioritariamente aos colaboradores litorâneos, eliminando descidas e subidas de serra desnecessárias.',
+      'Barreira Topográfica da Serra do Mar (+220 km virtuais): Penalização severa na matriz de custos espaciais (Voronoi/K-Means) para cruzamentos entre Planalto/Vale e Litoral.',
+      'Alinhamento Linear no Corredor Costeiro: Partição perfeitamente sequencial e contígua de clientes ao longo da rodovia Rio-Santos, impedindo a intercalação e sobreposição de vendedores no litoral.',
+      'Isolamento Diário de Clusters de Serra: Bloqueio estrito de roteiros mistos no mesmo dia, impedindo circuitos gigantes que descem a serra por Mogi/Bertioga e sobem por Salesópolis.'
+    ]
+  },
+  {
     version: '3.232.0',
     date: 'Hoje',
     title: 'Fuel360: Seletor e Troca de Vendedor Titular por Setor no Mapa com Casco Convexo e Centroides',

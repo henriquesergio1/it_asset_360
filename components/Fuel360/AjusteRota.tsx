@@ -658,6 +658,72 @@ const checkCoordinateAnomaly = (
     return { isAnomalous: false, distKm: 0, referenceType: 'none' };
 };
 
+// ==========================================
+// BLINDAGEM E COESÃO DE MACRO-REGIÕES E BARREIRA DA SERRA DO MAR
+// ==========================================
+export type MacroRegionType = 'LITORAL_NORTE' | 'LITORAL_SUL' | 'ALTO_TIETE' | 'VALE_PARAIBA' | 'BRAGANTINA' | 'CAPITAL_METROPOLITANA' | 'OUTRO';
+
+export const CIDADES_LITORAL_NORTE = new Set([
+    'BERTIOGA', 'SAO SEBASTIAO', 'SÃO SEBASTIÃO', 'ILHABELA', 'CARAGUATATUBA', 'UBATUBA',
+    'MARESIAS', 'JUQUEHY', 'BOICUCANGA', 'BOIÇUCANGA', 'BORACEIA', 'BORACÉIA', 'BARRA DO UNA', 'CAMBURI', 'PAUBA', 'PAÚBA'
+]);
+
+export const CIDADES_ALTO_TIETE = new Set([
+    'MOGI DAS CRUZES', 'SUZANO', 'ITAQUAQUECETUBA', 'POA', 'POÁ', 'FERRAZ DE VASCONCELOS', 
+    'BIRITIBA MIRIM', 'BIRITIBA-MIRIM', 'SALESOPOLIS', 'SALESÓPOLIS', 'GUARULHOS', 'ARUJA', 'ARUJÁ', 'SANTA ISABEL'
+]);
+
+export const CIDADES_VALE_PARAIBA = new Set([
+    'SAO JOSE DOS CAMPOS', 'SÃO JOSÉ DOS CAMPOS', 'JACAREI', 'JACAREÍ', 'CACAPAVA', 'CAÇAPAVA',
+    'TAUBATE', 'TAUBATÉ', 'TREMEMBE', 'TREMEMBÉ', 'PINDAMONHANGABA', 'GUARATINGUETA', 'GUARATINGUETÁ',
+    'APARECIDA', 'LORENA', 'CRUZEIRO', 'CACHOEIRA PAULISTA', 'ROSEIRA', 'POTIM', 'CANAS', 'LAVRINHAS',
+    'QUELUZ', 'SILVEIRAS', 'AREIAS', 'SAO JOSE DO BARREIRO', 'SÃO JOSÉ DO BARREIRO', 'BANANAL',
+    'CAMPOS DO JORDAO', 'CAMPOS DO JORDÃO', 'SANTO ANTONIO DO PINHAL', 'SANTO ANTÔNIO DO PINHAL',
+    'SAO BENTO DO SAPUCAI', 'SÃO BENTO DO SAPUCAÍ', 'REDENCAO DA SERRA', 'REDENÇÃO DA SERRA',
+    'NATIVIDADE DA SERRA', 'SAO LUIS DO PARAITINGA', 'SÃO LUÍS DO PARAITINGA', 'CUNHA', 'JAMBEIRO', 'PARAIBUNA', 'MONTEIRO LOBATO'
+]);
+
+export const CIDADES_BRAGANTINA = new Set([
+    'ATIBAIA', 'BRAGANCA PAULISTA', 'BRAGANÇA PAULISTA', 'NAZARE PAULISTA', 'NAZARÉ PAULISTA',
+    'PIRACAIA', 'JARINU', 'BOM JESUS DOS PERDOES', 'BOM JESUS DOS PERDÕES', 'JOANOPOLIS', 'JOANÓPOLIS',
+    'VARGEM', 'PEDRA BELA', 'PINHALZINHO', 'TUIUTI', 'MORUNGABA'
+]);
+
+export const getMacroRegion = (cidade?: string, lat?: number, lng?: number): MacroRegionType => {
+    const rawCity = (cidade || '').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const cleanOrig = (cidade || '').trim().toUpperCase();
+    
+    if (CIDADES_LITORAL_NORTE.has(rawCity) || CIDADES_LITORAL_NORTE.has(cleanOrig)) {
+        return 'LITORAL_NORTE';
+    }
+    if (CIDADES_ALTO_TIETE.has(rawCity) || CIDADES_ALTO_TIETE.has(cleanOrig)) {
+        return 'ALTO_TIETE';
+    }
+    if (CIDADES_VALE_PARAIBA.has(rawCity) || CIDADES_VALE_PARAIBA.has(cleanOrig)) {
+        return 'VALE_PARAIBA';
+    }
+    if (CIDADES_BRAGANTINA.has(rawCity) || CIDADES_BRAGANTINA.has(cleanOrig)) {
+        return 'BRAGANTINA';
+    }
+
+    // Identificação geográfica por coordenadas da Serra do Mar e Faixa Costeira
+    if (typeof lat === 'number' && typeof lng === 'number' && lat !== 0 && lng !== 0) {
+        // Litoral Norte de SP: Ao sul/leste da escarpa da Serra do Mar (Lat < -23.45 e Lng > -46.0)
+        if (lat < -23.55 && lng > -45.95 && lng < -44.7) {
+            return 'LITORAL_NORTE';
+        }
+        if (lat < -23.40 && lng > -45.45 && lng < -44.7) {
+            return 'LITORAL_NORTE';
+        }
+        // Alto Tietê: Longitude entre -46.4 e -45.8 com Latitude entre -23.70 e -23.35
+        if (lat >= -23.70 && lat <= -23.35 && lng >= -46.4 && lng <= -45.8) {
+            return 'ALTO_TIETE';
+        }
+    }
+
+    return 'OUTRO';
+};
+
 // Helper para aplicação de coordenadas geográficas customizadas salvas no navegador
 const applyCustomCoordinates = (routes: VisitaPrevista[]): VisitaPrevista[] => {
     try {
@@ -5728,7 +5794,22 @@ export const AjusteRota: React.FC = () => {
                                 capPenalty = Math.pow(countInDay - dayCap, 2) * 50000;
                             }
 
-                            const cost = dp[d - 1][j] + (diff * diff) + (valInDay === 0 ? 50000 : 0) + capPenalty;
+                            // Penalidade severa se misturar Macro-Regiões distintas no mesmo dia (ex: Litoral com Planalto/Vale)
+                            let crossRegionPenalty = 0;
+                            const sliceClusters = sweep.slice(j, i);
+                            const hasCoastal = sliceClusters.some(cl => {
+                                const m = getMacroRegion(cl.cityName, cl.centerLat, cl.centerLng);
+                                return m === 'LITORAL_NORTE' || m === 'LITORAL_SUL';
+                            });
+                            const hasPlateau = sliceClusters.some(cl => {
+                                const m = getMacroRegion(cl.cityName, cl.centerLat, cl.centerLng);
+                                return m !== 'LITORAL_NORTE' && m !== 'LITORAL_SUL' && m !== 'OUTRO';
+                            });
+                            if (hasCoastal && hasPlateau) {
+                                crossRegionPenalty = 200000; // Impede categoricamente misturar Litoral e Planalto no mesmo dia de trabalho!
+                            }
+
+                            const cost = dp[d - 1][j] + (diff * diff) + (valInDay === 0 ? 50000 : 0) + capPenalty + crossRegionPenalty;
                             if (cost < dp[d][i]) {
                                 dp[d][i] = cost;
                                 parent[d][i] = j;
@@ -6760,6 +6841,8 @@ export const AjusteRota: React.FC = () => {
             name: string;
             baseLat: number;
             baseLng: number;
+            macroRegion: MacroRegionType;
+            isCoastal: boolean;
             assignedClients: Set<number>;
             maxTarget: number;
             densityScore: number;
@@ -6778,11 +6861,16 @@ export const AjusteRota: React.FC = () => {
                 baseLng = validCoords.reduce((acc, v) => acc + (v.Long || 0), 0) / validCoords.length;
             }
 
+            const macro = getMacroRegion(colab?.CidadeBase || colab?.EnderecoBase, baseLat, baseLng);
+            const isCoastal = macro === 'LITORAL_NORTE' || macro === 'LITORAL_SUL';
+
             return {
                 id: sId,
                 name,
                 baseLat,
                 baseLng,
+                macroRegion: macro,
+                isCoastal,
                 assignedClients: new Set<number>(),
                 maxTarget: 0,
                 densityScore: 0
@@ -6795,6 +6883,8 @@ export const AjusteRota: React.FC = () => {
             cidade: string;
             lat: number;
             lng: number;
+            macroRegion: MacroRegionType;
+            isCoastal: boolean;
             originalSellerId: number;
             originalSellerName: string;
             isLocked: boolean;
@@ -6808,11 +6898,18 @@ export const AjusteRota: React.FC = () => {
                 const restr = clienteRestricoesMap.get(r.Cod_Cliente);
                 const isLocked = Boolean(restr && restr.Ativo !== false && restr.Observacao && restr.Observacao.toLowerCase().includes('fixo'));
                 const parsedP = parsePeriodicidade(r.Periodicidade);
+                const cLat = r.Lat || 0;
+                const cLng = r.Long || 0;
+                const macro = getMacroRegion(r.Cidade, cLat, cLng);
+                const isCoastal = macro === 'LITORAL_NORTE' || macro === 'LITORAL_SUL';
+
                 clientsMap.set(r.Cod_Cliente, {
                     cod: r.Cod_Cliente,
                     cidade: (r.Cidade || '').trim().toUpperCase(),
-                    lat: r.Lat || 0,
-                    lng: r.Long || 0,
+                    lat: cLat,
+                    lng: cLng,
+                    macroRegion: macro,
+                    isCoastal,
                     originalSellerId: r.Cod_Vend,
                     originalSellerName: r.Nome_Vendedor,
                     isLocked,
@@ -7006,13 +7103,19 @@ export const AjusteRota: React.FC = () => {
             }
         }
 
-        // Matriz de distâncias e afinidades espaciais
+        // Matriz de distâncias e afinidades espaciais com Barreira Topográfica da Serra do Mar
         const costMatrix: number[][] = unassignedClients.map(c => {
             if (isPureCentroid && centroidSeeds.length === sellerProfiles.length) {
                 // Modo Puro: distância euclidiana/esférica direta aos K centroides geométricos da carteira
                 return centroidSeeds.map(cs => {
                     const rawDist = calcDist(cs.lat, cs.lng, c.lat, c.lng);
-                    return Math.max(0.1, rawDist);
+                    const csMacro = getMacroRegion('', cs.lat, cs.lng);
+                    const csIsCoastal = csMacro === 'LITORAL_NORTE' || csMacro === 'LITORAL_SUL';
+                    let serraPenalty = 0;
+                    if (csIsCoastal !== c.isCoastal) {
+                        serraPenalty = 220; // Barreira da serra para centroides neutros
+                    }
+                    return Math.max(0.1, rawDist + serraPenalty);
                 });
             }
 
@@ -7021,10 +7124,18 @@ export const AjusteRota: React.FC = () => {
                 const bLng = sp.baseLng || teamAvgLng;
                 const rawDist = calcDist(bLat, bLng, c.lat, c.lng);
 
-                // Penalidade exponencial para distâncias longas da residência (evita deslocamentos cruzados ex: Litoral vs Atibaia)
-                const distancePenalty = rawDist > 35 ? Math.pow((rawDist - 35) / 6, 2) * 8 : 0;
+                // Barreira Topográfica da Serra do Mar: Cruzamento entre Litoral e Planalto/Vale é severamente penalizado
+                let crossRegionPenalty = 0;
+                if (sp.isCoastal !== c.isCoastal) {
+                    crossRegionPenalty = 220; // +220 km virtuais para impedir categoricamente descida/subida de serra desnecessária
+                } else if (sp.macroRegion !== 'OUTRO' && c.macroRegion !== 'OUTRO' && sp.macroRegion !== c.macroRegion) {
+                    crossRegionPenalty = 40; // Penalidade moderada entre macro-regiões distintas do planalto (ex: Bragantina vs Alto Tietê)
+                }
 
-                // Bônus de coesão municipal para atrair o município em bloco para a base mais próxima
+                // Penalidade exponencial para distâncias longas da residência (evita cruzamentos intermunicipais)
+                const distancePenalty = rawDist > 35 ? Math.pow((rawDist - 35) / 5, 2) * 10 : 0;
+
+                // Bônus de coesão municipal para manter cidades unidas no mesmo vendedor mais próximo
                 let cityCohesionBonus = 0;
                 if (c.cidade && c.cidade !== 'GERAL') {
                     const cList = cityGroups.get(c.cidade);
@@ -7032,13 +7143,23 @@ export const AjusteRota: React.FC = () => {
                         const cityCenterLat = cList.reduce((s, item) => s + item.lat, 0) / cList.length;
                         const cityCenterLng = cList.reduce((s, item) => s + item.lng, 0) / cList.length;
                         const distCityToBase = calcDist(bLat, bLng, cityCenterLat, cityCenterLng);
-                        if (distCityToBase < 35) {
-                            cityCohesionBonus = Math.max(5, (35 - distCityToBase) * 0.8);
+                        if (distCityToBase < 40 && sp.isCoastal === c.isCoastal) {
+                            cityCohesionBonus = Math.max(8, (40 - distCityToBase) * 1.2);
                         }
                     }
                 }
 
-                return Math.max(0.1, rawDist + distancePenalty - cityCohesionBonus);
+                // Alinhamento Linear no Corredor Costeiro (SP-055): Vendedores litorâneos atendem segmentos contíguos da rodovia
+                let coastalAlignmentBonus = 0;
+                if (sp.isCoastal && c.isCoastal) {
+                    // Projeção ao longo da rodovia Rio-Santos (Bertioga -> Maresias -> São Sebastião -> Caraguá -> Ubatuba)
+                    const sellerCoastalPos = bLng + bLat * 0.45;
+                    const clientCoastalPos = c.lng + c.lat * 0.45;
+                    const coastalDeltaKm = Math.abs(sellerCoastalPos - clientCoastalPos) * 111;
+                    coastalAlignmentBonus = Math.max(0, (45 - coastalDeltaKm) * 1.8);
+                }
+
+                return Math.max(0.1, rawDist + crossRegionPenalty + distancePenalty - cityCohesionBonus - coastalAlignmentBonus);
             });
         });
 
