@@ -6753,24 +6753,163 @@ export const AjusteRota: React.FC = () => {
                 }
             });
         } else {
-            // Modo EQUITATIVO (Balanceado)
-            const targetClientsPerSeller = Math.ceil(allClients.length / sellers.length);
-            unassignedClients.forEach(c => {
-                let bestSeller: SellerProfile = sellerProfiles[0];
-                let bestScore = Infinity;
+            // Modo EQUITATIVO (Balanceado e Homogêneo com Simulação Iterativa e Ancoragem na Base Residencial)
+            const numSellers = sellerProfiles.length;
+            const totalToDistribute = unassignedClients.length;
+            const baseQuota = Math.floor(totalToDistribute / numSellers);
+            const remainder = totalToDistribute % numSellers;
 
-                sellerProfiles.forEach(sp => {
-                    const d = calcDist(sp.baseLat || teamAvgLat, sp.baseLng || teamAvgLng, c.lat, c.lng);
-                    const loadFactor = sp.assignedClients.size / (targetClientsPerSeller || 1);
-                    const score = d + (loadFactor * 15);
-                    if (score < bestScore && sp.assignedClients.size < sp.maxTarget) {
-                        bestScore = score;
-                        bestSeller = sp;
+            // Define cota exata por vendedor
+            const sellerTargetQuotas = new Map<number, number>();
+            sellerProfiles.forEach((sp, sIdx) => {
+                sellerTargetQuotas.set(sp.id, baseQuota + (sIdx < remainder ? 1 : 0));
+            });
+
+            // Matriz de distâncias euclidianas/geográficas de cada cliente para a base residencial de cada vendedor
+            const costMatrix: number[][] = unassignedClients.map(c => {
+                return sellerProfiles.map(sp => {
+                    const bLat = sp.baseLat || teamAvgLat;
+                    const bLng = sp.baseLng || teamAvgLng;
+                    return calcDist(bLat, bLng, c.lat, c.lng);
+                });
+            });
+
+            // Simulação Iterativa de Voronoi Ponderado com Potenciais de Lagrange
+            const potentials = new Array(numSellers).fill(0);
+            const clientSellerAssignment: number[] = new Array(unassignedClients.length).fill(0);
+
+            for (let iter = 0; iter < 100; iter++) {
+                const sellerCounts = new Array(numSellers).fill(0);
+
+                // Atribuição de cada cliente ao vendedor com menor custo efetivo (distância base + potencial)
+                for (let cIdx = 0; cIdx < unassignedClients.length; cIdx++) {
+                    let bestSIdx = 0;
+                    let minEffectiveCost = Infinity;
+
+                    for (let sIdx = 0; sIdx < numSellers; sIdx++) {
+                        const effectiveCost = costMatrix[cIdx][sIdx] + potentials[sIdx];
+                        if (effectiveCost < minEffectiveCost) {
+                            minEffectiveCost = effectiveCost;
+                            bestSIdx = sIdx;
+                        }
+                    }
+
+                    clientSellerAssignment[cIdx] = bestSIdx;
+                    sellerCounts[bestSIdx]++;
+                }
+
+                // Verifica se convergiu para equilíbrio perfeito
+                let maxDiff = 0;
+                for (let sIdx = 0; sIdx < numSellers; sIdx++) {
+                    const targetQ = sellerTargetQuotas.get(sellerProfiles[sIdx].id) || baseQuota;
+                    const diff = sellerCounts[sIdx] - targetQ;
+                    if (Math.abs(diff) > maxDiff) {
+                        maxDiff = Math.abs(diff);
+                    }
+                    potentials[sIdx] += diff * 0.45;
+                }
+
+                if (maxDiff === 0) break;
+            }
+
+            // Agrupa clientes atribuídos por vendedor para ajuste fino de fronteira
+            const sellerAssignedIndices: number[][] = sellerProfiles.map(() => []);
+            clientSellerAssignment.forEach((sIdx, cIdx) => {
+                sellerAssignedIndices[sIdx].push(cIdx);
+            });
+
+            // Balanceamento Exato de Fronteira com Menor Arrependimento de Distância (min Delta)
+            let safetyLimit = 3000;
+            while (safetyLimit > 0) {
+                safetyLimit--;
+
+                // Identifica vendedores sobrecarregados (acima da cota exata)
+                let overSIdx = -1;
+                let maxExcess = 0;
+
+                sellerProfiles.forEach((sp, sIdx) => {
+                    const targetQ = sellerTargetQuotas.get(sp.id) || baseQuota;
+                    const excess = sellerAssignedIndices[sIdx].length - targetQ;
+                    if (excess > maxExcess) {
+                        maxExcess = excess;
+                        overSIdx = sIdx;
                     }
                 });
 
-                bestSeller.assignedClients.add(c.cod);
-                assignmentMap.set(c.cod, { sellerId: bestSeller.id, sellerName: bestSeller.name });
+                if (overSIdx === -1) break; // Todas as cotas estão perfeitamente balanceadas!
+
+                // Identifica vendedores receptores com capacidade disponível (abaixo da cota exata)
+                const underSellers: number[] = [];
+                sellerProfiles.forEach((sp, sIdx) => {
+                    const targetQ = sellerTargetQuotas.get(sp.id) || baseQuota;
+                    if (sellerAssignedIndices[sIdx].length < targetQ) {
+                        underSellers.push(sIdx);
+                    }
+                });
+
+                if (underSellers.length === 0) break;
+
+                // Encontra o cliente no vendedor sobrecarregado com a MENOR penalidade de transferência para algum receptor
+                let bestClientPosInOver = -1;
+                let bestTargetUnderSIdx = -1;
+                let minPenalty = Infinity;
+
+                sellerAssignedIndices[overSIdx].forEach((cIdx, pos) => {
+                    const currentCost = costMatrix[cIdx][overSIdx];
+
+                    underSellers.forEach(underSIdx => {
+                        const targetCost = costMatrix[cIdx][underSIdx];
+                        const penalty = targetCost - currentCost;
+
+                        if (penalty < minPenalty) {
+                            minPenalty = penalty;
+                            bestClientPosInOver = pos;
+                            bestTargetUnderSIdx = underSIdx;
+                        }
+                    });
+                });
+
+                if (bestClientPosInOver >= 0 && bestTargetUnderSIdx >= 0) {
+                    const [cIdxMoved] = sellerAssignedIndices[overSIdx].splice(bestClientPosInOver, 1);
+                    sellerAssignedIndices[bestTargetUnderSIdx].push(cIdxMoved);
+                } else {
+                    break;
+                }
+            }
+
+            // Simulação de Trocas Bilaterais Locais (2-Exchange Optimization) para eliminar cruzamentos residuais
+            for (let pass = 0; pass < 8; pass++) {
+                let improved = false;
+                for (let s1 = 0; s1 < numSellers; s1++) {
+                    for (let s2 = s1 + 1; s2 < numSellers; s2++) {
+                        for (let i = 0; i < sellerAssignedIndices[s1].length; i++) {
+                            const c1 = sellerAssignedIndices[s1][i];
+                            for (let j = 0; j < sellerAssignedIndices[s2].length; j++) {
+                                const c2 = sellerAssignedIndices[s2][j];
+
+                                const currentCost = costMatrix[c1][s1] + costMatrix[c2][s2];
+                                const swapCost = costMatrix[c1][s2] + costMatrix[c2][s1];
+
+                                if (swapCost < currentCost - 0.08) {
+                                    // Executa a troca direta
+                                    sellerAssignedIndices[s1][i] = c2;
+                                    sellerAssignedIndices[s2][j] = c1;
+                                    improved = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!improved) break;
+            }
+
+            // Grava atribuição final
+            sellerProfiles.forEach((sp, sIdx) => {
+                sellerAssignedIndices[sIdx].forEach(cIdx => {
+                    const c = unassignedClients[cIdx];
+                    sp.assignedClients.add(c.cod);
+                    assignmentMap.set(c.cod, { sellerId: sp.id, sellerName: sp.name });
+                });
             });
         }
 

@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.226.0',
+    date: 'Hoje',
+    title: 'Fuel360: Motor Avançado de Simulação e Re-setorização Equitativa por Raio Residencial',
+    changes: [
+      'Ancoragem na Base Residencial: A distribuição da carteira toma como polo de atração inicial a casa/base de cada colaborador selecionado.',
+      'Cotas Exatas e Balanceamento Homogêneo: Divisão rigorosamente igual e homogênea da quantidade total de clientes entre todos os vendedores do escopo filtrado.',
+      'Simulação Iterativa e Otimização de Fronteira: Partição Voronoi ponderada com ajuste de potenciais de Lagrange e minimização de arrependimento (min Delta) nas fronteiras territoriais.',
+      'Simulação 2-Exchange Local Search: Trocas bilaterais automáticas para eliminar cruzamentos residuais e compactar os perímetros de atendimento.'
+    ]
+  },
+  {
     version: '3.225.1',
     date: 'Hoje',
     title: 'Fuel360: Correção de Importação do Ícone Sparkles no Modal de Otimização',
