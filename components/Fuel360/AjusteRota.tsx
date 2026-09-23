@@ -656,6 +656,58 @@ const formatDuration = (minutes: number): string => {
     return `${h}h ${m}m`;
 };
 
+const parseHoursInput = (input: string | number): number => {
+    if (input === undefined || input === null) return 8;
+    if (typeof input === 'number') {
+        if (isNaN(input) || input <= 0) return 8;
+        return Math.min(24, Math.max(0.5, input));
+    }
+    const clean = String(input).trim().toLowerCase().replace(',', '.');
+    if (!clean) return 8;
+
+    // Formato HH:MM (ex: "8:48" ou "08:48")
+    if (clean.includes(':')) {
+        const parts = clean.split(':');
+        const h = parseInt(parts[0], 10) || 0;
+        const m = parseInt(parts[1], 10) || 0;
+        const totalHours = h + (m / 60);
+        return Math.min(24, Math.max(0.5, Math.round(totalHours * 1000) / 1000));
+    }
+
+    // Formato com "h" (ex: "8h48", "8h 48m", "8h")
+    if (clean.includes('h')) {
+        const parts = clean.split('h');
+        const h = parseInt(parts[0], 10) || 0;
+        const mStr = (parts[1] || '').replace('m', '').replace('min', '').trim();
+        const m = parseInt(mStr, 10) || 0;
+        const totalHours = h + (m / 60);
+        return Math.min(24, Math.max(0.5, Math.round(totalHours * 1000) / 1000));
+    }
+
+    // Formato decimal numérico (ex: "8.8" ou "8")
+    const num = parseFloat(clean);
+    if (isNaN(num) || num <= 0) return 8;
+    return Math.min(24, Math.max(0.5, num));
+};
+
+const formatHoursToDisplay = (hours: number): string => {
+    if (!hours || isNaN(hours) || hours <= 0) return '8h';
+    const totalMinutes = Math.round(hours * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    if (m === 0) return `${h}h`;
+    return `${h}h${String(m).padStart(2, '0')}`;
+};
+
+const formatHoursInputString = (hours: number): string => {
+    if (!hours || isNaN(hours) || hours <= 0) return '8';
+    const totalMinutes = Math.round(hours * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    if (m === 0) return `${h}`;
+    return `${h}:${String(m).padStart(2, '0')}`;
+};
+
 // Heurística de Roteirização TSP (Base -> Clientes -> opcional Base) com 2-Opt Local Search
 function optimizeDayCircuit2Opt<T extends { lat: number; lng: number }>(
     base: { lat: number; lng: number },
@@ -1663,12 +1715,17 @@ export const AjusteRota: React.FC = () => {
         const saved = localStorage.getItem('fuel_opt_max_hours');
         return saved ? Number(saved) : 8;
     });
+    const [optHoursInputStr, setOptHoursInputStr] = useState<string>(() => {
+        const saved = localStorage.getItem('fuel_opt_max_hours');
+        return formatHoursInputString(saved ? Number(saved) : 8);
+    });
     const [optLimitHours, setOptLimitHours] = useState<boolean>(() => {
         return localStorage.getItem('fuel_opt_limit_hours') === 'true';
     });
 
     useEffect(() => {
         localStorage.setItem('fuel_opt_max_hours', String(optMaxHours));
+        setOptHoursInputStr(formatHoursInputString(optMaxHours));
     }, [optMaxHours]);
 
     useEffect(() => {
@@ -9209,7 +9266,7 @@ export const AjusteRota: React.FC = () => {
                         <span className="ml-1.5 px-1.5 py-0.2 rounded-md bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-black border border-indigo-200/60 dark:border-indigo-800">
                             {optLimitClients ? `Máx ${optMaxClients}` : 'Livre'}
                             {optLimitKm ? ` • ${optMaxKm}km` : ''}
-                            {optLimitHours ? ` • ${optMaxHours}h` : ''}
+                            {optLimitHours ? ` • ${formatHoursToDisplay(optMaxHours)}` : ''}
                         </span>
                     </button>
 
@@ -9578,7 +9635,7 @@ export const AjusteRota: React.FC = () => {
                                     <span className="font-bold text-slate-500 dark:text-slate-400">Jornada:</span>
                                     {optLimitHours ? (
                                         <span className={`font-black ${kpis.adjusted.exceededHoursCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                            {kpis.adjusted.exceededHoursCount > 0 ? `${kpis.adjusted.exceededHoursCount} > ${optMaxHours}h` : `Máx ${optMaxHours}h (OK)`}
+                                            {kpis.adjusted.exceededHoursCount > 0 ? `${kpis.adjusted.exceededHoursCount} > ${formatHoursToDisplay(optMaxHours)}` : `Máx ${formatHoursToDisplay(optMaxHours)} (OK)`}
                                         </span>
                                     ) : (
                                         <span className="font-bold text-slate-400">Livre</span>
@@ -12232,20 +12289,29 @@ export const AjusteRota: React.FC = () => {
                                         </label>
                                         <div className="flex items-center space-x-1.5">
                                             <input 
-                                                type="number" 
-                                                value={optMaxHours} 
+                                                type="text" 
+                                                value={optHoursInputStr} 
                                                 disabled={!optLimitHours}
-                                                step={0.5}
-                                                min={1}
-                                                max={24}
-                                                onChange={(e) => setOptMaxHours(Number(e.target.value))}
-                                                className={`w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-1.5 px-2.5 text-xs font-black text-right outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitHours ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                                placeholder="8:48"
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setOptHoursInputStr(val);
+                                                    const parsed = parseHoursInput(val);
+                                                    if (parsed > 0) {
+                                                        setOptMaxHours(parsed);
+                                                    }
+                                                }}
+                                                onBlur={() => {
+                                                    setOptHoursInputStr(formatHoursInputString(optMaxHours));
+                                                }}
+                                                className={`w-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-1.5 px-2.5 text-xs font-black text-center outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitHours ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                                title="Digite o limite de horas por dia (ex: 8:48 para 8h48min, 8.8 ou 8)"
                                             />
                                             <span className="text-xs font-bold text-slate-400">h</span>
                                         </div>
                                     </div>
                                     <span className="text-[10px] text-slate-400 dark:text-slate-500 block">
-                                        Tempo total = percurso viário OSRM + permanência calculada em cada cliente.
+                                        Tempo total = percurso viário OSRM + permanência por cliente (ex: 8:48 = 8h48min).
                                     </span>
 
                                     {/* Atalhos para Canais e Janelas */}
@@ -13899,7 +13965,7 @@ export const AjusteRota: React.FC = () => {
                                     {optimizeProgress.completedSummary.mode === 'flexibilize' && (
                                         <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center space-x-2 text-amber-700 dark:text-amber-400 font-medium">
                                             <span className="shrink-0">⚠️</span>
-                                            <span><strong>Jornada Flexibilizada:</strong> Dias com carga acima de {optimizeProgress.completedSummary.hoursLimit || optMaxHours}h possuem tags coloridas de sobrecarga para fácil visualização na grade.</span>
+                                            <span><strong>Jornada Flexibilizada:</strong> Dias com carga acima de {formatHoursToDisplay(optimizeProgress.completedSummary.hoursLimit || optMaxHours)} possuem tags coloridas de sobrecarga para fácil visualização na grade.</span>
                                         </div>
                                     )}
 

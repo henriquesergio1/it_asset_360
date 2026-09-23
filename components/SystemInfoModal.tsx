@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.224.2',
+    date: 'Hoje',
+    title: 'Fuel360: Suporte a Tempo Quebrado na Jornada Diária de Otimização (HH:MM)',
+    changes: [
+      'Entrada de Horas Fracionadas e Quebradas: O campo "Limitar Horas / Dia" nos Parâmetros do Otimizador agora aceita digitação direta em formato de horas e minutos (ex: "8:48", "8h48", "8.8" ou "8,8").',
+      'Cálculo Preciso em Minutos: O motor de roteirização aplica com exatidão matemática a carga horária em minutos (ex: 8:48 = 528 minutos) para cálculo de deslocamento OSRM e permanência em clientes.',
+      'Exibição Amigável: Badges e indicadores de status em todo o sistema passam a exibir jornadas fracionárias de forma legível (ex: "• 8h48", "Máx 8h48").'
+    ]
+  },
+  {
     version: '3.224.1',
     date: 'Hoje',
     title: 'Fuel360: Homologação e Unificação Automática de Coordenadas na Auditoria do ERP',
