@@ -6090,6 +6090,7 @@ export const AjusteRota: React.FC = () => {
                         cityBuckets.get(cCity)!.push(c);
                     });
 
+                    const protectedCityGroupedClients = new Set<string | number>();
                     const dayLimitHours = (activeDays[d] === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
                     const dayLimitMins = dayLimitHours * 60;
                     const weeklyWorkloadMins = semanais.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit) + interStopTravelMins, 0);

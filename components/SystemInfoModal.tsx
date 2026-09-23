@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.230.1',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Declaração de Variável no Equalizador Quinzenal',
+    changes: [
+      'Correção de Referência de Variável: Adicionada a declaração explícita do Set de rastreamento de cidades blindadas no escopo do balanceador quinzenal, eliminando o erro ReferenceError durante a roteirização.'
+    ]
+  },
+  {
     version: '3.230.0',
     date: 'Hoje',
     title: 'Fuel360: Teto Estrito de Clientes Diários por Ciclo Quinzenal e Equalização 50/50',

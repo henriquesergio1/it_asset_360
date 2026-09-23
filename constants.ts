@@ -1,4 +1,4 @@
-export const SYSTEM_VERSION = '3.230.0';
+export const SYSTEM_VERSION = '3.230.1';
 export const SYSTEM_CODENAME = 'Eagle Eye';
 export const APP_VERSION = SYSTEM_VERSION;
 
