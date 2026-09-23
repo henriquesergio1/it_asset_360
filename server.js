@@ -2552,6 +2552,26 @@ async function ensureFuelTablesExist(pool) {
                 CREATE INDEX IX_FuelClienteAuditoria_Sup ON FuelClienteAuditoria(Cod_Supervisor);
             `);
         }
+
+        // Auto-healing: Garantir que FuelClienteCoordenadas reflita fielmente as coordenadas válidas do ERP quando disponíveis
+        try {
+            await pool.request().query(`
+                UPDATE cc
+                SET cc.Lat = ca.Lat_ERP,
+                    cc.Long = ca.Long_ERP,
+                    cc.Status = 'ATUALIZADO_ERP',
+                    cc.Usuario = 'Prevalência ERP',
+                    cc.DataAtualizacao = GETDATE()
+                FROM FuelClienteCoordenadas cc
+                INNER JOIN FuelClienteAuditoria ca ON ca.Cod_Cliente = cc.Cod_Cliente
+                WHERE ca.Lat_ERP IS NOT NULL 
+                  AND ca.Long_ERP IS NOT NULL 
+                  AND (ABS(ca.Lat_ERP) > 0.001 OR ABS(ca.Long_ERP) > 0.001)
+                  AND (ABS(cc.Lat - ca.Lat_ERP) > 0.0001 OR ABS(cc.Long - ca.Long_ERP) > 0.0001);
+            `);
+        } catch (healErr) {
+            // Ignora erro se tabelas estiverem sendo criadas pela primeira vez
+        }
     } catch (err) {
         console.error('AVISO ao verificar/criar tabelas Fuel360:', err.message);
     }
@@ -3393,7 +3413,12 @@ app.post('/api/fuel360/cliente-coordenadas-base-central', async (req, res) => {
             const longErp = row.Long_ERP !== null && row.Long_ERP !== undefined ? parseFloat(row.Long_ERP) : null;
             const hasErp = latErp !== null && longErp !== null && !isNaN(latErp) && !isNaN(longErp) && (Math.abs(latErp) > 0.001 || Math.abs(longErp) > 0.001);
 
-            if (hasManual) {
+            // REGRA OBRIGATÓRIA: SEMPRE DEVE PREVALECER A COORDENADA DO ERP
+            if (hasErp) {
+                lat = latErp;
+                lon = longErp;
+                origem = 'ERP';
+            } else if (hasManual) {
                 lat = latManual;
                 lon = longManual;
                 origem = 'MANUAL';
@@ -3401,10 +3426,6 @@ app.post('/api/fuel360/cliente-coordenadas-base-central', async (req, res) => {
                 lat = latGeo;
                 lon = longGeo;
                 origem = 'GEOCODE_APROVADO';
-            } else if (hasErp) {
-                lat = latErp;
-                lon = longErp;
-                origem = 'ERP';
             } else if (hasGeo) {
                 lat = latGeo;
                 lon = longGeo;
@@ -3525,12 +3546,21 @@ app.post('/api/fuel360/cliente-auditoria/salvar', async (req, res) => {
                     );
             `);
 
-        if (c.Lat_Geocode !== undefined && c.Lat_Geocode !== null && c.Long_Geocode !== undefined && c.Long_Geocode !== null) {
+        // Manter FuelClienteCoordenadas fiel à regra de prevalência absoluta do ERP
+        const latErpVal = c.Lat_ERP !== undefined && c.Lat_ERP !== null ? parseFloat(c.Lat_ERP) : null;
+        const longErpVal = c.Long_ERP !== undefined && c.Long_ERP !== null ? parseFloat(c.Long_ERP) : null;
+        const hasValidErp = latErpVal !== null && longErpVal !== null && !isNaN(latErpVal) && !isNaN(longErpVal) && (Math.abs(latErpVal) > 0.001 || Math.abs(longErpVal) > 0.001);
+
+        const latToSync = hasValidErp ? latErpVal : (c.Lat_Geocode !== undefined && c.Lat_Geocode !== null ? parseFloat(c.Lat_Geocode) : null);
+        const longToSync = hasValidErp ? longErpVal : (c.Long_Geocode !== undefined && c.Long_Geocode !== null ? parseFloat(c.Long_Geocode) : null);
+        const statusToSync = hasValidErp ? 'ATUALIZADO_ERP' : (c.Status || 'OK');
+
+        if (latToSync !== null && longToSync !== null && !isNaN(latToSync) && !isNaN(longToSync) && (Math.abs(latToSync) > 0.001 || Math.abs(longToSync) > 0.001)) {
             await pool.request()
                 .input('Cod_Cliente', sql.Int, parseInt(c.Cod_Cliente, 10))
-                .input('Lat', sql.Float, parseFloat(c.Lat_Geocode))
-                .input('Long', sql.Float, parseFloat(c.Long_Geocode))
-                .input('Status', sql.NVarChar(50), c.Status || 'OK')
+                .input('Lat', sql.Float, latToSync)
+                .input('Long', sql.Float, longToSync)
+                .input('Status', sql.NVarChar(50), statusToSync)
                 .input('Usuario', sql.NVarChar(255), userName)
                 .query(`
                     IF EXISTS (SELECT 1 FROM FuelClienteCoordenadas WHERE Cod_Cliente = @Cod_Cliente)
@@ -3637,13 +3667,22 @@ app.post('/api/fuel360/cliente-auditoria/salvar-lote', async (req, res) => {
                                 );
                         `);
 
-                    if (c.Lat_Geocode !== undefined && c.Lat_Geocode !== null && c.Long_Geocode !== undefined && c.Long_Geocode !== null) {
+                    // Manter FuelClienteCoordenadas fiel à regra de prevalência absoluta do ERP
+                    const latErpVal = c.Lat_ERP !== undefined && c.Lat_ERP !== null ? parseFloat(c.Lat_ERP) : null;
+                    const longErpVal = c.Long_ERP !== undefined && c.Long_ERP !== null ? parseFloat(c.Long_ERP) : null;
+                    const hasValidErp = latErpVal !== null && longErpVal !== null && !isNaN(latErpVal) && !isNaN(longErpVal) && (Math.abs(latErpVal) > 0.001 || Math.abs(longErpVal) > 0.001);
+
+                    const latToSync = hasValidErp ? latErpVal : (c.Lat_Geocode !== undefined && c.Lat_Geocode !== null ? parseFloat(c.Lat_Geocode) : null);
+                    const longToSync = hasValidErp ? longErpVal : (c.Long_Geocode !== undefined && c.Long_Geocode !== null ? parseFloat(c.Long_Geocode) : null);
+                    const statusToSync = hasValidErp ? 'ATUALIZADO_ERP' : (c.Status || 'OK');
+
+                    if (latToSync !== null && longToSync !== null && !isNaN(latToSync) && !isNaN(longToSync) && (Math.abs(latToSync) > 0.001 || Math.abs(longToSync) > 0.001)) {
                         const coordReq = new sql.Request(transaction);
                         await coordReq
                             .input('Cod_Cliente', sql.Int, parseInt(c.Cod_Cliente, 10))
-                            .input('Lat', sql.Float, parseFloat(c.Lat_Geocode))
-                            .input('Long', sql.Float, parseFloat(c.Long_Geocode))
-                            .input('Status', sql.NVarChar(50), c.Status || 'OK')
+                            .input('Lat', sql.Float, latToSync)
+                            .input('Long', sql.Float, longToSync)
+                            .input('Status', sql.NVarChar(50), statusToSync)
                             .input('Usuario', sql.NVarChar(255), userName)
                             .query(`
                                 IF EXISTS (SELECT 1 FROM FuelClienteCoordenadas WHERE Cod_Cliente = @Cod_Cliente)
@@ -4952,12 +4991,25 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
                     console.log(`[Roteirizador ERP] Sucesso! ${extRes.recordset.length} registros de visitas carregados do ERP.`);
                     const normalized = extRes.recordset.map(row => normalizeVisitaData(row));
 
-                    // Tratamento de coordenadas: PRIORIDADE PARA O ERP e sincronização no SQL Server
+                    // Tratamento de coordenadas: PRIORIDADE ABSOLUTA PARA O ERP e sincronização no SQL Server
                     try {
                         const savedCoordsRes = await pool.request().query("SELECT Cod_Cliente, Lat, Long FROM FuelClienteCoordenadas");
                         const coordMap = new Map();
                         if (savedCoordsRes.recordset && savedCoordsRes.recordset.length > 0) {
                             savedCoordsRes.recordset.forEach(c => coordMap.set(c.Cod_Cliente, c));
+                        }
+
+                        // Buscar coordenadas oficiais do ERP salvas na Base Central (FuelClienteAuditoria)
+                        const erpAuditoriaRes = await pool.request().query("SELECT Cod_Cliente, Lat_ERP, Long_ERP FROM FuelClienteAuditoria WHERE Lat_ERP IS NOT NULL AND Long_ERP IS NOT NULL");
+                        const erpAuditoriaMap = new Map();
+                        if (erpAuditoriaRes.recordset && erpAuditoriaRes.recordset.length > 0) {
+                            erpAuditoriaRes.recordset.forEach(a => {
+                                const lat = parseFloat(a.Lat_ERP);
+                                const lng = parseFloat(a.Long_ERP);
+                                if (!isNaN(lat) && !isNaN(lng) && (Math.abs(lat) > 0.001 || Math.abs(lng) > 0.001)) {
+                                    erpAuditoriaMap.set(a.Cod_Cliente, { Lat: lat, Long: lng });
+                                }
+                            });
                         }
 
                         const clientsToSyncInDb = [];
@@ -4976,8 +5028,13 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
                                     });
                                     coordMap.set(v.Cod_Cliente, { Cod_Cliente: v.Cod_Cliente, Lat: v.Lat, Long: v.Long });
                                 }
+                            } else if (v.Cod_Cliente && erpAuditoriaMap.has(v.Cod_Cliente)) {
+                                // 2. A visita atual veio sem coordenada na query, mas o cliente já possui coordenadas oficiais do ERP na Base Central: PRIORIDADE AO ERP!
+                                const erpSaved = erpAuditoriaMap.get(v.Cod_Cliente);
+                                v.Lat = erpSaved.Lat;
+                                v.Long = erpSaved.Long;
                             } else if (v.Cod_Cliente && coordMap.has(v.Cod_Cliente)) {
-                                // 2. O ERP NÃO possui coordenadas para este cliente: usar o fallback salvo no FuelClienteCoordenadas
+                                // 3. O ERP NÃO possui coordenadas para este cliente: usar o fallback salvo no FuelClienteCoordenadas
                                 const c = coordMap.get(v.Cod_Cliente);
                                 if (c.Lat && c.Long) {
                                     v.Lat = c.Lat;
@@ -5207,23 +5264,41 @@ app.get('/api/fuel360/roteiro/promotores/clientes', async (req, res) => {
                         };
                     });
 
-                    // Tratamento de coordenadas promotores: PRIORIDADE PARA O ERP
+                    // Tratamento de coordenadas promotores: PRIORIDADE ABSOLUTA PARA O ERP
                     try {
                         const savedCoordsRes = await pool.request().query("SELECT Cod_Cliente, Lat, Long FROM FuelClienteCoordenadas");
+                        const coordMap = new Map();
                         if (savedCoordsRes.recordset && savedCoordsRes.recordset.length > 0) {
-                            const coordMap = new Map();
                             savedCoordsRes.recordset.forEach(c => coordMap.set(c.Cod_Cliente, c));
-                            normalized.forEach(v => {
-                                const hasErpCoord = v.Lat && v.Long && (Math.abs(v.Lat) > 0.001 || Math.abs(v.Long) > 0.001);
-                                if (!hasErpCoord && v.Cod_Cliente && coordMap.has(v.Cod_Cliente)) {
-                                    const c = coordMap.get(v.Cod_Cliente);
-                                    if (c.Lat && c.Long) {
-                                        v.Lat = c.Lat;
-                                        v.Long = c.Long;
-                                    }
+                        }
+
+                        // Buscar coordenadas oficiais do ERP salvas na Base Central (FuelClienteAuditoria)
+                        const erpAuditoriaRes = await pool.request().query("SELECT Cod_Cliente, Lat_ERP, Long_ERP FROM FuelClienteAuditoria WHERE Lat_ERP IS NOT NULL AND Long_ERP IS NOT NULL");
+                        const erpAuditoriaMap = new Map();
+                        if (erpAuditoriaRes.recordset && erpAuditoriaRes.recordset.length > 0) {
+                            erpAuditoriaRes.recordset.forEach(a => {
+                                const lat = parseFloat(a.Lat_ERP);
+                                const lng = parseFloat(a.Long_ERP);
+                                if (!isNaN(lat) && !isNaN(lng) && (Math.abs(lat) > 0.001 || Math.abs(lng) > 0.001)) {
+                                    erpAuditoriaMap.set(a.Cod_Cliente, { Lat: lat, Long: lng });
                                 }
                             });
                         }
+
+                        normalized.forEach(v => {
+                            const hasErpCoord = v.Lat && v.Long && (Math.abs(v.Lat) > 0.001 || Math.abs(v.Long) > 0.001);
+                            if (!hasErpCoord && v.Cod_Cliente && erpAuditoriaMap.has(v.Cod_Cliente)) {
+                                const erpSaved = erpAuditoriaMap.get(v.Cod_Cliente);
+                                v.Lat = erpSaved.Lat;
+                                v.Long = erpSaved.Long;
+                            } else if (!hasErpCoord && v.Cod_Cliente && coordMap.has(v.Cod_Cliente)) {
+                                const c = coordMap.get(v.Cod_Cliente);
+                                if (c.Lat && c.Long) {
+                                    v.Lat = c.Lat;
+                                    v.Long = c.Long;
+                                }
+                            }
+                        });
                     } catch (cErr) {
                         console.warn('[Fuel360 WARN] Falha ao sobrepor coordenadas salvas em promotores:', cErr.message);
                     }
@@ -10567,6 +10642,25 @@ async function updateUserPendingStatus(pool, userId) {
                                             'PENDENTE', 'PENDENTE', @UsuarioAtualizacao, GETDATE()
                                         );
                                 `);
+
+                                // Sincronizar também FuelClienteCoordenadas com a coordenada oficial do ERP
+                                await pool.request()
+                                    .input('Cod_Cliente', sql.Int, v.Cod_Cliente)
+                                    .input('Lat', sql.Float, latErp)
+                                    .input('Long', sql.Float, lngErp)
+                                    .query(`
+                                        IF EXISTS (SELECT 1 FROM FuelClienteCoordenadas WHERE Cod_Cliente = @Cod_Cliente)
+                                        BEGIN
+                                            UPDATE FuelClienteCoordenadas
+                                            SET Lat = @Lat, Long = @Long, Status = 'ATUALIZADO_ERP', Usuario = 'Job Segundo Plano (5h)', DataAtualizacao = GETDATE()
+                                            WHERE Cod_Cliente = @Cod_Cliente;
+                                        END
+                                        ELSE
+                                        BEGIN
+                                            INSERT INTO FuelClienteCoordenadas (Cod_Cliente, Lat, Long, Status, Usuario, DataAtualizacao)
+                                            VALUES (@Cod_Cliente, @Lat, @Long, 'ATUALIZADO_ERP', 'Job Segundo Plano (5h)', GETDATE());
+                                        END
+                                    `);
                             updatedCount++;
                         }
 

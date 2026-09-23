@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.223.1',
+    date: 'Hoje',
+    title: 'Fuel360: Prevalência Absoluta das Coordenadas do ERP sobre a Geolocalização do Sistema',
+    changes: [
+      'Prevalência do ERP na Base Central: Reordenada a precedência de coordenadas para que o ERP ocupe o 1º lugar absoluto. Qualquer cliente com coordenadas válidas cadastradas no ERP sempre será plotado no mapa pela coordenada oficial do ERP.',
+      'Proteção contra Sobrescrita por Geocode: As rotinas de auditoria individual e em lote foram ajustadas para nunca sobrescrever as coordenadas de FuelClienteCoordenadas com estimativas do geocode se o cliente possuir coordenadas no ERP.',
+      'Auto-Healing de Coordenadas Homologadas: Sincronização e restauração automática no SQL Server local de qualquer coordenada em FuelClienteCoordenadas com a coordenada oficial de FuelClienteAuditoria (ERP).',
+      'Harmonização nas Rotas e Simulações: Tanto o carregamento inicial de rotas ("Rota ERP") quanto a abertura de simulações salvas e a atualização em tela aplicam estritamente as coordenadas do ERP.'
+    ]
+  },
+  {
     version: '3.223.0',
     date: 'Hoje',
     title: 'Fuel360: Sincronização em Segundo Plano (5h), Indicador de Pavimento e Preferência Global de Roteamento',
