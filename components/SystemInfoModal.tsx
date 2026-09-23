@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.224.0',
+    date: 'Hoje',
+    title: 'Fuel360: Reotimização de Traçado com Preservação Rigorosa de Dias Manuais',
+    changes: [
+      'Dois Modos de Otimização no Fuel360: Disponibilizada a distinção clara entre "Otimização Completa" (redistribuição livre de dias e sequenciamento pelo algoritmo) e "Reordenar Rota (Manter Dias)" (recalcula a melhor ordem viária respeitando os dias e quinzenas definidos pelo operador).',
+      'Preservação Total dos Ajustes Manuais via Laço: Ao utilizar a ferramenta de laço ou a tabela para equilibrar dias sobrecarregados, o operador pode agora reordenar o traçado viário sem que o algoritmo reverta os clientes para outros dias.',
+      'Sequenciamento TSP e Métricas Viárias OSRM: Para cada dia fixado, o motor recalcula o circuito viário ótimo a partir da base do colaborador, atualizando Sequencia_13, Sequencia_24, tempos de jornada e quilometragem.',
+      'Ações Rápidas na Barra Superior e no Card do Vendedor: Botões dedicados e de fácil acesso para disparar tanto a otimização global quanto a reordenação mantendo os dias atribuídos.'
+    ]
+  },
+  {
     version: '3.223.1',
     date: 'Hoje',
     title: 'Fuel360: Prevalência Absoluta das Coordenadas do ERP sobre a Geolocalização do Sistema',

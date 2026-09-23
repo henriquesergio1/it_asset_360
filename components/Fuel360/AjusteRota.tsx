@@ -7,7 +7,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, Tooltip
 import L from 'leaflet';
 import * as XLSX from 'xlsx';
 import { ShareSimulationModal } from './ShareSimulationModal';
-import { Calendar, Sun, Sunset, AlertCircle, Info, Edit3, Trash2, Plus, Check, FolderOpen, Share2, MessageSquare, FileSpreadsheet, Map as MapIconLucide, Layers, Download, Palette, CheckSquare, X } from 'lucide-react';
+import { Calendar, Sun, Sunset, AlertCircle, Info, Edit3, Trash2, Plus, Check, FolderOpen, Share2, MessageSquare, FileSpreadsheet, Map as MapIconLucide, Layers, Download, Palette, CheckSquare, X, Route } from 'lucide-react';
 import {
     CogIcon,
     SpinnerIcon,
@@ -4960,9 +4960,12 @@ export const AjusteRota: React.FC = () => {
             idleSellersCount?: number;
             idleSellerNames?: string[];
             isWhatIf?: boolean;
-        }
+            preserveCurrentDays?: boolean;
+        },
+        preserveCurrentDays: boolean = false
     ) => {
         if (sellers.length === 0) return [];
+        const effectivePreserveDays = Boolean(preserveCurrentDays || summaryMeta?.preserveCurrentDays);
 
         setLoading(true);
         setOptimizeProgress({
@@ -5142,7 +5145,8 @@ export const AjusteRota: React.FC = () => {
                 };
             });
 
-            // 2.2. Agrupamento Geográfico Municipal e Setorial (com suporte a Regiões Customizadas)
+            if (!effectivePreserveDays) {
+                // 2.2. Agrupamento Geográfico Municipal e Setorial (com suporte a Regiões Customizadas)
             const cityGroups = new Map<string, typeof uniqueClients>();
             uniqueClients.forEach(c => {
                 const rawCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
@@ -6158,11 +6162,74 @@ export const AjusteRota: React.FC = () => {
                     }
                 }
             }
+            } else {
+                // MODO REORDENAÇÃO MANTENDO DIAS FIXOS: PRESERVA RIGOROSAMENTE OS DIAS E QUINZENAS DEFINIDOS MANUALMENTE
+                const clientDays = Array.from(new Set(sellerVisits.map(v => normalizeDiaSemana(v.Dia_Semana || '', v.Data_da_Visita)).filter(Boolean)));
+                clientDays.forEach(dName => {
+                    if (!dayBuckets.some(b => b.day === dName)) {
+                        dayBuckets.push({
+                            day: dName,
+                            weight: getDayWeight(dName),
+                            targetQuota: 0,
+                            maxCap: Infinity,
+                            semanais: [],
+                            quinzenais13: [],
+                            quinzenais24: []
+                        });
+                    }
+                });
+
+                sellerVisits.forEach(v => {
+                    const clientDay = normalizeDiaSemana(v.Dia_Semana || '', v.Data_da_Visita) || activeDays[0];
+                    let bucket = dayBuckets.find(b => b.day === clientDay);
+                    if (!bucket) {
+                        bucket = {
+                            day: clientDay,
+                            weight: getDayWeight(clientDay),
+                            targetQuota: 0,
+                            maxCap: Infinity,
+                            semanais: [],
+                            quinzenais13: [],
+                            quinzenais24: []
+                        };
+                        dayBuckets.push(bucket);
+                    }
+
+                    const clientLat = v.Lat || (validCoords.find(vc => (vc.sampleVisit.Cidade || '').trim().toUpperCase() === (v.Cidade || '').trim().toUpperCase())?.lat || centerPortfolioLat);
+                    const clientLng = v.Long || (validCoords.find(vc => (vc.sampleVisit.Cidade || '').trim().toUpperCase() === (v.Cidade || '').trim().toUpperCase())?.lng || centerPortfolioLng);
+                    const parsedP = parsePeriodicidade(v.Periodicidade);
+                    const polarAngle = (clientLat && clientLng) 
+                        ? calcPolarAngle(baseLat, baseLng, clientLat, clientLng)
+                        : 0;
+                    const distFromBase = (clientLat && clientLng)
+                        ? calcDist(baseLat, baseLng, clientLat, clientLng)
+                        : 9999;
+
+                    const item: typeof uniqueClients[0] = {
+                        sampleVisit: v,
+                        tipo: parsedP.tipo,
+                        originalPeriodicidade: v.Periodicidade || 'Semanal',
+                        lat: clientLat,
+                        lng: clientLng,
+                        polarAngle,
+                        distFromBase
+                    };
+
+                    const periodicidadeUpper = (v.Periodicidade || '').toUpperCase();
+                    if (parsedP.tipo === 'SEMANAL') {
+                        bucket.semanais.push(item);
+                    } else if (parsedP.tipo === 'QUINZENAL_2_4' || periodicidadeUpper.includes('(2,4)') || periodicidadeUpper.includes('(2.4)') || periodicidadeUpper.includes('2 4') || periodicidadeUpper.includes('2/4') || periodicidadeUpper.includes('PAR')) {
+                        bucket.quinzenais24.push(item);
+                    } else {
+                        bucket.quinzenais13.push(item);
+                    }
+                });
+            }
 
             const unallocatedClients: typeof uniqueClients = [];
 
             // Em modo com teto estrito (!allowOverflow), remove excedentes
-            if (!allowOverflow) {
+            if (!allowOverflow && !effectivePreserveDays) {
                 dayBuckets.forEach(bucket => {
                     const maxAllowed = bucket.maxCap;
                     while ((bucket.semanais.length + bucket.quinzenais13.length) > maxAllowed && bucket.quinzenais13.length > 0) {
@@ -6258,8 +6325,8 @@ export const AjusteRota: React.FC = () => {
                 });
             }
 
-            // Salvaguarda matemática estrita: Quando allowOverflow = true, garante que nenhum cliente seja omitido
-            if (allowOverflow) {
+            // Salvaguarda matemática estrita: Quando allowOverflow = true, garante que nenhum cliente seja omitido (apenas em otimização completa)
+            if (allowOverflow && !effectivePreserveDays) {
                 const resultClientCodes = new Set(result.map(r => r.Cod_Cliente));
                 const missingClients = uniqueClients.filter(c => !resultClientCodes.has(c.sampleVisit.Cod_Cliente));
                 if (missingClients.length > 0) {
@@ -6689,7 +6756,7 @@ export const AjusteRota: React.FC = () => {
         };
     };
 
-    const handleOptimizeSimulate = async () => {
+    const handleOptimizeSimulate = async (preserveDays: boolean = false) => {
         if (adjustedRoutes.length === 0) {
             alert("Nenhum dado de rota carregado para otimização.");
             return;
@@ -6701,12 +6768,14 @@ export const AjusteRota: React.FC = () => {
             return;
         }
 
-        // Pré-checagem de viabilidade de capacidade / jornada para os vendedores em foco
-        const feasibility = checkCapacityFeasibility(sellers, adjustedRoutes);
-        if (feasibility.hasOverflow && feasibility.overflowData) {
-            setCapacityOverflowData(feasibility.overflowData);
-            setShowCapacityModal(true);
-            return;
+        // Pré-checagem de viabilidade de capacidade / jornada para os vendedores em foco (apenas em otimização completa)
+        if (!preserveDays) {
+            const feasibility = checkCapacityFeasibility(sellers, adjustedRoutes);
+            if (feasibility.hasOverflow && feasibility.overflowData) {
+                setCapacityOverflowData(feasibility.overflowData);
+                setShowCapacityModal(true);
+                return;
+            }
         }
 
         const isSingleSeller = sellers.length === 1;
@@ -6724,7 +6793,7 @@ export const AjusteRota: React.FC = () => {
         let idleSellersCount = 0;
         let idleSellerNames: string[] = [];
 
-        if (optAutoResectorizeSellers && sellers.length > 1) {
+        if (!preserveDays && optAutoResectorizeSellers && sellers.length > 1) {
             const resectorizeResult = resectorizeSellersTerritories(sellers, adjustedRoutes, effectiveScopedRoutes);
             if (resectorizeResult.transferredClientsCount > 0 || resectorizeResult.idleSellers.length > 0) {
                 baseRoutesForOptimization = resectorizeResult.updatedRoutes;
@@ -6736,18 +6805,21 @@ export const AjusteRota: React.FC = () => {
             }
         }
 
-        const isWhatIfSimulation = Boolean(optAutoResectorizeSellers && optWhatIfActive && optWhatIfSellersCount > 0 && optWhatIfSellersCount < sellers.length);
+        const isWhatIfSimulation = Boolean(!preserveDays && optAutoResectorizeSellers && optWhatIfActive && optWhatIfSellersCount > 0 && optWhatIfSellersCount < sellers.length);
 
         const result = await runOptimizationForSellers(activeSellersToOptimize, baseRoutesForOptimization, true, {
-            title: isSingleSeller ? `Otimização de ${sellerNameDesc} Concluída` : (isWhatIfSimulation ? `Simulação What-If (${activeSellersToOptimize.length} Vendedores)` : 'Otimização e Roteirização Concluída'),
-            escopoDesc: `Escopo: ${escopoDesc}${resectorizedCount > 0 ? ` (${resectorizedCount} PDVs re-setorizados)` : ''}`,
+            title: preserveDays
+                ? (isSingleSeller ? `Reordenação de ${sellerNameDesc} (Dias Preservados)` : 'Reordenação de Rotas (Dias Preservados)')
+                : (isSingleSeller ? `Otimização de ${sellerNameDesc} Concluída` : (isWhatIfSimulation ? `Simulação What-If (${activeSellersToOptimize.length} Vendedores)` : 'Otimização e Roteirização Concluída')),
+            escopoDesc: `Escopo: ${escopoDesc}${resectorizedCount > 0 ? ` (${resectorizedCount} PDVs re-setorizados)` : ''}${preserveDays ? ' • Dias e quinzenas mantidos rigorosamente' : ''}`,
             mode: 'simulate',
             resectorizedCount,
             activeSellersCount: activeSellersToOptimize.length,
             idleSellersCount,
             idleSellerNames,
-            isWhatIf: isWhatIfSimulation
-        });
+            isWhatIf: isWhatIfSimulation,
+            preserveCurrentDays: preserveDays
+        }, preserveDays);
         if (result && result.length === 0) {
             alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
             return;
@@ -6761,7 +6833,7 @@ export const AjusteRota: React.FC = () => {
         }
     };
 
-    const handleOptimizeSingleSeller = async (targetSellerId: number, e?: React.MouseEvent) => {
+    const handleOptimizeSingleSeller = async (targetSellerId: number, e?: React.MouseEvent, preserveDays: boolean = false) => {
         if (e) e.stopPropagation();
         if (adjustedRoutes.length === 0) {
             alert("Nenhum dado de rota carregado para otimização.");
@@ -6776,22 +6848,27 @@ export const AjusteRota: React.FC = () => {
 
         // Setores vagos são permitidos: o otimizador utilizará o centroide geográfico dos clientes como partida e retorno.
 
-        // Pré-checagem de viabilidade de capacidade / jornada para o vendedor
-        const feasibility = checkCapacityFeasibility([targetSellerId], adjustedRoutes);
-        if (feasibility.hasOverflow && feasibility.overflowData) {
-            setCapacityOverflowData(feasibility.overflowData);
-            setShowCapacityModal(true);
-            return;
+        // Pré-checagem de viabilidade de capacidade / jornada para o vendedor (apenas em otimização completa)
+        if (!preserveDays) {
+            const feasibility = checkCapacityFeasibility([targetSellerId], adjustedRoutes);
+            if (feasibility.hasOverflow && feasibility.overflowData) {
+                setCapacityOverflowData(feasibility.overflowData);
+                setShowCapacityModal(true);
+                return;
+            }
         }
 
         const sellerColab = getColabBySectorOrName(targetSellerId, sellerVisits[0]?.Nome_Vendedor);
         const sellerNameDesc = sellerColab?.Nome || sellerVisits[0]?.Nome_Vendedor || `Vendedor ${targetSellerId}`;
 
         const result = await runOptimizationForSellers([targetSellerId], adjustedRoutes, true, {
-            title: `Otimização de ${sellerNameDesc} Concluída`,
-            escopoDesc: `Escopo: Vendedor ${sellerNameDesc} (ID ${targetSellerId})`,
-            mode: 'simulate'
-        });
+            title: preserveDays 
+                ? `Reordenação de ${sellerNameDesc} (Dias Preservados)`
+                : `Otimização de ${sellerNameDesc} Concluída`,
+            escopoDesc: `Escopo: Vendedor ${sellerNameDesc} (ID ${targetSellerId})${preserveDays ? ' • Dias e quinzenas mantidos rigorosamente' : ''}`,
+            mode: 'simulate',
+            preserveCurrentDays: preserveDays
+        }, preserveDays);
         if (result && result.length === 0) {
             alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
             return;
@@ -11027,16 +11104,26 @@ export const AjusteRota: React.FC = () => {
                                         <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-700">
                                             <button
                                                 type="button"
-                                                onClick={handleOptimizeSimulate}
+                                                onClick={() => handleOptimizeSimulate(false)}
                                                 disabled={loading || effectiveScopedRoutes.length === 0}
                                                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-3.5 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 h-[32px]"
                                                 title={isSingleSeller
-                                                    ? `Executar algoritmo de otimização de rotas apenas para o vendedor selecionado (${effectiveScopedRoutes.length} PDVs)`
-                                                    : `Executar algoritmo de otimização de rotas para ${effectiveSellersList.length > 1 ? `${effectiveSellersList.length} vendedores selecionados` : 'os vendedores do escopo'} (${effectiveScopedRoutes.length} PDVs)`
+                                                    ? `Executar algoritmo de otimização de rotas redistribuindo dias para o vendedor selecionado (${effectiveScopedRoutes.length} PDVs)`
+                                                    : `Executar algoritmo de otimização de rotas redistribuindo dias para ${effectiveSellersList.length > 1 ? `${effectiveSellersList.length} vendedores selecionados` : 'os vendedores do escopo'} (${effectiveScopedRoutes.length} PDVs)`
                                                 }
                                             >
                                                 <RefreshIcon className="w-3.5 h-3.5 mr-1.5" />
                                                 <span>{isSingleSeller ? 'Otimizar Vendedor' : (effectiveSellersList.length > 1 ? `Otimizar ${effectiveSellersList.length} Vendedores` : 'Otimizar Rotas')}</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleOptimizeSimulate(true)}
+                                                disabled={loading || effectiveScopedRoutes.length === 0}
+                                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-3 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 h-[32px]"
+                                                title="Reordenar a melhor sequência e traçado viário mantendo rigorosamente os dias da semana e quinzenas definidos pelo operador (acatando as trocas manuais e do laço)"
+                                            >
+                                                <Route className="w-3.5 h-3.5 mr-1.5" />
+                                                <span>Reordenar Rota (Manter Dias)</span>
                                             </button>
                                             <button
                                                 type="button"
@@ -11846,10 +11933,22 @@ export const AjusteRota: React.FC = () => {
                                                                         </>
                                                                     )}
 
+                                                                    {/* BOTÃO REORDENAR (MANTER DIAS) */}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => handleOptimizeSingleSeller(Number(sellerId), e, true)}
+                                                                        disabled={loading || sellerVisits.length === 0}
+                                                                        className="disabled:opacity-50 text-white font-black px-2 py-1 rounded-xl shadow-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer border bg-emerald-600 hover:bg-emerald-700 border-emerald-500/50 text-[10px]"
+                                                                        title={`Reordenar o traçado e sequência viária para o Vendedor ${sellerDisplayName} mantendo rigorosamente os dias da semana e quinzenas atuais`}
+                                                                    >
+                                                                        <Route className="w-3 h-3" />
+                                                                        <span>Manter Dias</span>
+                                                                    </button>
+
                                                                     {/* BOTÃO OTIMIZAR VENDEDOR INDIVIDUAL */}
                                                                     <button
                                                                         type="button"
-                                                                        onClick={(e) => handleOptimizeSingleSeller(Number(sellerId), e)}
+                                                                        onClick={(e) => handleOptimizeSingleSeller(Number(sellerId), e, false)}
                                                                         disabled={loading || sellerVisits.length === 0}
                                                                         className={`disabled:opacity-50 text-white font-black px-2.5 py-1 rounded-xl shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer border ${
                                                                             isSellerOptimized
@@ -11857,7 +11956,7 @@ export const AjusteRota: React.FC = () => {
                                                                                 : 'bg-indigo-600 hover:bg-indigo-700 border-indigo-500/50'
                                                                         }`}
                                                                         title={isSellerOptimized
-                                                                            ? `Reotimizar e recalcular rotas para o Vendedor ${sellerDisplayName}`
+                                                                            ? `Reotimizar completamente (redistribuindo dias) para o Vendedor ${sellerDisplayName}`
                                                                             : `Executar algoritmo de otimização de rotas e balanceamento exclusivamente para o Vendedor ${sellerDisplayName} (${sellerVisits.length} PDVs)`
                                                                         }
                                                                     >
