@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.229.0',
+    date: 'Hoje',
+    title: 'Fuel360: Desbloqueio e Execução Imediata da Fusão Territorial de Equipe',
+    changes: [
+      'Execução Prioritária da Re-setorização: Ao escolher "Re-setorizar e Redistribuir a Carteira Toda", o motor de fusão e balanceamento territorial é executado imediatamente no primeiro passo, eliminando bloqueios prematuros de capacidade sobre a carteira antiga.',
+      'Validação de Capacidade Pós-Balanceamento: A checagem de viabilidade operacional valida a carteira já perfeitamente equalizada (78-79 PDVs por colaborador).',
+      'Mesclagem Segura de Rotas e Atualização Visual: Garantia de substituição direta e segura sobre a base re-setorizada, refletindo imediatamente os novos perímetros territoriais no mapa e nos resumos da equipe.'
+    ]
+  },
+  {
     version: '3.228.0',
     date: 'Hoje',
     title: 'Fuel360: Partição Territorial Voronoi Ponderada com Cotas Equitativas e Ancoragem Gravitacional',

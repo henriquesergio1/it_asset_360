@@ -6456,7 +6456,9 @@ export const AjusteRota: React.FC = () => {
 
         if (result.length > 0) {
             setAdjustedRoutes(prev => {
-                const otherRoutes = prev.filter(r => !sellers.includes(r.Cod_Vend));
+                const targetSellers = new Set(sellers);
+                const sourceBase = baseRoutes && baseRoutes.length > 0 ? baseRoutes : prev;
+                const otherRoutes = sourceBase.filter(r => !targetSellers.has(r.Cod_Vend));
                 return [...otherRoutes, ...result];
             });
         }
@@ -6983,16 +6985,6 @@ export const AjusteRota: React.FC = () => {
             return;
         }
 
-        // Pré-checagem de viabilidade de capacidade / jornada para os vendedores em foco (apenas em otimização completa)
-        if (!preserveDays) {
-            const feasibility = checkCapacityFeasibility(sellers, adjustedRoutes);
-            if (feasibility.hasOverflow && feasibility.overflowData) {
-                setCapacityOverflowData(feasibility.overflowData);
-                setShowCapacityModal(true);
-                return;
-            }
-        }
-
         const isSingleSeller = sellers.length === 1;
         const singleColab = isSingleSeller ? getColabBySectorOrName(sellers[0], effectiveScopedRoutes[0]?.Nome_Vendedor) : null;
         const sellerNameDesc = singleColab?.Nome || effectiveScopedRoutes[0]?.Nome_Vendedor || `Vendedor ${sellers[0]}`;
@@ -7012,6 +7004,7 @@ export const AjusteRota: React.FC = () => {
             ? overrideResectorize
             : optAutoResectorizeSellers;
 
+        // 1. Quando solicitado "Re-setorizar e Redistribuir", a fusão e balanceamento territorial ocorrem PRIMEIRO!
         if (!preserveDays && shouldResectorize && sellers.length > 1) {
             const resectorizeResult = resectorizeSellersTerritories(sellers, adjustedRoutes, effectiveScopedRoutes);
             if (resectorizeResult.transferredClientsCount > 0 || resectorizeResult.idleSellers.length > 0) {
@@ -7021,6 +7014,16 @@ export const AjusteRota: React.FC = () => {
                 idleSellersCount = resectorizeResult.idleSellers.length;
                 idleSellerNames = resectorizeResult.idleSellerNames;
                 setAdjustedRoutes(resectorizeResult.updatedRoutes);
+            }
+        }
+
+        // 2. Pré-checagem de viabilidade de capacidade / jornada para os vendedores em foco (usando a base já redistribuída e balanceada)
+        if (!preserveDays && !shouldResectorize) {
+            const feasibility = checkCapacityFeasibility(sellers, baseRoutesForOptimization);
+            if (feasibility.hasOverflow && feasibility.overflowData) {
+                setCapacityOverflowData(feasibility.overflowData);
+                setShowCapacityModal(true);
+                return;
             }
         }
 
