@@ -2886,6 +2886,10 @@ export const AjusteRota: React.FC = () => {
         breakdown: { targetId: number; targetName: string; count: number }[];
     } | null>(null);
 
+    // Modal de Decisão de Otimização de Equipe (Manter Clientes x Re-setorizar)
+    const [showTeamOptimizeDecisionModal, setShowTeamOptimizeDecisionModal] = useState(false);
+    const [teamOptimizeChoice, setTeamOptimizeChoice] = useState<'KEEP_CLIENTS' | 'RESECTORIZE'>('KEEP_CLIENTS');
+
     // Map polylines
     const [originalPolylines, setOriginalPolylines] = useState<{ 
         id: string; 
@@ -6813,7 +6817,10 @@ export const AjusteRota: React.FC = () => {
         };
     };
 
-    const handleOptimizeSimulate = async (preserveDays: boolean = false) => {
+    const handleOptimizeSimulate = async (
+        preserveDays: boolean = false,
+        overrideResectorize?: boolean
+    ) => {
         if (adjustedRoutes.length === 0) {
             alert("Nenhum dado de rota carregado para otimização.");
             return;
@@ -6850,7 +6857,11 @@ export const AjusteRota: React.FC = () => {
         let idleSellersCount = 0;
         let idleSellerNames: string[] = [];
 
-        if (!preserveDays && optAutoResectorizeSellers && sellers.length > 1) {
+        const shouldResectorize = overrideResectorize !== undefined
+            ? overrideResectorize
+            : optAutoResectorizeSellers;
+
+        if (!preserveDays && shouldResectorize && sellers.length > 1) {
             const resectorizeResult = resectorizeSellersTerritories(sellers, adjustedRoutes, effectiveScopedRoutes);
             if (resectorizeResult.transferredClientsCount > 0 || resectorizeResult.idleSellers.length > 0) {
                 baseRoutesForOptimization = resectorizeResult.updatedRoutes;
@@ -6862,7 +6873,7 @@ export const AjusteRota: React.FC = () => {
             }
         }
 
-        const isWhatIfSimulation = Boolean(!preserveDays && optAutoResectorizeSellers && optWhatIfActive && optWhatIfSellersCount > 0 && optWhatIfSellersCount < sellers.length);
+        const isWhatIfSimulation = Boolean(!preserveDays && shouldResectorize && optWhatIfActive && optWhatIfSellersCount > 0 && optWhatIfSellersCount < sellers.length);
 
         const result = await runOptimizationForSellers(activeSellersToOptimize, baseRoutesForOptimization, true, {
             title: preserveDays
@@ -11319,12 +11330,18 @@ export const AjusteRota: React.FC = () => {
                                         <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-700">
                                             <button
                                                 type="button"
-                                                onClick={() => handleOptimizeSimulate(false)}
+                                                onClick={() => {
+                                                    if (effectiveSellersList.length > 1) {
+                                                        setShowTeamOptimizeDecisionModal(true);
+                                                    } else {
+                                                        handleOptimizeSimulate(false);
+                                                    }
+                                                }}
                                                 disabled={loading || effectiveScopedRoutes.length === 0}
                                                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-3.5 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 h-[32px]"
                                                 title={isSingleSeller
                                                     ? `Executar algoritmo de otimização de rotas redistribuindo dias para o vendedor selecionado (${effectiveScopedRoutes.length} PDVs)`
-                                                    : `Executar algoritmo de otimização de rotas redistribuindo dias para ${effectiveSellersList.length > 1 ? `${effectiveSellersList.length} vendedores selecionados` : 'os vendedores do escopo'} (${effectiveScopedRoutes.length} PDVs)`
+                                                    : `Executar algoritmo de otimização de rotas para ${effectiveSellersList.length > 1 ? `${effectiveSellersList.length} vendedores selecionados` : 'os vendedores do escopo'} (${effectiveScopedRoutes.length} PDVs)`
                                                 }
                                             >
                                                 <RefreshIcon className="w-3.5 h-3.5 mr-1.5" />
@@ -16527,6 +16544,234 @@ export const AjusteRota: React.FC = () => {
                                     <span>💾 Salvar e Recalcular Rota</span>
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE DECISÃO RÁPIDA: OTIMIZAÇÃO DE EQUIPE (MANTER CLIENTES OU RE-SETORIZAR) */}
+            {showTeamOptimizeDecisionModal && (
+                <div className="fixed inset-0 z-[2000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 lg:p-6 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+                        {/* Header */}
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-indigo-50/50 dark:bg-indigo-950/20">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-600/20 shrink-0">
+                                    <Sparkles className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        Otimização de Rotas da Equipe
+                                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                            {effectiveSellersList.length} Vendedores • {effectiveScopedRoutes.length} PDVs
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                        Escolha como a inteligência de roteirização deve processar a carteira dos vendedores selecionados.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowTeamOptimizeDecisionModal(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Conteúdo */}
+                        <div className="p-6 overflow-y-auto custom-scrollbar space-y-4 flex-1">
+                            {/* OPÇÃO 1: MANTER CLIENTES ATUAIS */}
+                            <div 
+                                onClick={() => setTeamOptimizeChoice('KEEP_CLIENTS')}
+                                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                                    teamOptimizeChoice === 'KEEP_CLIENTS'
+                                        ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/30 shadow-md'
+                                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-800/60'
+                                }`}
+                            >
+                                <div className="flex items-start gap-3.5">
+                                    <div className="mt-0.5">
+                                        <input 
+                                            type="radio" 
+                                            name="team_opt_mode" 
+                                            checked={teamOptimizeChoice === 'KEEP_CLIENTS'}
+                                            onChange={() => setTeamOptimizeChoice('KEEP_CLIENTS')}
+                                            className="text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base">👤</span>
+                                            <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                                                Manter Clientes nos Vendedores Atuais (Recomendado)
+                                            </h4>
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                                                Preserva Carteiras
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                                            Otimiza os dias da semana, horários de atendimento e o circuito viário (TSP) de cada vendedor, <strong>mantendo integralmente a carteira de clientes de cada um</strong> (nenhum cliente é transferido de vendedor).
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* OPÇÃO 2: RE-SETORIZAR E REDISTRIBUIR CARTEIRA */}
+                            <div 
+                                onClick={() => setTeamOptimizeChoice('RESECTORIZE')}
+                                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                                    teamOptimizeChoice === 'RESECTORIZE'
+                                        ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/30 shadow-md'
+                                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-800/60'
+                                }`}
+                            >
+                                <div className="flex items-start gap-3.5">
+                                    <div className="mt-0.5">
+                                        <input 
+                                            type="radio" 
+                                            name="team_opt_mode" 
+                                            checked={teamOptimizeChoice === 'RESECTORIZE'}
+                                            onChange={() => setTeamOptimizeChoice('RESECTORIZE')}
+                                            className="text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                                        />
+                                    </div>
+                                    <div className="flex-1 space-y-3">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-base">🔄</span>
+                                                <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                                                    Re-setorizar e Redistribuir a Carteira Toda
+                                                </h4>
+                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300">
+                                                    Fusão Territorial
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                                                Reagrupa a massa total de clientes ({effectiveScopedRoutes.length} PDVs) entre os {effectiveSellersList.length} vendedores selecionados com base na proximidade de suas bases residenciais e menor tempo de deslocamento viário.
+                                            </p>
+                                        </div>
+
+                                        {teamOptimizeChoice === 'RESECTORIZE' && (
+                                            <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60 space-y-2.5 animate-in fade-in duration-150">
+                                                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                                    Modo de Distribuição da Carteira:
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    <label 
+                                                        onClick={(e) => { e.stopPropagation(); setOptResectorizeMode('BALANCED'); setOptWhatIfActive(false); }}
+                                                        className={`p-2.5 rounded-xl border flex items-start space-x-2 cursor-pointer transition ${
+                                                            optResectorizeMode === 'BALANCED' && !optWhatIfActive
+                                                                ? 'bg-indigo-100/60 dark:bg-indigo-900/40 border-indigo-400 dark:border-indigo-600'
+                                                                : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700'
+                                                        }`}
+                                                    >
+                                                        <input 
+                                                            type="radio" 
+                                                            name="team_resectorize_submode" 
+                                                            checked={optResectorizeMode === 'BALANCED' && !optWhatIfActive}
+                                                            onChange={() => { setOptResectorizeMode('BALANCED'); setOptWhatIfActive(false); }}
+                                                            className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+                                                        />
+                                                        <div className="text-xs">
+                                                            <div className="font-black text-slate-800 dark:text-white">⚖️ Equitativo (Balanceado)</div>
+                                                            <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                                                                Divide a carteira igualmente entre os {effectiveSellersList.length} vendedores.
+                                                            </div>
+                                                        </div>
+                                                    </label>
+
+                                                    <label 
+                                                        onClick={(e) => { e.stopPropagation(); setOptResectorizeMode('MINIMIZE_SELLERS'); setOptWhatIfActive(false); }}
+                                                        className={`p-2.5 rounded-xl border flex items-start space-x-2 cursor-pointer transition ${
+                                                            optResectorizeMode === 'MINIMIZE_SELLERS' && !optWhatIfActive
+                                                                ? 'bg-indigo-100/60 dark:bg-indigo-900/40 border-indigo-400 dark:border-indigo-600'
+                                                            : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700'
+                                                        }`}
+                                                    >
+                                                        <input 
+                                                            type="radio" 
+                                                            name="team_resectorize_submode" 
+                                                            checked={optResectorizeMode === 'MINIMIZE_SELLERS' && !optWhatIfActive}
+                                                            onChange={() => { setOptResectorizeMode('MINIMIZE_SELLERS'); setOptWhatIfActive(false); }}
+                                                            className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+                                                        />
+                                                        <div className="text-xs">
+                                                            <div className="font-black text-slate-800 dark:text-white">⚡ Minimizar Vendedores</div>
+                                                            <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                                                                Preenche a capacidade máxima de cada vendedor e consolida.
+                                                            </div>
+                                                        </div>
+                                                    </label>
+                                                </div>
+
+                                                {/* What-If Checkbox */}
+                                                <div className="pt-1.5 flex items-center justify-between">
+                                                    <label 
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="flex items-center space-x-2 cursor-pointer"
+                                                    >
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={optWhatIfActive}
+                                                            onChange={(e) => setOptWhatIfActive(e.target.checked)}
+                                                            className="rounded text-indigo-600 focus:ring-indigo-500"
+                                                        />
+                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                            🔮 Simular cenário "What-If" (definir qtd. de vendedores)
+                                                        </span>
+                                                    </label>
+                                                    {optWhatIfActive && (
+                                                        <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
+                                                            <input 
+                                                                type="number" 
+                                                                min={1} 
+                                                                max={effectiveSellersList.length}
+                                                                value={optWhatIfSellersCount || Math.max(1, effectiveSellersList.length - 1)}
+                                                                onChange={(e) => setOptWhatIfSellersCount(Number(e.target.value))}
+                                                                className="w-16 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1 text-xs font-black text-center"
+                                                            />
+                                                            <span className="text-[11px] font-bold text-slate-400">vendedores</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* AVISO DE ISOLAMENTO DE ESCOPO */}
+                            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 flex items-center gap-2 text-xs">
+                                <span className="text-sm shrink-0">🔒</span>
+                                <span>
+                                    <strong>Garantia de Isolamento:</strong> Esta ação afetará <strong>apenas os {effectiveSellersList.length} vendedores selecionados</strong>. Todos os demais colaboradores do sistema permanecerão 100% inalterados.
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70">
+                            <button
+                                type="button"
+                                onClick={() => setShowTeamOptimizeDecisionModal(false)}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowTeamOptimizeDecisionModal(false);
+                                    handleOptimizeSimulate(false, teamOptimizeChoice === 'RESECTORIZE');
+                                }}
+                                disabled={loading}
+                                className="px-5 py-2.5 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition cursor-pointer disabled:opacity-50 flex items-center space-x-1.5"
+                            >
+                                <RefreshIcon className="w-4 h-4" />
+                                <span>Executar Otimização</span>
+                            </button>
                         </div>
                     </div>
                 </div>

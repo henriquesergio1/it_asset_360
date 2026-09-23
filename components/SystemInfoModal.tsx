@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.225.0',
+    date: 'Hoje',
+    title: 'Fuel360: Modal Interativo de Decisão de Roteirização e Re-setorização de Equipe',
+    changes: [
+      'Modal de Decisão Rápida ao Otimizar Vendedores: Ao clicar em "Otimizar Vendedores", o sistema abre um modal de confirmação permitindo escolher diretamente entre "Manter Clientes nos Vendedores Atuais" ou "Re-setorizar e Redistribuir a Carteira Toda".',
+      'Configuração Ágil de Modos de Re-setorização: Opções de distribuição Equitativo, Minimizar Vendedores e Simulador What-If disponíveis e configuráveis diretamente no diálogo de execução.',
+      'Garantia de Isolamento Rigoroso: A execução opera estritamente sobre a base dos vendedores filtrados e marcados no momento, preservando 100% dos demais colaboradores do sistema.'
+    ]
+  },
+  {
     version: '3.224.3',
     date: 'Hoje',
     title: 'Fuel360: Redistribuição Inteligente por Afinidade Territorial e K-NN na Extinção de Setor',
