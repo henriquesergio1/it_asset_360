@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.231.0',
+    date: 'Hoje',
+    title: 'Fuel360: Setorização Pura por Centroides Geográficos da Carteira (Sem Casa/Base)',
+    changes: [
+      'Novo Modo de Particionamento Neutro (PURE_CENTROID): Permite agrupar a massa total de clientes em K setores espaciais contíguos calculados diretamente a partir dos centroides geométricos dos PDVs (K-Means++ e Voronoi Neutro), sem força de atração das residências dos colaboradores.',
+      'Divisão Rigorosa com Cotas Equitativas: Cada setor recebe uma quantidade idêntica de clientes da carteira (N/K) com otimização de fronteira 2-Exchange.',
+      'Atribuição 1:1 e Circuito Fechado por Centroide: Permite formar primeiro as regiões/setores ótimos de mercado para depois alocar os vendedores responsáveis e reordenar as visitas com circuito fechado.'
+    ]
+  },
+  {
     version: '3.230.1',
     date: 'Hoje',
     title: 'Fuel360: Correção de Declaração de Variável no Equalizador Quinzenal',

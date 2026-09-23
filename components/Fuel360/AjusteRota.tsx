@@ -2886,9 +2886,9 @@ export const AjusteRota: React.FC = () => {
         breakdown: { targetId: number; targetName: string; count: number }[];
     } | null>(null);
 
-    // Modal de Decisão de Otimização de Equipe (Manter Clientes x Re-setorizar)
+    // Modal de Decisão de Otimização de Equipe (Manter Clientes x Re-setorizar x Setorização Pura)
     const [showTeamOptimizeDecisionModal, setShowTeamOptimizeDecisionModal] = useState(false);
-    const [teamOptimizeChoice, setTeamOptimizeChoice] = useState<'KEEP_CLIENTS' | 'RESECTORIZE'>('KEEP_CLIENTS');
+    const [teamOptimizeChoice, setTeamOptimizeChoice] = useState<'KEEP_CLIENTS' | 'RESECTORIZE' | 'PURE_CENTROID'>('KEEP_CLIENTS');
 
     // Map polylines
     const [originalPolylines, setOriginalPolylines] = useState<{ 
@@ -6513,12 +6513,12 @@ export const AjusteRota: React.FC = () => {
         return result;
     };
 
-    // Função de Re-setorização Territorial Multi-Vendedor (Transferência e Balanceamento Inteligente de PDVs)
-    // Função de Re-setorização Territorial Multi-Vendedor (Transferência, Balanceamento e Minimização de Vendedores)
+    // Função de Re-setorização Territorial Multi-Vendedor (Transferência, Balanceamento, Minimização e Centroides Puros)
     const resectorizeSellersTerritories = (
         sellers: number[],
         allRoutes: VisitaPrevista[],
-        targetScopeRoutes: VisitaPrevista[]
+        targetScopeRoutes: VisitaPrevista[],
+        isPureCentroid: boolean = false
     ) => {
         if (sellers.length <= 1) {
             return {
@@ -6656,7 +6656,7 @@ export const AjusteRota: React.FC = () => {
                     sp.maxTarget = 0; // Ocioso no What-If
                 }
             });
-        } else if (optResectorizeMode === 'MINIMIZE_SELLERS') {
+        } else if (optResectorizeMode === 'MINIMIZE_SELLERS' && !isPureCentroid) {
             let totalVisitsCapacityPerWeek = 0;
             activeDays.forEach(day => {
                 const dayHours = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
@@ -6723,8 +6723,78 @@ export const AjusteRota: React.FC = () => {
         // 5.2. Demais clientes para distribuição unificada
         const unassignedClients = allClients.filter(c => !assignmentMap.has(c.cod));
 
-        // Matriz de distâncias e afinidades espaciais a partir da base residencial de cada colaborador
+        // Inicialização de Centroides Espaciais Neutros (K-Means++ sem residência) quando isPureCentroid = true
+        const numCentroids = sellers.length;
+        const centroidSeeds: Array<{ lat: number; lng: number }> = [];
+
+        if (isPureCentroid && unassignedClients.length > 0) {
+            // Semente 1: Cliente mais central em relação à média geral da carteira
+            let bestFirstIdx = 0;
+            let minCenterDist = Infinity;
+            unassignedClients.forEach((c, idx) => {
+                const d = calcDist(teamAvgLat, teamAvgLng, c.lat, c.lng);
+                if (d < minCenterDist) {
+                    minCenterDist = d;
+                    bestFirstIdx = idx;
+                }
+            });
+            centroidSeeds.push({ lat: unassignedClients[bestFirstIdx].lat, lng: unassignedClients[bestFirstIdx].lng });
+
+            // Sementes 2 a K: maior distância mínima aos centroides já definidos (K-Means++)
+            while (centroidSeeds.length < numCentroids && centroidSeeds.length < unassignedClients.length) {
+                let farthestIdx = 0;
+                let maxMinDist = -1;
+
+                unassignedClients.forEach((c, idx) => {
+                    let minDistToSeed = Infinity;
+                    centroidSeeds.forEach(s => {
+                        const d = calcDist(s.lat, s.lng, c.lat, c.lng);
+                        if (d < minDistToSeed) minDistToSeed = d;
+                    });
+                    if (minDistToSeed > maxMinDist) {
+                        maxMinDist = minDistToSeed;
+                        farthestIdx = idx;
+                    }
+                });
+
+                centroidSeeds.push({ lat: unassignedClients[farthestIdx].lat, lng: unassignedClients[farthestIdx].lng });
+            }
+
+            // Refinamento com 15 iterações de K-Means padrão para convergência dos centros de gravidade geométricos
+            for (let kIter = 0; kIter < 15; kIter++) {
+                const clusters: Array<Array<{ lat: number; lng: number }>> = centroidSeeds.map(() => []);
+                unassignedClients.forEach(c => {
+                    let bestCIdx = 0;
+                    let bestD = Infinity;
+                    centroidSeeds.forEach((s, sIdx) => {
+                        const d = calcDist(s.lat, s.lng, c.lat, c.lng);
+                        if (d < bestD) {
+                            bestD = d;
+                            bestCIdx = sIdx;
+                        }
+                    });
+                    clusters[bestCIdx].push(c);
+                });
+
+                clusters.forEach((cl, sIdx) => {
+                    if (cl.length > 0) {
+                        centroidSeeds[sIdx].lat = cl.reduce((acc, c) => acc + c.lat, 0) / cl.length;
+                        centroidSeeds[sIdx].lng = cl.reduce((acc, c) => acc + c.lng, 0) / cl.length;
+                    }
+                });
+            }
+        }
+
+        // Matriz de distâncias e afinidades espaciais
         const costMatrix: number[][] = unassignedClients.map(c => {
+            if (isPureCentroid && centroidSeeds.length === sellerProfiles.length) {
+                // Modo Puro: distância euclidiana/esférica direta aos K centroides geométricos da carteira
+                return centroidSeeds.map(cs => {
+                    const rawDist = calcDist(cs.lat, cs.lng, c.lat, c.lng);
+                    return Math.max(0.1, rawDist);
+                });
+            }
+
             return sellerProfiles.map(sp => {
                 const bLat = sp.baseLat || teamAvgLat;
                 const bLng = sp.baseLng || teamAvgLng;
@@ -6751,7 +6821,7 @@ export const AjusteRota: React.FC = () => {
             });
         });
 
-        if (isWhatIfActive || optResectorizeMode === 'MINIMIZE_SELLERS') {
+        if (!isPureCentroid && (isWhatIfActive || optResectorizeMode === 'MINIMIZE_SELLERS')) {
             const candidateSellers = isWhatIfActive ? sellerProfiles.filter(s => s.maxTarget > 0) : sellerProfiles;
             // Ordena vendedores por densidade de clientes perto de casa (vendedores com melhores bases primeiro)
             const orderedSellers = [...candidateSellers].sort((a, b) => b.densityScore - a.densityScore);
@@ -6794,13 +6864,13 @@ export const AjusteRota: React.FC = () => {
                 }
             });
         } else {
-            // Modo EQUITATIVO (Balanceado e Homogêneo com Simulação Iterativa e Ancoragem Rigorosa na Base Residencial)
+            // Modo EQUITATIVO (Balanceado e Homogêneo com Simulação Iterativa e Particionamento Rigoroso)
             const numSellers = sellerProfiles.length;
             const totalToDistribute = unassignedClients.length;
             const baseQuota = Math.floor(totalToDistribute / numSellers);
             const remainder = totalToDistribute % numSellers;
 
-            // Define cota exata por vendedor (garantindo que todos fiquem rigorosamente com a mesma quantidade de clientes)
+            // Define cota exata por vendedor/setor (garantindo que todos fiquem rigorosamente com a mesma quantidade de clientes)
             const sellerTargetQuotas = new Map<number, number>();
             sellerProfiles.forEach((sp, sIdx) => {
                 const lockedCount = sp.assignedClients.size;
@@ -6815,7 +6885,7 @@ export const AjusteRota: React.FC = () => {
             for (let iter = 0; iter < 150; iter++) {
                 const sellerCounts = new Array(numSellers).fill(0);
 
-                // Atribuição de cada cliente ao vendedor com menor custo efetivo (distância base ponderada + potencial)
+                // Atribuição de cada cliente ao setor com menor custo efetivo (distância + potencial)
                 for (let cIdx = 0; cIdx < unassignedClients.length; cIdx++) {
                     let bestSIdx = 0;
                     let minEffectiveCost = Infinity;
@@ -6846,7 +6916,7 @@ export const AjusteRota: React.FC = () => {
                 if (maxDiff === 0) break;
             }
 
-            // Agrupa clientes atribuídos por vendedor para ajuste fino de fronteira
+            // Agrupa clientes atribuídos por setor para ajuste fino de fronteira
             const sellerAssignedIndices: number[][] = sellerProfiles.map(() => []);
             clientSellerAssignment.forEach((sIdx, cIdx) => {
                 sellerAssignedIndices[sIdx].push(cIdx);
@@ -6857,7 +6927,7 @@ export const AjusteRota: React.FC = () => {
             while (safetyLimit > 0) {
                 safetyLimit--;
 
-                // Identifica vendedores sobrecarregados (acima da cota exata)
+                // Identifica setores sobrecarregados (acima da cota exata)
                 let overSIdx = -1;
                 let maxExcess = 0;
 
@@ -6872,7 +6942,7 @@ export const AjusteRota: React.FC = () => {
 
                 if (overSIdx === -1) break; // Todas as cotas estão perfeitamente balanceadas!
 
-                // Identifica vendedores receptores com capacidade disponível (abaixo da cota exata)
+                // Identifica setores receptores com capacidade disponível (abaixo da cota exata)
                 const underSellers: number[] = [];
                 sellerProfiles.forEach((sp, sIdx) => {
                     const targetQ = sellerTargetQuotas.get(sp.id) || baseQuota;
@@ -6883,7 +6953,7 @@ export const AjusteRota: React.FC = () => {
 
                 if (underSellers.length === 0) break;
 
-                // Encontra o cliente no vendedor sobrecarregado com a MENOR penalidade de transferência para algum receptor
+                // Encontra o cliente no setor sobrecarregado com a MENOR penalidade de transferência para algum receptor
                 let bestClientPosInOver = -1;
                 let bestTargetUnderSIdx = -1;
                 let minPenalty = Infinity;
@@ -6937,14 +7007,65 @@ export const AjusteRota: React.FC = () => {
                 if (!improved) break;
             }
 
-            // Grava atribuição final
-            sellerProfiles.forEach((sp, sIdx) => {
-                sellerAssignedIndices[sIdx].forEach(cIdx => {
-                    const c = unassignedClients[cIdx];
-                    sp.assignedClients.add(c.cod);
-                    assignmentMap.set(c.cod, { sellerId: sp.id, sellerName: sp.name });
+            // No modo Puro por Centroides, emparelha os K setores formados aos K vendedores mais próximos de forma 1:1
+            if (isPureCentroid) {
+                const sectorCentroids = sellerAssignedIndices.map(indices => {
+                    const validC = indices.map(idx => unassignedClients[idx]).filter(c => c.lat && c.lng);
+                    if (validC.length === 0) return { lat: teamAvgLat, lng: teamAvgLng };
+                    return {
+                        lat: validC.reduce((s, c) => s + c.lat, 0) / validC.length,
+                        lng: validC.reduce((s, c) => s + c.lng, 0) / validC.length
+                    };
                 });
-            });
+
+                // Emparelhamento 1:1 de menor distância entre base do vendedor e centroide do setor
+                const availableSectorIdxs = new Set(sectorCentroids.map((_, i) => i));
+                const sellerSectorPairs = new Map<number, number>();
+
+                // Ordena vendedores que têm base válida primeiro
+                const sortedSellersForMatching = [...sellerProfiles].sort((a, b) => (b.baseLat ? 1 : 0) - (a.baseLat ? 1 : 0));
+
+                sortedSellersForMatching.forEach(sp => {
+                    const bLat = sp.baseLat || teamAvgLat;
+                    const bLng = sp.baseLng || teamAvgLng;
+                    let bestSecIdx = -1;
+                    let minSecDist = Infinity;
+
+                    availableSectorIdxs.forEach(secIdx => {
+                        const sc = sectorCentroids[secIdx];
+                        const d = calcDist(bLat, bLng, sc.lat, sc.lng);
+                        if (d < minSecDist) {
+                            minSecDist = d;
+                            bestSecIdx = secIdx;
+                        }
+                    });
+
+                    if (bestSecIdx !== -1) {
+                        sellerSectorPairs.set(sp.id, bestSecIdx);
+                        availableSectorIdxs.delete(bestSecIdx);
+                    }
+                });
+
+                // Grava atribuição com base no emparelhamento de centroides
+                sellerProfiles.forEach(sp => {
+                    const secIdx = sellerSectorPairs.has(sp.id) ? sellerSectorPairs.get(sp.id)! : 0;
+                    const assignedList = sellerAssignedIndices[secIdx] || [];
+                    assignedList.forEach(cIdx => {
+                        const c = unassignedClients[cIdx];
+                        sp.assignedClients.add(c.cod);
+                        assignmentMap.set(c.cod, { sellerId: sp.id, sellerName: sp.name });
+                    });
+                });
+            } else {
+                // Grava atribuição padrão ancorada nas residências
+                sellerProfiles.forEach((sp, sIdx) => {
+                    sellerAssignedIndices[sIdx].forEach(cIdx => {
+                        const c = unassignedClients[cIdx];
+                        sp.assignedClients.add(c.cod);
+                        assignmentMap.set(c.cod, { sellerId: sp.id, sellerName: sp.name });
+                    });
+                });
+            }
         }
 
         // 6. Diagnóstico de Dimensionamento de Equipe
@@ -6992,7 +7113,8 @@ export const AjusteRota: React.FC = () => {
 
     const handleOptimizeSimulate = async (
         preserveDays: boolean = false,
-        overrideResectorize?: boolean
+        overrideResectorize?: boolean,
+        isPureCentroid: boolean = false
     ) => {
         if (adjustedRoutes.length === 0) {
             alert("Nenhum dado de rota carregado para otimização.");
@@ -7024,9 +7146,9 @@ export const AjusteRota: React.FC = () => {
             ? overrideResectorize
             : optAutoResectorizeSellers;
 
-        // 1. Quando solicitado "Re-setorizar e Redistribuir", a fusão e balanceamento territorial ocorrem PRIMEIRO!
+        // 1. Quando solicitado "Re-setorizar e Redistribuir" ou "Setorização Pura", a fusão e balanceamento territorial ocorrem PRIMEIRO!
         if (!preserveDays && shouldResectorize && sellers.length > 1) {
-            const resectorizeResult = resectorizeSellersTerritories(sellers, adjustedRoutes, effectiveScopedRoutes);
+            const resectorizeResult = resectorizeSellersTerritories(sellers, adjustedRoutes, effectiveScopedRoutes, isPureCentroid);
             if (resectorizeResult.transferredClientsCount > 0 || resectorizeResult.idleSellers.length > 0) {
                 baseRoutesForOptimization = resectorizeResult.updatedRoutes;
                 resectorizedCount = resectorizeResult.transferredClientsCount;
@@ -7052,8 +7174,12 @@ export const AjusteRota: React.FC = () => {
         const result = await runOptimizationForSellers(activeSellersToOptimize, baseRoutesForOptimization, true, {
             title: preserveDays
                 ? (isSingleSeller ? `Reordenação de ${sellerNameDesc} (Dias Preservados)` : 'Reordenação de Rotas (Dias Preservados)')
-                : (isSingleSeller ? `Otimização de ${sellerNameDesc} Concluída` : (isWhatIfSimulation ? `Simulação What-If (${activeSellersToOptimize.length} Vendedores)` : 'Otimização e Roteirização Concluída')),
-            escopoDesc: `Escopo: ${escopoDesc}${resectorizedCount > 0 ? ` (${resectorizedCount} PDVs re-setorizados)` : ''}${preserveDays ? ' • Dias e quinzenas mantidos rigorosamente' : ''}`,
+                : (isSingleSeller 
+                    ? `Otimização de ${sellerNameDesc} Concluída` 
+                    : (isPureCentroid
+                        ? `Setorização Pura por Centroides Concluída (${activeSellersToOptimize.length} Setores)`
+                        : (isWhatIfSimulation ? `Simulação What-If (${activeSellersToOptimize.length} Vendedores)` : 'Otimização e Roteirização Concluída'))),
+            escopoDesc: `Escopo: ${escopoDesc}${resectorizedCount > 0 ? ` (${resectorizedCount} PDVs re-setorizados)` : ''}${preserveDays ? ' • Dias e quinzenas mantidos rigorosamente' : ''}${isPureCentroid ? ' • Centroides Geográficos Neutros' : ''}`,
             mode: 'simulate',
             resectorizedCount,
             activeSellersCount: activeSellersToOptimize.length,
@@ -16916,6 +17042,42 @@ export const AjusteRota: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* OPÇÃO 3: SETORIZAÇÃO PURA POR CENTROIDES GEOGRÁFICOS (SEM CASA/BASE) */}
+                            <div 
+                                onClick={() => setTeamOptimizeChoice('PURE_CENTROID')}
+                                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                                    teamOptimizeChoice === 'PURE_CENTROID'
+                                        ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/30 shadow-md'
+                                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-800/60'
+                                }`}
+                            >
+                                <div className="flex items-start gap-3.5">
+                                    <div className="mt-0.5">
+                                        <input 
+                                            type="radio" 
+                                            name="team_opt_mode" 
+                                            checked={teamOptimizeChoice === 'PURE_CENTROID'}
+                                            onChange={() => setTeamOptimizeChoice('PURE_CENTROID')}
+                                            className="text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                                        />
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base">📍</span>
+                                            <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                                                Setorização Pura por Centroides da Carteira (Sem Casa/Base)
+                                            </h4>
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300">
+                                                K-Means Neutro
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                            Calcula {effectiveSellersList.length} setores espaciais contíguos e compactos a partir dos próprios núcleos geométricos dos {effectiveScopedRoutes.length} PDVs (Voronoi neutro), com cotas balanceadas e sem atração pela residência dos colaboradores. Ideal para definir os setores primeiro e depois alocar os vendedores.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* AVISO DE ISOLAMENTO DE ESCOPO */}
                             <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 flex items-center gap-2 text-xs">
                                 <span className="text-sm shrink-0">🔒</span>
@@ -16938,7 +17100,7 @@ export const AjusteRota: React.FC = () => {
                                 type="button"
                                 onClick={() => {
                                     setShowTeamOptimizeDecisionModal(false);
-                                    handleOptimizeSimulate(false, teamOptimizeChoice === 'RESECTORIZE');
+                                    handleOptimizeSimulate(false, teamOptimizeChoice !== 'KEEP_CLIENTS', teamOptimizeChoice === 'PURE_CENTROID');
                                 }}
                                 disabled={loading}
                                 className="px-5 py-2.5 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition cursor-pointer disabled:opacity-50 flex items-center space-x-1.5"
