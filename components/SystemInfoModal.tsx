@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.232.0',
+    date: 'Hoje',
+    title: 'Fuel360: Seletor e Troca de Vendedor Titular por Setor no Mapa com Casco Convexo e Centroides',
+    changes: [
+      'Polígonos Translúcidos de Setores (Convex Hull): Renderização interativa no mapa da envoltória convexa de cada setor gerado por centroides, colorida conforme a identidade visual do vendedor.',
+      'Marcadores de Centroide do Setor Interativos: Ícone geodésico no baricentro geométrico do cluster com contagem de clientes e badge descritivo.',
+      'Modal de Atribuição e Troca Bilateral (Swap 1:1): Permite selecionar ou inverter diretamente no mapa qual colaborador assume a titularidade daquele polígono/setor.',
+      'Sincronização Instantânea com Grade e Otimizador: Ao confirmar a titularidade, a rota, o mapa e os resumos de equipe são atualizados imediatamente com circuito fechado.'
+    ]
+  },
+  {
     version: '3.231.0',
     date: 'Hoje',
     title: 'Fuel360: Setorização Pura por Centroides Geográficos da Carteira (Sem Casa/Base)',

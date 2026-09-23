@@ -188,6 +188,111 @@ export interface RouteDeviationWaypoint {
     lng: number;
 }
 
+// Interface dos dados de setorização poligonal e centroide
+export interface SectorPolygonData {
+    sellerId: number;
+    sellerName: string;
+    color: string;
+    pointsCount: number;
+    centroid: [number, number];
+    hullPoints: Array<[number, number]>;
+}
+
+// Algoritmo Andrew's Monotone Chain (Graham Scan) para cálculo de Envoltória Convexa (Convex Hull) dos setores
+export const computeConvexHull = (points: Array<[number, number]>): Array<[number, number]> => {
+    if (points.length < 3) return points;
+
+    // Remover duplicatas de coordenadas aproximadas
+    const uniqueMap = new Map<string, [number, number]>();
+    points.forEach(p => {
+        const key = `${p[0].toFixed(5)},${p[1].toFixed(5)}`;
+        if (!uniqueMap.has(key)) uniqueMap.set(key, p);
+    });
+    const unique = Array.from(uniqueMap.values());
+    if (unique.length < 3) return unique;
+
+    // Ordenação lexicográfica por latitude e depois longitude
+    unique.sort((a, b) => a[0] === b[0] ? a[1] - b[1] : a[0] - b[0]);
+
+    // Produto vetorial 2D (Cross Product)
+    const cross = (a: [number, number], b: [number, number], c: [number, number]): number => {
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    };
+
+    // Casco inferior (Lower Hull)
+    const lower: Array<[number, number]> = [];
+    for (const p of unique) {
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+            lower.pop();
+        }
+        lower.push(p);
+    }
+
+    // Casco superior (Upper Hull)
+    const upper: Array<[number, number]> = [];
+    for (let i = unique.length - 1; i >= 0; i--) {
+        const p = unique[i];
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+            upper.pop();
+        }
+        upper.push(p);
+    }
+
+    // Concatenação removendo o ponto repetido
+    lower.pop();
+    upper.pop();
+
+    return lower.concat(upper);
+};
+
+// Ícone interativo para o centroide geométrico do setor
+export function createSectorCentroidIcon(sellerId: string | number, sellerName?: string, clientCount?: number, color?: string) {
+    const mainColor = color || '#4f46e5';
+    const cleanName = (sellerName || `Setor ${sellerId}`).length > 15 ? (sellerName || `Setor ${sellerId}`).slice(0, 13) + '..' : (sellerName || `Setor ${sellerId}`);
+    return L.divIcon({
+        className: 'custom-sector-centroid-icon',
+        html: `
+            <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.45)); transform: translate(-50%, -50%); transition: transform 0.2s ease;">
+                <div style="
+                    background: linear-gradient(135deg, ${mainColor} 0%, #0f172a 100%);
+                    width: 34px;
+                    height: 34px;
+                    border-radius: 50%;
+                    border: 2.5px solid #ffffff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 0 0 3px ${mainColor}88, 0 4px 14px rgba(0,0,0,0.35);
+                ">
+                    <span style="font-size: 15px; line-height: 1;">📍</span>
+                </div>
+                <div style="
+                    background: #090d16;
+                    color: #ffffff;
+                    font-size: 9px;
+                    font-weight: 800;
+                    padding: 2.5px 7px;
+                    border-radius: 8px;
+                    margin-top: 4px;
+                    white-space: nowrap;
+                    border: 1.5px solid ${mainColor};
+                    box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    <span style="color: ${mainColor}; font-size: 10px;">●</span>
+                    <span style="letter-spacing: 0.3px;">${cleanName}</span>
+                    <span style="background: ${mainColor}; color: #ffffff; padding: 0.5px 4.5px; border-radius: 4px; font-size: 8px; font-weight: 900; margin-left: 2px;">${clientCount || 0} PDVs</span>
+                </div>
+            </div>
+        `,
+        iconSize: [140, 65],
+        iconAnchor: [70, 32],
+        popupAnchor: [0, -32]
+    });
+}
+
 // Paleta de cores cromáticas e consistentes por dia da semana para visão detalhada de vendedor
 export const DAY_COLORS: Record<string, { bg: string, text: string, border: string, hex: string, label: string }> = {
     'SEGUNDA-FEIRA': { bg: 'bg-blue-600', text: 'text-blue-600', border: 'border-blue-500', hex: '#2563eb', label: 'SEG' },
@@ -2944,6 +3049,15 @@ export const AjusteRota: React.FC = () => {
     const [selectedDaysFilter, setSelectedDaysFilter] = useState<string[]>([]);
     const [selectedQuinzenaFilter, setSelectedQuinzenaFilter] = useState<'ALL' | '1_3' | '2_4'>('ALL');
     const [showHeatmap, setShowHeatmap] = useState(false);
+    const [showSectorPolygons, setShowSectorPolygons] = useState(true);
+    const [sectorAssignModalData, setSectorAssignModalData] = useState<{
+        sourceSellerId: number;
+        sourceSellerName: string;
+        pointsCount: number;
+        color: string;
+    } | null>(null);
+    const [sectorAssignSearch, setSectorAssignSearch] = useState('');
+    const [sectorAssignSwapMode, setSectorAssignSwapMode] = useState(true);
     const [sidebarActiveTab, setSidebarActiveTab] = useState<'params' | 'colabs' | 'all'>('params');
     const [collaboratorSearchQuery, setCollaboratorSearchQuery] = useState<string>('');
 
@@ -3333,6 +3447,113 @@ export const AjusteRota: React.FC = () => {
             };
         }).sort((a, b) => a.name.localeCompare(b.name));
     }, [scopedAdjustedRoutes, getColabBySectorOrName, formatSellerDisplayName, promoterColorMap]);
+
+    // Polígonos de Envoltória Convexa e Centroides Geométricos por Setor/Vendedor
+    const mapSectorsData = useMemo<SectorPolygonData[]>(() => {
+        const sellerGroups = new Map<number, VisitaPrevista[]>();
+        scopedAdjustedRoutes.forEach(v => {
+            if (!v.Cod_Vend) return;
+            const current = sellerGroups.get(v.Cod_Vend) || [];
+            current.push(v);
+            sellerGroups.set(v.Cod_Vend, current);
+        });
+
+        const sectors: SectorPolygonData[] = [];
+        sellerGroups.forEach((visits, sellerId) => {
+            const validPoints = visits.filter(v => 
+                typeof v.Lat === 'number' && 
+                typeof v.Long === 'number' && 
+                !isNaN(v.Lat) && 
+                !isNaN(v.Long) && 
+                (Math.abs(v.Lat) > 0.001 || Math.abs(v.Long) > 0.001)
+            );
+
+            if (validPoints.length === 0) return;
+
+            const sumLat = validPoints.reduce((acc, v) => acc + v.Lat, 0);
+            const sumLng = validPoints.reduce((acc, v) => acc + v.Long, 0);
+            const centroidLat = sumLat / validPoints.length;
+            const centroidLng = sumLng / validPoints.length;
+
+            const latLngPoints: Array<[number, number]> = validPoints.map(v => [v.Lat, v.Long]);
+            let hull = computeConvexHull(latLngPoints);
+
+            // Caso com 1 ou 2 pontos: criar um polígono mínimo representativo ao redor
+            if (hull.length === 1) {
+                const [lat, lng] = hull[0];
+                const delta = 0.005;
+                hull = [
+                    [lat + delta, lng],
+                    [lat, lng + delta],
+                    [lat - delta, lng],
+                    [lat, lng - delta]
+                ];
+            } else if (hull.length === 2) {
+                const [p1, p2] = hull;
+                const dLat = p2[0] - p1[0];
+                const dLng = p2[1] - p1[1];
+                const perpLat = -dLng * 0.2;
+                const perpLng = dLat * 0.2;
+                hull = [
+                    [p1[0] + perpLat, p1[1] + perpLng],
+                    [p2[0] + perpLat, p2[1] + perpLng],
+                    [p2[0] - perpLat, p2[1] - perpLng],
+                    [p1[0] - perpLat, p1[1] - perpLng]
+                ];
+            }
+
+            const colab = getColabBySectorOrName(sellerId, visits[0]?.Nome_Vendedor);
+            const sellerName = formatSellerDisplayName(sellerId, colab?.Nome || visits[0]?.Nome_Vendedor || `Vendedor ${sellerId}`);
+            const color = promoterColorMap.get(String(sellerId)) || '#4f46e5';
+
+            sectors.push({
+                sellerId,
+                sellerName,
+                color,
+                pointsCount: visits.length,
+                centroid: [centroidLat, centroidLng],
+                hullPoints: hull
+            });
+        });
+
+        return sectors.sort((a, b) => a.sellerId - b.sellerId);
+    }, [scopedAdjustedRoutes, getColabBySectorOrName, formatSellerDisplayName, promoterColorMap]);
+
+    // Reatribuir vendedor titular do setor ou efetuar troca bilateral (Swap)
+    const handleReassignSectorSeller = useCallback((sourceSellerId: number, targetSellerId: number, isSwap: boolean = true) => {
+        if (sourceSellerId === targetSellerId) return;
+
+        const targetColab = getColabBySectorOrName(targetSellerId);
+        const sourceColab = getColabBySectorOrName(sourceSellerId);
+
+        const targetName = targetColab?.Nome || `Colaborador ${targetSellerId}`;
+        const sourceName = sourceColab?.Nome || `Colaborador ${sourceSellerId}`;
+
+        setAdjustedRoutes(prev => {
+            const hasTargetInRoutes = prev.some(v => v.Cod_Vend === targetSellerId);
+
+            return prev.map(v => {
+                if (v.Cod_Vend === sourceSellerId) {
+                    return {
+                        ...v,
+                        Cod_Vend: targetSellerId,
+                        Nome_Vendedor: targetName
+                    };
+                }
+                if (isSwap && hasTargetInRoutes && v.Cod_Vend === targetSellerId) {
+                    return {
+                        ...v,
+                        Cod_Vend: sourceSellerId,
+                        Nome_Vendedor: sourceName
+                    };
+                }
+                return v;
+            });
+        });
+
+        // Limpar modal após atribuição
+        setSectorAssignModalData(null);
+    }, [getColabBySectorOrName]);
 
     const handleToggleTeamSeller = (sellerId: string) => {
         setSelectedTeamSellers(prev => {
@@ -10296,6 +10517,21 @@ export const AjusteRota: React.FC = () => {
                                         <span className="text-sm leading-none">🎯</span>
                                         <span>{isLassoActive ? 'Laço Ativo' : 'Laço de Seleção'}</span>
                                     </button>
+
+                                    {/* Botão de Exibição dos Polígonos de Setor e Centroides */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSectorPolygons(prev => !prev)}
+                                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 cursor-pointer ${
+                                            showSectorPolygons 
+                                                ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white border-teal-400 shadow-teal-500/30 ring-2 ring-teal-400/40' 
+                                                : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800 hover:border-teal-400 hover:text-teal-600'
+                                        }`}
+                                        title={showSectorPolygons ? "Ocultar Polígonos e Centroides dos Setores" : "Exibir Polígonos e Centroides dos Setores no Mapa"}
+                                    >
+                                        <span className="text-sm leading-none">🗺️</span>
+                                        <span>{showSectorPolygons ? 'Setores Ativos' : 'Ver Setores'}</span>
+                                    </button>
                                 </>
                             )}
 
@@ -10504,6 +10740,73 @@ export const AjusteRota: React.FC = () => {
                                             <span className="font-bold text-xs">{zona.nome}</span>
                                         </Tooltip>
                                     </Polygon>
+                                ))}
+
+                                {/* Renderização dos Polígonos de Envoltória Convexa dos Setores */}
+                                {!isDrawingZone && showSectorPolygons && mapSectorsData.map(sector => (
+                                    <Polygon
+                                        key={`sector-poly-${sector.sellerId}`}
+                                        positions={sector.hullPoints}
+                                        pathOptions={{
+                                            color: sector.color,
+                                            fillColor: sector.color,
+                                            fillOpacity: 0.14,
+                                            weight: 2.5,
+                                            dashArray: '6, 6'
+                                        }}
+                                        eventHandlers={{
+                                            click: () => {
+                                                setSectorAssignModalData({
+                                                    sourceSellerId: sector.sellerId,
+                                                    sourceSellerName: sector.sellerName,
+                                                    pointsCount: sector.pointsCount,
+                                                    color: sector.color
+                                                });
+                                                setSectorAssignSearch('');
+                                            }
+                                        }}
+                                    >
+                                        <Tooltip sticky>
+                                            <div className="p-1 space-y-0.5">
+                                                <div className="flex items-center gap-1.5 font-bold text-xs">
+                                                    <span style={{ color: sector.color }}>●</span>
+                                                    <span>{sector.sellerName}</span>
+                                                </div>
+                                                <p className="text-[10px] text-slate-500 font-medium">
+                                                    {sector.pointsCount} PDVs no Setor • <strong>Clique para alterar vendedor titular</strong>
+                                                </p>
+                                            </div>
+                                        </Tooltip>
+                                    </Polygon>
+                                ))}
+
+                                {/* Marcadores de Centroide Geométrico dos Setores (Interativos para Troca de Titularidade) */}
+                                {!isDrawingZone && showSectorPolygons && mapSectorsData.map(sector => (
+                                    <Marker
+                                        key={`sector-centroid-${sector.sellerId}`}
+                                        position={sector.centroid}
+                                        icon={createSectorCentroidIcon(sector.sellerId, sector.sellerName, sector.pointsCount, sector.color)}
+                                        zIndexOffset={800}
+                                        eventHandlers={{
+                                            click: () => {
+                                                setSectorAssignModalData({
+                                                    sourceSellerId: sector.sellerId,
+                                                    sourceSellerName: sector.sellerName,
+                                                    pointsCount: sector.pointsCount,
+                                                    color: sector.color
+                                                });
+                                                setSectorAssignSearch('');
+                                            }
+                                        }}
+                                    >
+                                        <Tooltip direction="top" offset={[0, -25]}>
+                                            <div className="p-1 text-center font-sans">
+                                                <p className="font-bold text-xs">{sector.sellerName}</p>
+                                                <p className="text-[10px] text-slate-500 font-medium">{sector.pointsCount} clientes atendidos</p>
+                                                <p className="text-[9px] text-indigo-600 font-black mt-1">📍 Clique para assumir / trocar titular</p>
+                                            </div>
+                                        </Tooltip>
+                                    </Marker>
                                 ))}
 
                                 {/* Polígono em Construção Durante o Modo de Desenho */}
@@ -18040,6 +18343,180 @@ export const AjusteRota: React.FC = () => {
                                 className="px-5 py-2 font-bold bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition cursor-pointer text-xs"
                             >
                                 Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE ATRIBUIÇÃO E TROCA DE VENDEDOR TITULAR POR SETOR NO MAPA */}
+            {sectorAssignModalData && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/70 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+                        {/* Cabeçalho com cor do setor */}
+                        <div 
+                            className="p-5 text-white flex items-center justify-between relative overflow-hidden"
+                            style={{
+                                background: `linear-gradient(135deg, ${sectorAssignModalData.color} 0%, #0f172a 100%)`
+                            }}
+                        >
+                            <div className="flex items-center gap-3 z-10">
+                                <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur border border-white/25 flex items-center justify-center text-xl shadow-inner">
+                                    🗺️
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full backdrop-blur">
+                                            Setor #{sectorAssignModalData.sourceSellerId}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-white/80">
+                                            {sectorAssignModalData.pointsCount} PDVs
+                                        </span>
+                                    </div>
+                                    <h3 className="text-lg font-black mt-0.5 tracking-tight">
+                                        Definir Vendedor Titular do Setor
+                                    </h3>
+                                    <p className="text-xs text-white/80 mt-0.5 font-medium">
+                                        Titular Atual: <strong className="text-white underline decoration-white/40">{sectorAssignModalData.sourceSellerName}</strong>
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSectorAssignModalData(null)}
+                                className="z-10 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
+                                title="Fechar"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Corpo do Modal */}
+                        <div className="p-5 space-y-4 overflow-y-auto flex-1">
+                            {/* Opção de Troca Bilateral (Swap) */}
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between gap-3">
+                                <div className="space-y-0.5">
+                                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-200">
+                                        <span>🔄</span>
+                                        <span>Troca Bilateral Inteligente (Swap 1:1)</span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                        Se o vendedor selecionado já tiver outro setor, os setores serão invertidos mutuamente entre eles.
+                                    </p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={sectorAssignSwapMode} 
+                                        onChange={(e) => setSectorAssignSwapMode(e.target.checked)} 
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+
+                            {/* Campo de Busca Rápida */}
+                            <div className="relative">
+                                <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar vendedor por nome ou código do setor..."
+                                    value={sectorAssignSearch}
+                                    onChange={(e) => setSectorAssignSearch(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            {/* Lista de Vendedores Disponíveis para Escolha */}
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                {teamColaboradores
+                                    .filter(c => {
+                                        if (!sectorAssignSearch.trim()) return true;
+                                        const query = sectorAssignSearch.toLowerCase();
+                                        return (
+                                            c.Nome.toLowerCase().includes(query) || 
+                                            String(c.CodigoSetor).includes(query) ||
+                                            String(c.ID_Colaborador).includes(query)
+                                        );
+                                    })
+                                    .map(col => {
+                                        const colSellerId = Number(col.CodigoSetor || col.ID_Colaborador);
+                                        const isCurrentHolder = colSellerId === sectorAssignModalData.sourceSellerId;
+                                        const colVisitsCount = scopedAdjustedRoutes.filter(v => v.Cod_Vend === colSellerId).length;
+                                        const colColor = promoterColorMap.get(String(colSellerId)) || '#64748b';
+
+                                        return (
+                                            <div
+                                                key={col.ID_Colaborador}
+                                                className={`p-3 rounded-2xl border transition flex items-center justify-between gap-3 ${
+                                                    isCurrentHolder
+                                                        ? 'bg-slate-100 dark:bg-slate-800/80 border-slate-300 dark:border-slate-600 opacity-80'
+                                                        : 'bg-white dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 shadow-2xs hover:shadow-md'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div 
+                                                        className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center font-bold text-xs text-white shadow-xs"
+                                                        style={{ backgroundColor: colColor }}
+                                                    >
+                                                        {col.CodigoSetor || col.ID_Colaborador}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
+                                                                {col.Nome}
+                                                            </h4>
+                                                            {isCurrentHolder && (
+                                                                <span className="text-[9px] font-black bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded">
+                                                                    Atual
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                                            Setor #{col.CodigoSetor || col.ID_Colaborador} • {colVisitsCount} PDVs atualmente
+                                                            {col.EnderecoBase ? ` • Base: ${col.EnderecoBase.split(',')[0]}` : ''}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="shrink-0">
+                                                    {isCurrentHolder ? (
+                                                        <span className="text-xs font-bold text-slate-400 px-3 py-1.5">
+                                                            Já é o Titular
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                handleReassignSectorSeller(
+                                                                    sectorAssignModalData.sourceSellerId,
+                                                                    colSellerId,
+                                                                    sectorAssignSwapMode
+                                                                );
+                                                            }}
+                                                            className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                                                        >
+                                                            <span>{colVisitsCount > 0 && sectorAssignSwapMode ? '🔄 Trocar (Swap)' : '✓ Atribuir'}</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+                        </div>
+
+                        {/* Rodapé do Modal */}
+                        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
+                            <span className="text-[11px] text-slate-500 font-medium">
+                                A alteração atualizará a rota, o mapa e a grade instantaneamente.
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setSectorAssignModalData(null)}
+                                className="px-4 py-2 font-bold bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition cursor-pointer text-xs"
+                            >
+                                Cancelar
                             </button>
                         </div>
                     </div>
