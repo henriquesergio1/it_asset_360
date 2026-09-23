@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.230.0',
+    date: 'Hoje',
+    title: 'Fuel360: Teto Estrito de Clientes Diários por Ciclo Quinzenal e Equalização 50/50',
+    changes: [
+      'Teto Rígido por Ciclo Ativo (<= optMaxClients): Garantia estrita de que em cada dia da semana o total de visitas ativas (semanais + quinzenais do ciclo) nunca ultrapasse o limite configurado (ex: máximo de 12 visitas/dia tanto na 1/3 quanto na 2/4).',
+      'Equalização Homogênea entre Quinzenas (50/50): Eliminação do desequilíbrio entre Sem 1/3 e Sem 2/4 através de partição em quadrantes geográficos contíguos com tolerância de Delta <= 1 PDV.',
+      'Prioridade Operacional sobre Blindagens: O teto de visitas diárias possui precedência absoluta na equalização fina, evitando acúmulo unilateral de cidades secundárias em uma única quinzena.'
+    ]
+  },
+  {
     version: '3.229.0',
     date: 'Hoje',
     title: 'Fuel360: Desbloqueio e Execução Imediata da Fusão Territorial de Equipe',

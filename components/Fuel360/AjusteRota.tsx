@@ -6090,14 +6090,21 @@ export const AjusteRota: React.FC = () => {
                         cityBuckets.get(cCity)!.push(c);
                     });
 
-                    const protectedCityGroupedClients = new Set<string | number>();
                     const dayLimitHours = (activeDays[d] === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
                     const dayLimitMins = dayLimitHours * 60;
                     const weeklyWorkloadMins = semanais.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit) + interStopTravelMins, 0);
 
+                    // Teto de clientes no dia
+                    const dayClientCap = optLimitClients 
+                        ? ((activeDays[d] === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients)
+                        : Infinity;
+
+                    // Alvo ideal de quinzenais para cada ciclo no dia (equilíbrio 50/50 estrito)
+                    const totalDynamic = dynamicQuinzenais.length;
+                    const needed13 = Math.max(0, Math.min(totalDynamic, Math.round((totalDynamic + fixed24.length - fixed13.length) / 2)));
+                    const needed24 = totalDynamic - needed13;
+
                     // 1. Processamento de Cidades Secundárias (distintas da cidade base)
-                    // Prioridade: alocar 100% dos clientes da cidade em um único ciclo quinzenal (1/3 ou 2/4),
-                    // evitando viagens repetidas à cidade toda semana.
                     const baseCityClients: typeof uniqueClients = [];
 
                     cityBuckets.forEach((cList, cCity) => {
@@ -6110,24 +6117,25 @@ export const AjusteRota: React.FC = () => {
                         const cityInternalTravelMins = Math.max(0, (cList.length - 1) * interStopTravelMins);
                         const cityTotalWorkloadMins = cityServiceTimeMins + cityInternalTravelMins;
 
-                        // Verifica se a cidade cabe em um único ciclo quinzenal
-                        // Prioridade máxima: cidades secundárias/distantes NÃO devem ser visitadas toda semana!
-                        // Devem ser 100% alocadas em um único ciclo (1/3 ou 2/4), alternando com outras regiões na quinzena oposta.
-                        const canGroupInSingleCycle = (cList.length <= Math.max(optSmallCityThreshold, 20)) &&
-                            (weeklyWorkloadMins + cityTotalWorkloadMins <= dayLimitMins * 1.15 || cityTotalWorkloadMins <= dayLimitMins * 0.90);
+                        // Cabe 100% em q13 sem estourar limite diário nem desbalancear excessivamente?
+                        const fitsEntireIn13 = (semanais.length + q13.length + cList.length <= dayClientCap) &&
+                            (weeklyWorkloadMins + cityTotalWorkloadMins <= dayLimitMins * 1.05) &&
+                            (q13.length + cList.length <= needed13 + 2);
 
-                        if (canGroupInSingleCycle) {
-                            // Aloca a cidade inteira no ciclo com menor carga atual
-                            if (q13.length <= q24.length) {
-                                q13.push(...cList);
-                            } else {
-                                q24.push(...cList);
-                            }
-                            // Blinda os clientes da cidade para preservá-los juntos na equalização fina
+                        // Cabe 100% em q24 sem estourar limite diário nem desbalancear excessivamente?
+                        const fitsEntireIn24 = (semanais.length + q24.length + cList.length <= dayClientCap) &&
+                            (weeklyWorkloadMins + cityTotalWorkloadMins <= dayLimitMins * 1.05) &&
+                            (q24.length + cList.length <= needed24 + 2);
+
+                        if (fitsEntireIn13 && (q13.length <= q24.length || !fitsEntireIn24)) {
+                            q13.push(...cList);
+                            cList.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
+                        } else if (fitsEntireIn24) {
+                            q24.push(...cList);
                             cList.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
                         } else {
-                            // Se a cidade secundária não couber em um único ciclo, divide em setores geográficos contíguos
-                            // (ex: Norte na quinzena 1/3 e Sul na quinzena 2/4), NUNCA intercalando cliente a cliente
+                            // Se a cidade não cabe inteira em um ciclo sem estourar o limite diário de clientes,
+                            // divide em setores geográficos contíguos balanceados (ex: Norte na 1/3 e Sul na 2/4)
                             const sortedSec = sortClientsContiguously(cList);
                             const half = Math.ceil(sortedSec.length / 2);
                             const part1 = sortedSec.slice(0, half);
@@ -6144,40 +6152,51 @@ export const AjusteRota: React.FC = () => {
                     });
 
                     // 2. Processamento da Cidade Base / Região Metropolitana Central
-                    // Setorização contígua por quadrantes geográficos (elimina rotas sobrepostas na cidade base)
                     if (baseCityClients.length > 0 || (cityBuckets.size === 1 && cityBuckets.has(sellerBaseCity))) {
                         const targetBaseClients = baseCityClients.length > 0 ? baseCityClients : (cityBuckets.get(sellerBaseCity) || []);
                         const sortedBase = sortClientsContiguously(targetBaseClients);
 
-                        // Determina o ponto de corte contíguo para balancear perfeitamente os ciclos
-                        const totalNeeded13 = Math.max(0, Math.round((sortedBase.length + q24.length - q13.length) / 2));
-                        const cutIdx = Math.max(0, Math.min(sortedBase.length, totalNeeded13));
+                        // Determina o corte contíguo para equilibrar 50/50 as semanas
+                        const currentGap = (q24.length - q13.length);
+                        const targetFor13 = Math.max(0, Math.min(sortedBase.length, Math.round((sortedBase.length + currentGap) / 2)));
 
-                        const part13 = sortedBase.slice(0, cutIdx);
-                        const part24 = sortedBase.slice(cutIdx);
+                        const part13 = sortedBase.slice(0, targetFor13);
+                        const part24 = sortedBase.slice(targetFor13);
 
                         q13.push(...part13);
                         q24.push(...part24);
                     }
 
-                    // 3. Equalização Fina com Salvaguarda Territorial
-                    // Ajusta diferenças residuais sem desmembrar cidades blindadas e movendo apenas clientes da fronteira
-                    let maxLoop = 15;
-                    while (Math.abs(q13.length - q24.length) > 1 && maxLoop-- > 0) {
-                        if (q13.length > q24.length + 1) {
-                            const movableIdx = q13.findLastIndex(c => !fixed13.includes(c) && !protectedCityGroupedClients.has(c.sampleVisit.Cod_Cliente));
+                    // 3. Equalização Fina e Salvaguarda Rígida do Teto de Clientes por Dia (<= optMaxClients)
+                    let maxLoop = 30;
+                    while (maxLoop-- > 0) {
+                        const count13 = semanais.length + q13.length;
+                        const count24 = semanais.length + q24.length;
+
+                        // Se estourar o teto no ciclo 1/3 OU se 1/3 tiver mais clientes que 2/4
+                        if ((count13 > dayClientCap && count24 < dayClientCap) || (Math.abs(q13.length - q24.length) > 1 && q13.length > q24.length + 1)) {
+                            let movableIdx = q13.findLastIndex(c => !fixed13.includes(c) && !protectedCityGroupedClients.has(c.sampleVisit.Cod_Cliente));
+                            if (movableIdx === -1 && count13 > dayClientCap) {
+                                // Se estiver estourando o teto diário, o teto tem prioridade sobre a blindagem
+                                movableIdx = q13.findLastIndex(c => !fixed13.includes(c));
+                            }
                             if (movableIdx !== -1) {
                                 q24.push(q13.splice(movableIdx, 1)[0]);
                             } else {
                                 break;
                             }
-                        } else if (q24.length > q13.length + 1) {
-                            const movableIdx = q24.findLastIndex(c => !fixed24.includes(c) && !protectedCityGroupedClients.has(c.sampleVisit.Cod_Cliente));
+                        } else if ((count24 > dayClientCap && count13 < dayClientCap) || (Math.abs(q13.length - q24.length) > 1 && q24.length > q13.length + 1)) {
+                            let movableIdx = q24.findLastIndex(c => !fixed24.includes(c) && !protectedCityGroupedClients.has(c.sampleVisit.Cod_Cliente));
+                            if (movableIdx === -1 && count24 > dayClientCap) {
+                                movableIdx = q24.findLastIndex(c => !fixed24.includes(c));
+                            }
                             if (movableIdx !== -1) {
                                 q13.push(q24.splice(movableIdx, 1)[0]);
                             } else {
                                 break;
                             }
+                        } else {
+                            break;
                         }
                     }
 
