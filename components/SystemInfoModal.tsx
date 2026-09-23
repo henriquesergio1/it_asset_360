@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.228.0',
+    date: 'Hoje',
+    title: 'Fuel360: Partição Territorial Voronoi Ponderada com Cotas Equitativas e Ancoragem Gravitacional',
+    changes: [
+      'Partição Territorial Unificada de 100% da Carteira: Toda a base de clientes do escopo filtrado entra em um único motor de atração geográfica, eliminando desequilíbrios entre cidades satélites e clientes centrais.',
+      'Cotas Rigorosamente Equitativas: Garantia matemática de que todos os colaboradores do escopo recebam cotas idênticas e homogêneas de PDVs.',
+      'Ancoragem Gravitacional e Penalidade Quadrática de Distância: Penalização exponencial para pontos distantes da residência do vendedor, impedindo o cruzamento de macro-regiões (ex: colaborador de Atibaia/Bragança não recebe Litoral/Vale).',
+      'Otimizador 2-Exchange de Fronteira: Trocas bilaterais iterativas para compactação territorial e eliminação de sobreposições limítrofes.'
+    ]
+  },
+  {
     version: '3.227.0',
     date: 'Hoje',
     title: 'Fuel360: Setorização Radial Cônica da Base e Consolidação Regional de Quinzenas',

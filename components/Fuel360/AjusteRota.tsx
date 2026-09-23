@@ -6677,7 +6677,7 @@ export const AjusteRota: React.FC = () => {
             }, 0);
         });
 
-        // 5. Agrupamento por cidades satélites para manter coesão territorial municipal
+        // 5. Agrupamento por cidades satélites para cálculo de bônus de afinidade municipal
         const cityGroups = new Map<string, ClientInfo[]>();
         allClients.forEach(c => {
             const k = c.cidade || 'GERAL';
@@ -6698,37 +6698,36 @@ export const AjusteRota: React.FC = () => {
             }
         });
 
-        // 5.2. Cidades pequenas/satélites (<= optSmallCityThreshold clientes) atribuídas em bloco
-        cityGroups.forEach((cList, cityName) => {
-            if (cityName !== 'GERAL' && cList.length <= optSmallCityThreshold && cList.every(c => !c.isLocked)) {
-                const cityLat = cList.reduce((s, c) => s + c.lat, 0) / cList.length;
-                const cityLng = cList.reduce((s, c) => s + c.lng, 0) / cList.length;
-
-                const candidateSellers = isWhatIfActive ? sellerProfiles.filter(s => s.maxTarget > 0) : sellerProfiles;
-
-                const sortedSellers = [...candidateSellers].sort((a, b) => {
-                    if (optResectorizeMode === 'MINIMIZE_SELLERS' || isWhatIfActive) {
-                        const aHasClients = a.assignedClients.size > 0 ? 1 : 0;
-                        const bHasClients = b.assignedClients.size > 0 ? 1 : 0;
-                        if (aHasClients !== bHasClients) return bHasClients - aHasClients;
-                    }
-                    const distA = calcDist(a.baseLat || teamAvgLat, a.baseLng || teamAvgLng, cityLat, cityLng);
-                    const distB = calcDist(b.baseLat || teamAvgLat, b.baseLng || teamAvgLng, cityLat, cityLng);
-                    return distA - distB;
-                });
-
-                let chosen = sortedSellers.find(s => (s.assignedClients.size + cList.length) <= s.maxTarget);
-                if (!chosen) chosen = sortedSellers[0];
-
-                cList.forEach(c => {
-                    chosen!.assignedClients.add(c.cod);
-                    assignmentMap.set(c.cod, { sellerId: chosen!.id, sellerName: chosen!.name });
-                });
-            }
-        });
-
-        // 5.3. Demais clientes individuais: alocação considerando endereço base do vendedor e menor tempo de deslocamento
+        // 5.2. Demais clientes para distribuição unificada
         const unassignedClients = allClients.filter(c => !assignmentMap.has(c.cod));
+
+        // Matriz de distâncias e afinidades espaciais a partir da base residencial de cada colaborador
+        const costMatrix: number[][] = unassignedClients.map(c => {
+            return sellerProfiles.map(sp => {
+                const bLat = sp.baseLat || teamAvgLat;
+                const bLng = sp.baseLng || teamAvgLng;
+                const rawDist = calcDist(bLat, bLng, c.lat, c.lng);
+
+                // Penalidade exponencial para distâncias longas da residência (evita deslocamentos cruzados ex: Litoral vs Atibaia)
+                const distancePenalty = rawDist > 35 ? Math.pow((rawDist - 35) / 6, 2) * 8 : 0;
+
+                // Bônus de coesão municipal para atrair o município em bloco para a base mais próxima
+                let cityCohesionBonus = 0;
+                if (c.cidade && c.cidade !== 'GERAL') {
+                    const cList = cityGroups.get(c.cidade);
+                    if (cList && cList.length > 0) {
+                        const cityCenterLat = cList.reduce((s, item) => s + item.lat, 0) / cList.length;
+                        const cityCenterLng = cList.reduce((s, item) => s + item.lng, 0) / cList.length;
+                        const distCityToBase = calcDist(bLat, bLng, cityCenterLat, cityCenterLng);
+                        if (distCityToBase < 35) {
+                            cityCohesionBonus = Math.max(5, (35 - distCityToBase) * 0.8);
+                        }
+                    }
+                }
+
+                return Math.max(0.1, rawDist + distancePenalty - cityCohesionBonus);
+            });
+        });
 
         if (isWhatIfActive || optResectorizeMode === 'MINIMIZE_SELLERS') {
             const candidateSellers = isWhatIfActive ? sellerProfiles.filter(s => s.maxTarget > 0) : sellerProfiles;
@@ -6773,35 +6772,28 @@ export const AjusteRota: React.FC = () => {
                 }
             });
         } else {
-            // Modo EQUITATIVO (Balanceado e Homogêneo com Simulação Iterativa e Ancoragem na Base Residencial)
+            // Modo EQUITATIVO (Balanceado e Homogêneo com Simulação Iterativa e Ancoragem Rigorosa na Base Residencial)
             const numSellers = sellerProfiles.length;
             const totalToDistribute = unassignedClients.length;
             const baseQuota = Math.floor(totalToDistribute / numSellers);
             const remainder = totalToDistribute % numSellers;
 
-            // Define cota exata por vendedor
+            // Define cota exata por vendedor (garantindo que todos fiquem rigorosamente com a mesma quantidade de clientes)
             const sellerTargetQuotas = new Map<number, number>();
             sellerProfiles.forEach((sp, sIdx) => {
-                sellerTargetQuotas.set(sp.id, baseQuota + (sIdx < remainder ? 1 : 0));
-            });
-
-            // Matriz de distâncias euclidianas/geográficas de cada cliente para a base residencial de cada vendedor
-            const costMatrix: number[][] = unassignedClients.map(c => {
-                return sellerProfiles.map(sp => {
-                    const bLat = sp.baseLat || teamAvgLat;
-                    const bLng = sp.baseLng || teamAvgLng;
-                    return calcDist(bLat, bLng, c.lat, c.lng);
-                });
+                const lockedCount = sp.assignedClients.size;
+                const targetQ = Math.max(0, baseQuota + (sIdx < remainder ? 1 : 0) - lockedCount);
+                sellerTargetQuotas.set(sp.id, targetQ);
             });
 
             // Simulação Iterativa de Voronoi Ponderado com Potenciais de Lagrange
             const potentials = new Array(numSellers).fill(0);
             const clientSellerAssignment: number[] = new Array(unassignedClients.length).fill(0);
 
-            for (let iter = 0; iter < 100; iter++) {
+            for (let iter = 0; iter < 150; iter++) {
                 const sellerCounts = new Array(numSellers).fill(0);
 
-                // Atribuição de cada cliente ao vendedor com menor custo efetivo (distância base + potencial)
+                // Atribuição de cada cliente ao vendedor com menor custo efetivo (distância base ponderada + potencial)
                 for (let cIdx = 0; cIdx < unassignedClients.length; cIdx++) {
                     let bestSIdx = 0;
                     let minEffectiveCost = Infinity;
@@ -6839,7 +6831,7 @@ export const AjusteRota: React.FC = () => {
             });
 
             // Balanceamento Exato de Fronteira com Menor Arrependimento de Distância (min Delta)
-            let safetyLimit = 3000;
+            let safetyLimit = 4000;
             while (safetyLimit > 0) {
                 safetyLimit--;
 
@@ -6898,7 +6890,7 @@ export const AjusteRota: React.FC = () => {
             }
 
             // Simulação de Trocas Bilaterais Locais (2-Exchange Optimization) para eliminar cruzamentos residuais
-            for (let pass = 0; pass < 8; pass++) {
+            for (let pass = 0; pass < 12; pass++) {
                 let improved = false;
                 for (let s1 = 0; s1 < numSellers; s1++) {
                     for (let s2 = s1 + 1; s2 < numSellers; s2++) {
@@ -6910,7 +6902,7 @@ export const AjusteRota: React.FC = () => {
                                 const currentCost = costMatrix[c1][s1] + costMatrix[c2][s2];
                                 const swapCost = costMatrix[c1][s2] + costMatrix[c2][s1];
 
-                                if (swapCost < currentCost - 0.08) {
+                                if (swapCost < currentCost - 0.05) {
                                     // Executa a troca direta
                                     sellerAssignedIndices[s1][i] = c2;
                                     sellerAssignedIndices[s2][j] = c1;
