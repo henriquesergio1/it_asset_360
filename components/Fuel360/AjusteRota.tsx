@@ -3737,13 +3737,7 @@ export const AjusteRota: React.FC = () => {
             marker.setLatLng([client.Lat, client.Long]);
         }
 
-        // Se carteira for fechada (Vendedores), não permite transferência manual arrastando
-        if (teamType === 'vendedores') {
-            setCriticaToast("Carteira fixa: transferência de clientes de vendas deve ser realizada na gestão de carteiras.");
-            return;
-        }
-
-        // Localiza a rota de outro vendedor mais próxima de onde o cliente foi solto
+        // Localiza a rota ou cliente de outro vendedor mais próximo de onde o cliente foi solto
         const target = findNearestSellerToPoint(
             finalLatLng.lat, 
             finalLatLng.lng, 
@@ -3758,6 +3752,9 @@ export const AjusteRota: React.FC = () => {
             const sourceColab = getColabBySectorOrName(client.Cod_Vend);
             const sourceName = sourceColab?.Nome || client.Nome_Vendedor;
 
+            const targetDisplayName = formatSellerDisplayName(target.sellerId, targetName);
+            const sourceDisplayName = formatSellerDisplayName(client.Cod_Vend, sourceName);
+
             setAdjustedRoutes(prev => prev.map(v => {
                 if (v.Cod_Cliente === client.Cod_Cliente) {
                     return {
@@ -3769,9 +3766,11 @@ export const AjusteRota: React.FC = () => {
                 return v;
             }));
 
-            setCriticaToast(`✓ Cliente #${client.Cod_Cliente} (${client.Razao_Social}) transferido de ${sourceName} para ${targetName}!`);
+            setCriticaToast(`✓ Cliente #${client.Cod_Cliente} (${client.Razao_Social}) transferido de ${sourceDisplayName} para ${targetDisplayName}!`);
+        } else {
+            setCriticaToast(`ℹ️ Cliente mantido com ${client.Nome_Vendedor}. Solte sobre ou próximo à linha/área de outro vendedor para transferir.`);
         }
-    }, [teamType, adjustedPolylines, adjustedRoutes, getColabBySectorOrName]);
+    }, [adjustedPolylines, adjustedRoutes, getColabBySectorOrName, formatSellerDisplayName]);
 
     const handleToggleTeamSeller = (sellerId: string) => {
         setSelectedTeamSellers(prev => {
@@ -11538,7 +11537,7 @@ export const AjusteRota: React.FC = () => {
                                                     }
                                                 }}
                                                 position={[v.Lat, v.Long]}
-                                                draggable={teamType !== 'vendedores'}
+                                                draggable={!isDrawingZone}
                                                 icon={createClientCircleIcon(
                                                     markerFillColor,
                                                     markerBorderColor,

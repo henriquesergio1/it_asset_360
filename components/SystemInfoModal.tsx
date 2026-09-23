@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.235.2',
+    date: 'Hoje',
+    title: 'Fuel360: Desbloqueio e Aprimoramento do Arrastar e Soltar (Drag & Drop) de Clientes para Equipes de Vendas',
+    changes: [
+      'Desbloqueio de Drag & Drop para Vendedores: Marcadores de clientes agora podem ser clicados e arrastados livremente no mapa também no modo de Vendedores, permitindo soltá-los sobre traçados, áreas ou proximidades de outro vendedor para reatribuição imediata da carteira.',
+      'Identificação e Notificação Inteligente de Transferência: Ao soltar o cliente próximo à rota de outro vendedor, o sistema detecta o vendedor mais próximo, atualiza a titularidade e exibe notificação toast clara com código e nome dos colaboradores envolvidos.',
+      'Restauração de Coordenada Cadastral: Ao concluir o arrasto e efetuar a transferência, o marcador retorna automaticamente para sua localização geográfica exata do PDV.'
+    ]
+  },
+  {
     version: '3.235.1',
     date: 'Hoje',
     title: 'Fuel360: Exibição do Código de Vendedor no Menu de Transferência em Lote do Laço',
