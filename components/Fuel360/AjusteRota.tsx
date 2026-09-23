@@ -293,6 +293,111 @@ export function createSectorCentroidIcon(sellerId: string | number, sellerName?:
     });
 }
 
+// Ícone circular SVG de alta performance e compatível com Drag-and-Drop
+export function createClientCircleIcon(
+    fillColor: string, 
+    borderColor: string, 
+    radius: number, 
+    borderWidth: number, 
+    opacity: number,
+    isHighlighted: boolean,
+    hasRestriction: boolean,
+    restrictionColor: string,
+    isSelectedInLasso: boolean = false
+) {
+    const size = Math.max(12, Math.round(radius * 2));
+    const haloSize = size + 10;
+    const haloHtml = (hasRestriction || isSelectedInLasso) 
+        ? `<div style="position: absolute; width: ${haloSize}px; height: ${haloSize}px; top: -5px; left: -5px; border-radius: 50%; border: 2px dashed ${isSelectedInLasso ? '#8b5cf6' : restrictionColor}; opacity: 0.75; pointer-events: none; animation: pulse 2s infinite;"></div>` 
+        : '';
+    const glowStyle = isHighlighted 
+        ? `box-shadow: 0 0 0 3px #ffffff, 0 0 14px #4f46e5; transform: scale(1.25);` 
+        : `box-shadow: 0 2px 5px rgba(0,0,0,0.35);`;
+
+    return L.divIcon({
+        className: 'custom-client-draggable-icon',
+        html: `
+            <div style="position: relative; width: ${size}px; height: ${size}px; display: flex; align-items: center; justify-content: center; cursor: grab;" title="Arraste e solte na linha de outro vendedor para transferir">
+                ${haloHtml}
+                <div style="
+                    width: ${size}px; 
+                    height: ${size}px; 
+                    background-color: ${fillColor}; 
+                    border: ${borderWidth}px solid ${borderColor}; 
+                    border-radius: 50%; 
+                    opacity: ${opacity};
+                    ${glowStyle}
+                    transition: transform 0.15s ease, box-shadow 0.15s ease;
+                "></div>
+            </div>
+        `,
+        iconSize: [size, size],
+        iconAnchor: [Math.round(size / 2), Math.round(size / 2)],
+        popupAnchor: [0, -Math.round(size / 2) - 4]
+    });
+}
+
+// Helper para calcular a menor distância entre um ponto e um segmento de linha rodoviária (em km)
+export function distToSegmentKm(pLat: number, pLng: number, vLat: number, vLng: number, wLat: number, wLng: number): number {
+    const l2 = (vLat - wLat) * (vLat - wLat) + (vLng - wLng) * (vLng - wLng);
+    if (l2 === 0) return calcDist(pLat, pLng, vLat, vLng);
+    let t = ((pLat - vLat) * (wLat - vLat) + (pLng - vLng) * (wLng - vLng)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    const projLat = vLat + t * (wLat - vLat);
+    const projLng = vLng + t * (wLng - vLng);
+    return calcDist(pLat, pLng, projLat, projLng);
+}
+
+// Helper para encontrar o vendedor mais próximo de um ponto com base em suas rotas (polilinhas) e clientes
+export function findNearestSellerToPoint(
+    lat: number, 
+    lng: number, 
+    polylines: Array<{ sellerId: number; points: Array<[number, number]> }>,
+    routes: VisitaPrevista[],
+    currentSellerId: number
+): { sellerId: number; sellerName: string; distKm: number } | null {
+    let bestSellerId: number | null = null;
+    let minDist = Infinity;
+
+    // 1. Checar distância até os traçados polilinhas dos outros vendedores
+    polylines.forEach(poly => {
+        if (poly.sellerId === currentSellerId || !poly.points || poly.points.length < 2) return;
+        for (let i = 0; i < poly.points.length - 1; i++) {
+            const p1 = poly.points[i];
+            const p2 = poly.points[i + 1];
+            const d = distToSegmentKm(lat, lng, p1[0], p1[1], p2[0], p2[1]);
+            if (d < minDist) {
+                minDist = d;
+                bestSellerId = poly.sellerId;
+            }
+        }
+    });
+
+    // 2. Fallback: Checar distância até os clientes dos outros vendedores
+    if (minDist > 25) {
+        routes.forEach(v => {
+            if (v.Cod_Vend === currentSellerId || !v.Lat || !v.Long) return;
+            const d = calcDist(lat, lng, v.Lat, v.Long);
+            if (d < minDist) {
+                minDist = d;
+                bestSellerId = v.Cod_Vend;
+            }
+        });
+    }
+
+    if (bestSellerId !== null && minDist <= 30) {
+        const sampleVisit = routes.find(r => r.Cod_Vend === bestSellerId);
+        const name = sampleVisit?.Nome_Vendedor || `Vendedor ${bestSellerId}`;
+        return {
+            sellerId: bestSellerId,
+            sellerName: name,
+            distKm: Math.round(minDist * 10) / 10
+        };
+    }
+
+    return null;
+}
+
 // Paleta de cores cromáticas e consistentes por dia da semana para visão detalhada de vendedor
 export const DAY_COLORS: Record<string, { bg: string, text: string, border: string, hex: string, label: string }> = {
     'SEGUNDA-FEIRA': { bg: 'bg-blue-600', text: 'text-blue-600', border: 'border-blue-500', hex: '#2563eb', label: 'SEG' },
@@ -3621,6 +3726,53 @@ export const AjusteRota: React.FC = () => {
         setSectorAssignModalData(null);
     }, [getColabBySectorOrName]);
 
+    // Arrastar e soltar cliente diretamente no mapa sobre a linha/setor de outro vendedor (Drag-and-Drop)
+    const handleClientMarkerDragEnd = useCallback((client: VisitaPrevista, e: L.LeafletEvent) => {
+        const marker = e.target as L.Marker;
+        if (!marker || !marker.getLatLng) return;
+        const finalLatLng = marker.getLatLng();
+
+        // Sempre restaura visualmente o marcador na coordenada real de cadastro do cliente
+        if (client.Lat && client.Long) {
+            marker.setLatLng([client.Lat, client.Long]);
+        }
+
+        // Se carteira for fechada (Vendedores), não permite transferência manual arrastando
+        if (teamType === 'vendedores') {
+            setCriticaToast("Carteira fixa: transferência de clientes de vendas deve ser realizada na gestão de carteiras.");
+            return;
+        }
+
+        // Localiza a rota de outro vendedor mais próxima de onde o cliente foi solto
+        const target = findNearestSellerToPoint(
+            finalLatLng.lat, 
+            finalLatLng.lng, 
+            adjustedPolylines, 
+            adjustedRoutes, 
+            client.Cod_Vend
+        );
+
+        if (target && target.sellerId !== client.Cod_Vend) {
+            const targetColab = getColabBySectorOrName(target.sellerId);
+            const targetName = targetColab?.Nome || target.sellerName;
+            const sourceColab = getColabBySectorOrName(client.Cod_Vend);
+            const sourceName = sourceColab?.Nome || client.Nome_Vendedor;
+
+            setAdjustedRoutes(prev => prev.map(v => {
+                if (v.Cod_Cliente === client.Cod_Cliente) {
+                    return {
+                        ...v,
+                        Cod_Vend: target.sellerId,
+                        Nome_Vendedor: targetName
+                    };
+                }
+                return v;
+            }));
+
+            setCriticaToast(`✓ Cliente #${client.Cod_Cliente} (${client.Razao_Social}) transferido de ${sourceName} para ${targetName}!`);
+        }
+    }, [teamType, adjustedPolylines, adjustedRoutes, getColabBySectorOrName]);
+
     const handleToggleTeamSeller = (sellerId: string) => {
         setSelectedTeamSellers(prev => {
             const next = new Set(prev);
@@ -5269,7 +5421,8 @@ export const AjusteRota: React.FC = () => {
                 sellerId,
                 sellerName,
                 totalClients: uniqueClients.length,
-                capacity: sellerWeeklyCap === Infinity ? uniqueClients.length : sellerWeeklyCap,
+                visitsPerCycle,
+                capacity: sellerWeeklyCap === Infinity ? visitsPerCycle : sellerWeeklyCap,
                 overflow: sellerOverflow
             });
         });
@@ -5759,17 +5912,19 @@ export const AjusteRota: React.FC = () => {
                 const clusterWeights = sweep.map(cl => 
                     criterion === 'WORKLOAD' 
                         ? cl.clients.reduce((sum, c) => sum + getClientWorkloadMins(c), 0)
-                        : cl.clients.length
+                        : cl.clients.reduce((sum, c) => sum + (c.tipo === 'SEMANAL' ? 1 : 0.5), 0)
                 );
                 const prefixWeights: number[] = [0];
                 for (let i = 0; i < M_len; i++) {
                     prefixWeights.push(prefixWeights[i] + clusterWeights[i]);
                 }
 
-                const clusterCounts = sweep.map(cl => cl.clients.length);
+                const clusterVisitCounts = sweep.map(cl => 
+                    cl.clients.reduce((sum, c) => sum + (c.tipo === 'SEMANAL' ? 1 : 0.5), 0)
+                );
                 const prefixCounts: number[] = [0];
                 for (let i = 0; i < M_len; i++) {
-                    prefixCounts.push(prefixCounts[i] + clusterCounts[i]);
+                    prefixCounts.push(prefixCounts[i] + clusterVisitCounts[i]);
                 }
 
                 for (let d = 1; d <= K; d++) {
@@ -5788,7 +5943,7 @@ export const AjusteRota: React.FC = () => {
                             const countInDay = prefixCounts[i] - prefixCounts[j];
                             const diff = valInDay - targetVal;
 
-                            // Penalidade severa se ultrapassar o limite de clientes configurado
+                            // Penalidade severa se ultrapassar o limite diário de visitas/clientes por dia útil
                             let capPenalty = 0;
                             if (optLimitClients && countInDay > dayCap) {
                                 capPenalty = Math.pow(countInDay - dayCap, 2) * 50000;
@@ -5970,8 +6125,10 @@ export const AjusteRota: React.FC = () => {
                                     if ((c.sampleVisit.Cidade || '').trim().toUpperCase() !== cCity) continue;
                                     if (!isDayAllowedForClient(c, mainDayName)) continue;
 
-                                    // Salvaguarda: Não puxar se o dia principal já atingiu o teto de clientes configurado
-                                    if (optLimitClients && currentPart[mainDayIdx].length >= mainDayCap) continue;
+                                    // Salvaguarda: Não puxar se o dia principal já atingiu o teto diário de clientes configurado
+                                    const curMainDayVisits = currentPart[mainDayIdx].reduce((sum, item) => sum + (item.tipo === 'SEMANAL' ? 1 : 0.5), 0);
+                                    const clientAddVisit = (c.tipo === 'SEMANAL' ? 1 : 0.5);
+                                    if (optLimitClients && curMainDayVisits + clientAddVisit > mainDayCap) continue;
 
                                     const testClients = [...currentPart[mainDayIdx], c];
                                     const testMetrics = getOrderedDayMetrics(testClients);
@@ -5999,7 +6156,7 @@ export const AjusteRota: React.FC = () => {
                         let minDayCount = Infinity;
 
                         for (let d = 0; d < K; d++) {
-                            const count = currentPart[d].length;
+                            const count = currentPart[d].reduce((sum, item) => sum + (item.tipo === 'SEMANAL' ? 1 : 0.5), 0);
                             if (count > maxDayCount) {
                                 maxDayCount = count;
                                 maxDayIdx = d;
@@ -6019,7 +6176,7 @@ export const AjusteRota: React.FC = () => {
                             ? ((activeDays[minDayIdx] === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients)
                             : maxAllowedClientsPerDay;
 
-                        const needsRebalance = (optLimitClients && maxDayCount > maxCap) || (maxDayCount - minDayCount >= 3);
+                        const needsRebalance = (optLimitClients && maxDayCount > maxCap) || (maxDayCount - minDayCount >= 2);
                         if (!needsRebalance) break;
                         if (minDayCount >= minCap) break;
 
@@ -6202,22 +6359,26 @@ export const AjusteRota: React.FC = () => {
                     }
                 }
 
-                // Penalidade severa para estouro do limite diário de clientes (optLimitClients / optMaxClients)
+                // Penalidade severa para estouro do limite diário de clientes por quinzena (optLimitClients / optMaxClients)
                 let clientLimitExcessTotal = 0;
                 let maxClientLimitExcess = 0;
                 let clientDisparityPenalty = 0;
 
                 for (let d = 0; d < K; d++) {
-                    const dayCount = currentPart[d].length;
+                    const clientsInDay = currentPart[d];
+                    const semCount = clientsInDay.filter(c => c.tipo === 'SEMANAL').length;
+                    const quinzCount = clientsInDay.length - semCount;
+                    // Demanda máxima de visitas no dia considerando o ciclo quinzenal (Sem 1/3 e Sem 2/4)
+                    const peakDayVisits = semCount + Math.ceil(quinzCount / 2);
                     const dayCap = (activeDays[d] === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients;
-                    if (optLimitClients && dayCount > dayCap) {
-                        const excess = dayCount - dayCap;
+                    if (optLimitClients && peakDayVisits > dayCap) {
+                        const excess = peakDayVisits - dayCap;
                         clientLimitExcessTotal += excess;
                         if (excess > maxClientLimitExcess) maxClientLimitExcess = excess;
                     }
                     if (optRoutingBalanceMode !== 'MENOR_KM') {
-                        if (dayCount < minAllowedClientsPerDay) {
-                            clientDisparityPenalty += Math.pow(minAllowedClientsPerDay - dayCount, 2) * 80;
+                        if (peakDayVisits < minAllowedClientsPerDay) {
+                            clientDisparityPenalty += Math.pow(minAllowedClientsPerDay - peakDayVisits, 2) * 80;
                         }
                     }
                 }
@@ -11331,26 +11492,32 @@ export const AjusteRota: React.FC = () => {
                                                     }}
                                                 />
                                             )}
-                                            <CircleMarker
+                                            <Marker
                                                 key={`marker-${v.Cod_Cliente}-${idx}`}
                                                 ref={(el) => {
                                                     if (el) {
-                                                        markerRefs.current[v.Cod_Cliente] = el;
+                                                        markerRefs.current[v.Cod_Cliente] = el as any;
                                                     }
                                                 }}
-                                                center={[v.Lat, v.Long]}
-                                                radius={markerRadius}
-                                                pathOptions={{ 
-                                                    fillColor: markerFillColor, 
-                                                    color: markerBorderColor, 
-                                                    fillOpacity: showHeatmap ? 0.45 : (isPdvHighlighted ? 1 : (isAnomalousPdv ? 1 : 0.92)), 
-                                                    weight: markerWeight,
-                                                    dashArray: isPdvHighlighted ? undefined : dashArray,
-                                                    className: 'transition-all duration-300 ease-in-out cursor-pointer'
-                                                }}
+                                                position={[v.Lat, v.Long]}
+                                                draggable={teamType !== 'vendedores'}
+                                                icon={createClientCircleIcon(
+                                                    markerFillColor,
+                                                    markerBorderColor,
+                                                    markerRadius,
+                                                    markerWeight,
+                                                    showHeatmap ? 0.45 : (isPdvHighlighted ? 1 : (isAnomalousPdv ? 1 : 0.92)),
+                                                    isPdvHighlighted,
+                                                    hasParticularidade,
+                                                    particularidadeColor,
+                                                    isSelectedInLasso
+                                                )}
                                                 eventHandlers={{
                                                     click: () => {
                                                         handleSelectPdvFromMap(v.Cod_Cliente);
+                                                    },
+                                                    dragend: (e) => {
+                                                        handleClientMarkerDragEnd(v, e);
                                                     }
                                                 }}
                                             >
@@ -11565,7 +11732,7 @@ export const AjusteRota: React.FC = () => {
                                                         </div>
                                                     </div>
                                                 </Popup>
-                                            </CircleMarker>
+                                            </Marker>
                                         </React.Fragment>
                                     );
                                 })}
@@ -17605,7 +17772,7 @@ export const AjusteRota: React.FC = () => {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <span className="text-slate-500 dark:text-slate-400">
-                                                    Total: <strong>{s.totalClients}</strong> clientes | Capacidade: <strong>{s.capacity}</strong>
+                                                    Demanda: <strong>{s.visitsPerCycle ?? s.totalClients}</strong> visitas/sem ({s.totalClients} PDVs) | Cap: <strong>{s.capacity}</strong>/sem
                                                 </span>
                                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
                                                     +{s.overflow} excedentes

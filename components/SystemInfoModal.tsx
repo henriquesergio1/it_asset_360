@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.234.0',
+    date: 'Hoje',
+    title: 'Fuel360: Drag-and-Drop de Clientes no Mapa e Correção do Limite Diário por Quinzena',
+    changes: [
+      'Arrastar e Soltar (Drag & Drop) de Clientes no Mapa: Permite pegar o marcador (bolinha) de um cliente no mapa e soltá-lo sobre o traçado de rota de outro colaborador, executando a transferência automática de titularidade de forma atômica.',
+      'Reversão Geográfica Automática ao Soltar: O marcador do cliente transfere a posse e retorna com precisão milimétrica para sua coordenada cadastral real.',
+      'Correção do Teto Diário de Clientes (Por Dia Real): O parâmetro "Limitar Clientes / Dia" agora avalia estritamente a carga diária de visitas em cada ciclo quinzenal (ex: até 12 clientes na Segunda 1/3 e até 12 na Segunda 2/4), eliminando a falsa soma das duas quinzenas e falsos avisos de capacidade excedida.',
+      'Equalização e Sincronização Perfeita dos Filtros: Interação 100% reativa entre filtros de equipe, dias, quinzenas, mapa interativo e grade de edição.'
+    ]
+  },
+  {
     version: '3.233.0',
     date: 'Hoje',
     title: 'Fuel360: Blindagem de Macro-Regiões, Barreira da Serra do Mar e Alinhamento Costeiro Linear',
