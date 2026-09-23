@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.224.1',
+    date: 'Hoje',
+    title: 'Fuel360: Homologação e Unificação Automática de Coordenadas na Auditoria do ERP',
+    changes: [
+      'Unificação Imediata das Coordenadas: Ao clicar em "Aprovar p/ ERP", "Ajustado no ERP", "Posição ERP OK" ou alterar o status na tabela, a coordenada oficial do ERP é adotada como a posição homologada do cliente.',
+      'Zeramento da Divergência Métrica: A divergência de localização é imediatamente recalculada para 0 metros e o status passa para "Conforme / OK", removendo o alerta de divergência crítica.',
+      'Juntada dos Marcadores no Mapa: No modal do mapa, os dois pontos (ERP e Geocode) são unificados diretamente sobre a coordenada do ERP e a linha pontilhada de divergência é removida.',
+      'Persistência Dupla Automática: A homologação é gravada imediatamente em FuelClienteAuditoria e na Base Central (FuelClienteCoordenadas) no banco SQL Server local.'
+    ]
+  },
+  {
     version: '3.224.0',
     date: 'Hoje',
     title: 'Fuel360: Reotimização de Traçado com Preservação Rigorosa de Dias Manuais',

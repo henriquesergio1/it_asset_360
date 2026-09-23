@@ -507,8 +507,35 @@ export const GeolocalizadorERP: React.FC = () => {
 
     // --- ATUALIZAR STATUS DE ACEITE / AJUSTE ERP ---
     const handleUpdateAceite = async (client: ClienteAuditado, novoAceite: StatusAceiteERP) => {
+        const hasValidErp = client.HasValidERPCoords || (client.Lat_ERP !== null && client.Long_ERP !== null && !isNaN(client.Lat_ERP) && !isNaN(client.Long_ERP) && (Math.abs(client.Lat_ERP) > 0.001 || Math.abs(client.Long_ERP) > 0.001));
+
+        let latGeo = client.Lat_Geocode;
+        let longGeo = client.Long_Geocode;
+        let divergencia = client.Divergencia_Metros;
+        let status = client.Status;
+
+        // Se o operador aprovar ou marcar ajustado e o ERP tiver coordenadas válidas:
+        // A coordenada correta oficial é a do ERP! Igualamos o Geocode ao ERP, unificamos os pontos e zeramos a divergência!
+        if ((novoAceite === 'APROVADO_GEOCODE' || novoAceite === 'AJUSTADO_NO_ERP') && hasValidErp && client.Lat_ERP !== null && client.Long_ERP !== null) {
+            latGeo = client.Lat_ERP;
+            longGeo = client.Long_ERP;
+            divergencia = 0;
+            status = 'OK';
+            saveToLocalCache(client.Cod_Cliente, client.Lat_ERP, client.Long_ERP);
+            saveClienteCoordenada({
+                codCliente: client.Cod_Cliente,
+                lat: client.Lat_ERP,
+                lon: client.Long_ERP,
+                status: 'APROVADO_ERP'
+            }).catch(e => console.warn('Erro ao persistir aprovação no SQL:', e));
+        }
+
         const updated: ClienteAuditado = {
             ...client,
+            Lat_Geocode: latGeo,
+            Long_Geocode: longGeo,
+            Divergencia_Metros: divergencia,
+            Status: status,
             Aceite_ERP: novoAceite,
             GeocodedAt: new Date().toISOString()
         };
@@ -1794,7 +1821,8 @@ export const GeolocalizadorERP: React.FC = () => {
                                     {/* Linha Vermelha de Divergência */}
                                     {selectedClientModal.HasValidERPCoords && 
                                      selectedClientModal.Lat_Geocode !== null && 
-                                     selectedClientModal.Long_Geocode !== null && (
+                                     selectedClientModal.Long_Geocode !== null && 
+                                     (selectedClientModal.Divergencia_Metros ?? 0) > 0 && (
                                         <Polyline
                                             positions={[
                                                 [selectedClientModal.Lat_ERP, selectedClientModal.Long_ERP],
