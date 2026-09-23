@@ -3782,34 +3782,75 @@ export const AjusteRota: React.FC = () => {
                 next.add(sellerId);
             }
             if (next.size === 1) {
-                setSelectedPromoter(Array.from(next)[0]);
+                const singleId = Array.from(next)[0];
+                setSelectedPromoter(singleId);
+                setFocusedMapSellerId(Number(singleId));
             } else {
                 setSelectedPromoter('ALL');
+                setFocusedMapSellerId(null);
             }
             return next;
         });
     };
 
     const handleSelectOnlySeller = (sellerId: string) => {
+        const numId = Number(sellerId);
         setSelectedTeamSellers(new Set([sellerId]));
         setSelectedPromoter(sellerId);
+        setFocusedMapSellerId(numId);
+        const sVisits = scopedAdjustedRoutes.filter(v => v.Cod_Vend === numId && v.Lat && v.Long);
+        if (sVisits.length > 0) {
+            setMapFlyToTarget({
+                lat: sVisits[0].Lat!,
+                lng: sVisits[0].Long!,
+                codCliente: sVisits[0].Cod_Cliente,
+                timestamp: Date.now()
+            });
+        } else {
+            const colab = getColabBySectorOrName(numId);
+            if (colab?.LatitudeBase && colab?.LongitudeBase) {
+                setMapFlyToTarget({
+                    lat: colab.LatitudeBase,
+                    lng: colab.LongitudeBase,
+                    codCliente: 0,
+                    timestamp: Date.now()
+                });
+            }
+        }
     };
 
     const handleSelectAllTeamSellers = () => {
         setSelectedTeamSellers(new Set());
         setSelectedPromoter('ALL');
+        setFocusedMapSellerId(null);
     };
 
-    // Escopo efetivo de rotas refinado pelo filtro de vendedores selecionados
+    // Escopo efetivo de rotas refinado pelo filtro unificado de vendedores (tabela e mapa)
     const effectiveScopedRoutes = useMemo(() => {
         if (selectedTeamSellers.size > 0) {
             return scopedAdjustedRoutes.filter(r => selectedTeamSellers.has(String(r.Cod_Vend)));
+        }
+        if (focusedMapSellerId !== null) {
+            return scopedAdjustedRoutes.filter(r => r.Cod_Vend === focusedMapSellerId);
         }
         if (selectedPromoter !== 'ALL') {
             return scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter);
         }
         return scopedAdjustedRoutes;
-    }, [scopedAdjustedRoutes, selectedTeamSellers, selectedPromoter]);
+    }, [scopedAdjustedRoutes, selectedTeamSellers, focusedMapSellerId, selectedPromoter]);
+
+    const effectiveScopedOriginalRoutes = useMemo(() => {
+        if (selectedTeamSellers.size > 0) {
+            return scopedOriginalRoutes.filter(r => selectedTeamSellers.has(String(r.Cod_Vend)));
+        }
+        if (focusedMapSellerId !== null) {
+            return scopedOriginalRoutes.filter(r => r.Cod_Vend === focusedMapSellerId);
+        }
+        if (selectedPromoter !== 'ALL') {
+            return scopedOriginalRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter);
+        }
+        return scopedOriginalRoutes;
+    }, [scopedOriginalRoutes, selectedTeamSellers, focusedMapSellerId, selectedPromoter]);
 
     const effectiveSellersList = useMemo(() => {
         return Array.from(new Set(effectiveScopedRoutes.map(r => String(r.Cod_Vend))))
@@ -3841,16 +3882,14 @@ export const AjusteRota: React.FC = () => {
 
     // Pontos geográficos para renderização do Mapa de Calor (Heatmap)
     const heatmapPoints = useMemo(() => {
-        const sourceRoutes = focusedMapSellerId ? filteredRoutes.filter(v => v.Cod_Vend === focusedMapSellerId) : filteredRoutes;
-        return sourceRoutes
+        return filteredRoutes
             .filter(v => v.Lat && v.Long)
             .map(v => ({ lat: v.Lat, lng: v.Long }));
-    }, [filteredRoutes, focusedMapSellerId]);
+    }, [filteredRoutes]);
 
     // Totais acumulados por Quinzena (Semanas 1/3 e Semanas 2/4) no escopo selecionado
     const quinzenaTotals = useMemo(() => {
-        const routes = scopedAdjustedRoutes.filter(v => {
-            if (selectedPromoter !== 'ALL' && String(v.Cod_Vend) !== selectedPromoter) return false;
+        const routes = effectiveScopedRoutes.filter(v => {
             if (selectedDaysFilter.length > 0 && !selectedDaysFilter.includes(v.Dia_Semana)) return false;
             return true;
         });
@@ -3889,12 +3928,11 @@ export const AjusteRota: React.FC = () => {
             variationPct,
             isImbalanced: variationPct > 30 && (quinzenal13Count > 0 || quinzenal24Count > 0)
         };
-    }, [scopedAdjustedRoutes, selectedPromoter, selectedDaysFilter]);
+    }, [effectiveScopedRoutes, selectedDaysFilter]);
 
     // Resumo de visitas distribuídas por dia da semana no escopo ativo (Rota Ajustada/Simulada)
     const visitsByDay = useMemo(() => {
-        const routes = scopedAdjustedRoutes.filter(v => {
-            if (selectedPromoter !== 'ALL' && String(v.Cod_Vend) !== selectedPromoter) return false;
+        const routes = effectiveScopedRoutes.filter(v => {
             if (selectedQuinzenaFilter === '1_3') {
                 const p = parsePeriodicidade(v.Periodicidade).tipo;
                 return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
@@ -3913,12 +3951,11 @@ export const AjusteRota: React.FC = () => {
             }
         });
         return counts;
-    }, [scopedAdjustedRoutes, selectedPromoter, selectedQuinzenaFilter]);
+    }, [effectiveScopedRoutes, selectedQuinzenaFilter]);
 
     // Resumo de visitas distribuídas por dia da semana no escopo ativo (Rota Original)
     const originalVisitsByDay = useMemo(() => {
-        const routes = scopedOriginalRoutes.filter(v => {
-            if (selectedPromoter !== 'ALL' && String(v.Cod_Vend) !== selectedPromoter) return false;
+        const routes = effectiveScopedOriginalRoutes.filter(v => {
             if (selectedQuinzenaFilter === '1_3') {
                 const p = parsePeriodicidade(v.Periodicidade).tipo;
                 return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
@@ -3937,7 +3974,7 @@ export const AjusteRota: React.FC = () => {
             }
         });
         return counts;
-    }, [scopedOriginalRoutes, selectedPromoter, selectedQuinzenaFilter]);
+    }, [effectiveScopedOriginalRoutes, selectedQuinzenaFilter]);
 
     // Comparativo Detalhado de Clientes: Antes (Original) vs Depois (Simulado)
     const routeComparisonDiff = useMemo(() => {
@@ -10648,64 +10685,47 @@ export const AjusteRota: React.FC = () => {
                         <div className="absolute top-3 right-3 z-[1000] flex flex-wrap items-center gap-2">
                             {scopedAdjustedRoutes.length > 0 && (
                                 <>
-                                    {/* Seletor Rápido de Vendedor no Mapa (Foco Individual) */}
-                                    {isMultipleSellers && (
+                                    {/* Seletor Rápido de Vendedor no Mapa (Foco Individual / Sincronizado com Tabela) */}
+                                    {availableTeamSellers.length > 1 && (
                                         <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-md flex items-center gap-1 text-xs">
                                             <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider pl-1.5 hidden sm:inline">
                                                 Vendedor:
                                             </span>
                                             <select
-                                                value={focusedMapSellerId !== null ? String(focusedMapSellerId) : 'ALL'}
+                                                value={
+                                                    focusedMapSellerId !== null
+                                                        ? String(focusedMapSellerId)
+                                                        : (selectedTeamSellers.size === 1
+                                                            ? Array.from(selectedTeamSellers)[0]
+                                                            : (selectedTeamSellers.size > 1 && selectedTeamSellers.size < availableTeamSellers.length ? 'FILTERED' : 'ALL'))
+                                                }
                                                 onChange={(e) => {
                                                     const val = e.target.value;
                                                     if (val === 'ALL') {
-                                                        setFocusedMapSellerId(null);
-                                                    } else {
-                                                        const selId = Number(val);
-                                                        setFocusedMapSellerId(selId);
-                                                        const sVisits = scopedAdjustedRoutes.filter(v => v.Cod_Vend === selId && v.Lat && v.Long);
-                                                        if (sVisits.length > 0) {
-                                                            setMapFlyToTarget({
-                                                                lat: sVisits[0].Lat!,
-                                                                lng: sVisits[0].Long!,
-                                                                codCliente: sVisits[0].Cod_Cliente,
-                                                                timestamp: Date.now()
-                                                            });
-                                                        } else {
-                                                            const colab = getColabBySectorOrName(selId);
-                                                            if (colab?.LatitudeBase && colab?.LongitudeBase) {
-                                                                setMapFlyToTarget({
-                                                                    lat: colab.LatitudeBase,
-                                                                    lng: colab.LongitudeBase,
-                                                                    codCliente: 0,
-                                                                    timestamp: Date.now()
-                                                                });
-                                                            }
-                                                        }
+                                                        handleSelectAllTeamSellers();
+                                                    } else if (val !== 'FILTERED') {
+                                                        handleSelectOnlySeller(val);
                                                     }
                                                 }}
                                                 className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold outline-none cursor-pointer focus:ring-1 focus:ring-indigo-500 max-w-[170px] truncate"
-                                                title="Filtrar visualização no mapa para apenas um vendedor específico"
+                                                title="Filtrar visualização no mapa e na tabela para apenas um vendedor específico"
                                             >
-                                                <option value="ALL">Todos os Vendedores ({effectiveSellersList.length})</option>
-                                                {effectiveSellersList.map(sId => {
-                                                    const numId = Number(sId);
-                                                    const sVisits = scopedAdjustedRoutes.filter(v => v.Cod_Vend === numId);
-                                                    const colab = getColabBySectorOrName(numId, sVisits[0]?.Nome_Vendedor);
-                                                    const name = colab?.Nome || sVisits[0]?.Nome_Vendedor || `Vendedor ${sId}`;
-                                                    return (
-                                                        <option key={sId} value={sId}>
-                                                            {formatSellerDisplayName(numId, name)} ({sVisits.length} PDVs)
-                                                        </option>
-                                                    );
-                                                })}
+                                                <option value="ALL">Todos os Vendedores ({availableTeamSellers.length})</option>
+                                                {selectedTeamSellers.size > 1 && selectedTeamSellers.size < availableTeamSellers.length && (
+                                                    <option value="FILTERED" disabled>Vendedores Filtrados ({selectedTeamSellers.size})</option>
+                                                )}
+                                                {availableTeamSellers.map(seller => (
+                                                    <option key={seller.id} value={seller.id}>
+                                                        {seller.name} ({seller.count} PDVs)
+                                                    </option>
+                                                ))}
                                             </select>
-                                            {focusedMapSellerId !== null && (
+                                            {(focusedMapSellerId !== null || selectedTeamSellers.size > 0) && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => setFocusedMapSellerId(null)}
+                                                    onClick={handleSelectAllTeamSellers}
                                                     className="px-1.5 py-0.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded transition cursor-pointer font-black text-xs"
-                                                    title="Limpar filtro e exibir todos os vendedores no mapa"
+                                                    title="Limpar filtro e exibir todos os vendedores no mapa e na tabela"
                                                 >
                                                     ✕
                                                 </button>
@@ -10713,26 +10733,26 @@ export const AjusteRota: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {/* Alternador Rápido de Traçado por Quinzena */}
+                                    {/* Alternador Rápido de Traçado por Quinzena (Sincronizado com Tabela) */}
                                     <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-md flex items-center gap-0.5 text-xs font-bold">
                                         <button
                                             type="button"
                                             onClick={() => setSelectedQuinzenaFilter('ALL')}
-                                            className={`px-2.5 py-1 rounded-lg transition-all duration-200 ${
+                                            className={`px-2.5 py-1 rounded-lg transition-all duration-200 cursor-pointer ${
                                                 selectedQuinzenaFilter === 'ALL'
                                                     ? 'bg-indigo-600 text-white shadow-xs'
                                                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                                             }`}
                                             title="Visualizar traçado e clientes de todas as semanas"
                                         >
-                                            Todas
+                                            Todas ({quinzenaTotals.semanalCount + quinzenaTotals.quinzenal13Count + quinzenaTotals.quinzenal24Count})
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => setSelectedQuinzenaFilter('1_3')}
-                                            className={`px-2.5 py-1 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                                            onClick={() => setSelectedQuinzenaFilter(prev => prev === '1_3' ? 'ALL' : '1_3')}
+                                            className={`px-2.5 py-1 rounded-lg transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
                                                 selectedQuinzenaFilter === '1_3'
-                                                    ? 'bg-amber-500 text-white shadow-xs'
+                                                    ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-400/50'
                                                     : 'text-slate-600 dark:text-slate-400 hover:text-amber-600'
                                             }`}
                                             title="Visualizar apenas traçados e clientes da Semana 1 e 3"
@@ -10747,10 +10767,23 @@ export const AjusteRota: React.FC = () => {
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => setSelectedQuinzenaFilter('2_4')}
-                                            className={`px-2.5 py-1 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                                            onClick={() => setSelectedQuinzenaFilter(prev => prev === '2_4' ? 'ALL' : '2_4')}
+                                            className={`px-2.5 py-1 rounded-lg transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
                                                 selectedQuinzenaFilter === '2_4'
-                                                    ? 'bg-fuchsia-600 text-white shadow-xs'
+                                                    ? 'bg-fuchsia-600 text-white shadow-xs ring-2 ring-fuchsia-400/50'
+                                                    : 'text-slate-600 dark:text-slate-400 hover:text-fuchsia-600'
+                                            }`}
+                                            title="Visualizar apenas traçados e clientes da Semana 2 e 4"
+                                        >
+                                            <span className="w-2 h-2 rounded-full bg-fuchsia-300 ring-1 ring-fuchsia-400/50 shrink-0" />
+                                            <span>Sem 2 e 4</span>
+                                            {quinzenaTotals.total24 > 0 && (
+                                                <span className={`text-[10px] px-1 py-0.2 rounded-full ${selectedQuinzenaFilter === '2_4' ? 'bg-fuchsia-700 text-fuchsia-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                                    {quinzenaTotals.total24}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </div>
                                                     : 'text-slate-600 dark:text-slate-400 hover:text-fuchsia-600'
                                             }`}
                                             title="Visualizar apenas traçados e clientes da Semana 2 e 4"
@@ -11793,10 +11826,10 @@ export const AjusteRota: React.FC = () => {
                                     <div className="space-y-1">
                                         <div className="flex items-center justify-between text-[8px] text-slate-500 dark:text-slate-400 font-semibold">
                                             <span>Vendedores ({availableTeamSellers.length})</span>
-                                            {focusedMapSellerId !== null && (
+                                            {(focusedMapSellerId !== null || selectedTeamSellers.size > 0) && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => setFocusedMapSellerId(null)}
+                                                    onClick={handleSelectAllTeamSellers}
                                                     className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer font-bold"
                                                 >
                                                     Mostrar Todos
@@ -11805,18 +11838,24 @@ export const AjusteRota: React.FC = () => {
                                         </div>
                                         <div className="flex flex-wrap gap-1 max-h-[140px] overflow-y-auto pr-0.5">
                                             {availableTeamSellers.map(seller => {
-                                                const isFocused = focusedMapSellerId === Number(seller.id);
+                                                const isFocused = (selectedTeamSellers.size === 1 && selectedTeamSellers.has(seller.id)) || (focusedMapSellerId === Number(seller.id));
                                                 return (
                                                     <button
                                                         key={seller.id}
                                                         type="button"
-                                                        onClick={() => setFocusedMapSellerId(prev => prev === Number(seller.id) ? null : Number(seller.id))}
+                                                        onClick={() => {
+                                                            if (isFocused) {
+                                                                handleSelectAllTeamSellers();
+                                                            } else {
+                                                                handleSelectOnlySeller(seller.id);
+                                                            }
+                                                        }}
                                                         className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-[8.5px] font-bold transition-all cursor-pointer select-none active:scale-95 border ${
                                                             isFocused
                                                                 ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xs ring-1 ring-offset-1 ring-slate-400'
                                                                 : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                                         }`}
-                                                        title={`Clique para ${isFocused ? 'desfocar' : 'focar'} no vendedor ${seller.name}`}
+                                                        title={`Clique para ${isFocused ? 'desfocar' : 'isolar'} no vendedor ${seller.name}`}
                                                     >
                                                         <span 
                                                             className="w-2.5 h-2.5 rounded-full shrink-0 border border-white dark:border-slate-900 shadow-xs" 
@@ -12973,53 +13012,35 @@ export const AjusteRota: React.FC = () => {
                                                                         📍 {sellerVisits.length} PDVs
                                                                     </span>
 
-                                                                    {/* BOTÃO FOCAR / ISOLAR NO MAPA */}
-                                                                    {isMultipleSellers && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                if (focusedMapSellerId === Number(sellerId)) {
-                                                                                    setFocusedMapSellerId(null);
-                                                                                } else {
-                                                                                    const sId = Number(sellerId);
-                                                                                    setFocusedMapSellerId(sId);
-                                                                                    // Centraliza câmera no vendedor
-                                                                                    const validV = sellerVisits.find(v => v.Lat && v.Long);
-                                                                                    if (validV) {
-                                                                                        setMapFlyToTarget({
-                                                                                            lat: validV.Lat!,
-                                                                                            lng: validV.Long!,
-                                                                                            codCliente: validV.Cod_Cliente,
-                                                                                            timestamp: Date.now()
-                                                                                        });
+                                                                    {/* BOTÃO FOCAR / ISOLAR NO MAPA (SINCRONIZADO) */}
+                                                                    {availableTeamSellers.length > 1 && (() => {
+                                                                        const isFocused = (selectedTeamSellers.size === 1 && selectedTeamSellers.has(String(sellerId))) || (focusedMapSellerId === Number(sellerId));
+                                                                        return (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    if (isFocused) {
+                                                                                        handleSelectAllTeamSellers();
                                                                                     } else {
-                                                                                        const colab = getColabBySectorOrName(sId);
-                                                                                        if (colab?.LatitudeBase && colab?.LongitudeBase) {
-                                                                                            setMapFlyToTarget({
-                                                                                                lat: colab.LatitudeBase,
-                                                                                                lng: colab.LongitudeBase,
-                                                                                                codCliente: 0,
-                                                                                                timestamp: Date.now()
-                                                                                            });
-                                                                                        }
+                                                                                        handleSelectOnlySeller(String(sellerId));
                                                                                     }
+                                                                                }}
+                                                                                className={`px-2.5 py-1 rounded-xl font-black text-[10px] flex items-center gap-1.5 transition-all cursor-pointer border shadow-2xs ${
+                                                                                    isFocused
+                                                                                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-indigo-600/30 ring-2 ring-indigo-400/40'
+                                                                                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400'
+                                                                                }`}
+                                                                                title={isFocused
+                                                                                    ? `Visão está isolada no Vendedor ${sellerDisplayName}. Clique para exibir todos os vendedores.`
+                                                                                    : `Isolar e visualizar exclusivamente as rotas e clientes do Vendedor ${sellerDisplayName} no mapa e na grade.`
                                                                                 }
-                                                                            }}
-                                                                            className={`px-2.5 py-1 rounded-xl font-black text-[10px] flex items-center gap-1.5 transition-all cursor-pointer border shadow-2xs ${
-                                                                                focusedMapSellerId === Number(sellerId)
-                                                                                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-indigo-600/30 ring-2 ring-indigo-400/40'
-                                                                                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400'
-                                                                            }`}
-                                                                            title={focusedMapSellerId === Number(sellerId)
-                                                                                ? `Mapa está isolado no Vendedor ${sellerDisplayName}. Clique para voltar a exibir todos os vendedores.`
-                                                                                : `Isolar e visualizar exclusivamente as rotas e clientes do Vendedor ${sellerDisplayName} no mapa.`
-                                                                            }
-                                                                        >
-                                                                            <LocationMarkerIcon className="w-3.5 h-3.5" />
-                                                                            <span>{focusedMapSellerId === Number(sellerId) ? 'Focado no Mapa' : 'Ver no Mapa'}</span>
-                                                                        </button>
-                                                                    )}
+                                                                            >
+                                                                                <LocationMarkerIcon className="w-3.5 h-3.5" />
+                                                                                <span>{isFocused ? 'Focado no Mapa' : 'Ver no Mapa'}</span>
+                                                                            </button>
+                                                                        );
+                                                                    })()}
 
                                                                     {/* AÇÕES DE GESTÃO DO SETOR VAGO */}
                                                                     {isVacant && (

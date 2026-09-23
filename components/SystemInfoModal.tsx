@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.235.0',
+    date: 'Hoje',
+    title: 'Fuel360: Sincronização Bidirecional Total de Filtros entre Mapa e Grade de Roteirização',
+    changes: [
+      'Unificação Bidirecional de Vendedores (Mapa ↔ Grade): Ao filtrar um vendedor no mapa (no seletor superior, na legenda ou pelo botão "Ver no Mapa"), a grade/sanfona abaixo isola imediatamente os cards e visitas daquele colaborador. Da mesma forma, filtrar vendedores no menu da tabela atualiza o seletor do mapa e restringe os traçados no mapa.',
+      'Sincronização Reativa de Ciclos e Quinzenas: Os botões de seleção de Quinzena ("Todas", "Sem 1 e 3", "Sem 2 e 4") no topo do mapa e na barra da tabela compartilham os mesmos estados e contadores dinâmicos calculados em tempo real.',
+      'Integração Instantânea de Dias da Semana: Filtros por dia da semana selecionados na tabela ou na legenda do mapa refletem instantaneamente nos clientes plotados, nas polilinhas de circuito e nas seções da tabela.',
+      'Ação de Limpeza Global Centralizada: Clicar em "Todos os Vendedores", "Mostrar Todos" ou "Resetar" em qualquer controle restaura a visão completa da equipe em todos os componentes simultaneamente.'
+    ]
+  },
+  {
     version: '3.234.0',
     date: 'Hoje',
     title: 'Fuel360: Drag-and-Drop de Clientes no Mapa e Correção do Limite Diário por Quinzena',
