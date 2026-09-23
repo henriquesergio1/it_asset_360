@@ -5109,14 +5109,10 @@ export const AjusteRota: React.FC = () => {
             const getDayWeight = (day: string) => (day === 'SÁBADO' && optSatHalfPeriod) ? 0.5 : 1.0;
             const totalWeight = activeDays.reduce((sum, d) => sum + getDayWeight(d), 0);
 
-            // Centro geográfico da carteira de clientes
+            // Ponto de referência polar: CASA/BASE DO COLABORADOR (se houver) para particionamento radial cônico
             const validCoords = uniqueClients.filter(c => c.lat && c.lng);
-            const centerPortfolioLat = validCoords.length > 0 
-                ? validCoords.reduce((acc, c) => acc + c.lat, 0) / validCoords.length 
-                : (baseLat || -23.18);
-            const centerPortfolioLng = validCoords.length > 0 
-                ? validCoords.reduce((acc, c) => acc + c.lng, 0) / validCoords.length 
-                : (baseLng || -45.88);
+            const refBaseLat = (baseLat && baseLat !== 0) ? baseLat : (validCoords.length > 0 ? validCoords.reduce((acc, c) => acc + c.lat, 0) / validCoords.length : -23.18);
+            const refBaseLng = (baseLng && baseLng !== 0) ? baseLng : (validCoords.length > 0 ? validCoords.reduce((acc, c) => acc + c.lng, 0) / validCoords.length : -45.88);
 
             // Garantir coordenadas válidas para clientes com lat/long zerados
             uniqueClients.forEach(c => {
@@ -5128,12 +5124,12 @@ export const AjusteRota: React.FC = () => {
                         c.lat = cityMatch.lat;
                         c.lng = cityMatch.lng;
                     } else {
-                        c.lat = centerPortfolioLat;
-                        c.lng = centerPortfolioLng;
+                        c.lat = refBaseLat;
+                        c.lng = refBaseLng;
                     }
-                    c.polarAngle = calcPolarAngle(centerPortfolioLat, centerPortfolioLng, c.lat, c.lng);
-                    c.distFromBase = calcDist(baseLat, baseLng, c.lat, c.lng);
                 }
+                c.polarAngle = calcPolarAngle(refBaseLat, refBaseLng, c.lat, c.lng);
+                c.distFromBase = calcDist(refBaseLat, refBaseLng, c.lat, c.lng);
             });
 
             // 2.1. Cálculo das Cotas Rígidas por Dia (Garantia de que NENHUM dia fique com 0 PDVs e nenhum com sobrecarga)
@@ -5293,8 +5289,8 @@ export const AjusteRota: React.FC = () => {
                 if (shouldBeIndivisible) {
                     const cLat = cList.reduce((s, c) => s + c.lat, 0) / cList.length;
                     const cLng = cList.reduce((s, c) => s + c.lng, 0) / cList.length;
-                    const pAngle = calcPolarAngle(centerPortfolioLat, centerPortfolioLng, cLat, cLng);
-                    const dBase = calcDist(baseLat, baseLng, cLat, cLng);
+                    const pAngle = calcPolarAngle(refBaseLat, refBaseLng, cLat, cLng);
+                    const dBase = calcDist(refBaseLat, refBaseLng, cLat, cLng);
 
                     clusters.push({
                         id: `${cityName}_SATELLITE`,
@@ -5312,10 +5308,10 @@ export const AjusteRota: React.FC = () => {
                     const validCityCoords = cList.filter(c => c.lat && c.lng);
                     const avgCityLat = validCityCoords.length > 0 
                         ? validCityCoords.reduce((s, c) => s + c.lat, 0) / validCityCoords.length 
-                        : centerPortfolioLat;
+                        : refBaseLat;
                     const avgCityLng = validCityCoords.length > 0 
                         ? validCityCoords.reduce((s, c) => s + c.lng, 0) / validCityCoords.length 
-                        : centerPortfolioLng;
+                        : refBaseLng;
 
                     let varLat = 0, varLng = 0, covLatLng = 0;
                     validCityCoords.forEach(c => {
@@ -5343,8 +5339,8 @@ export const AjusteRota: React.FC = () => {
                         const chunk = sortedCity.slice(i, i + sliceSize);
                         const cLat = chunk.reduce((s, c) => s + c.lat, 0) / chunk.length;
                         const cLng = chunk.reduce((s, c) => s + c.lng, 0) / chunk.length;
-                        const pAngle = calcPolarAngle(centerPortfolioLat, centerPortfolioLng, cLat, cLng);
-                        const dBase = calcDist(baseLat, baseLng, cLat, cLng);
+                        const pAngle = calcPolarAngle(refBaseLat, refBaseLng, cLat, cLng);
+                        const dBase = calcDist(refBaseLat, refBaseLng, cLat, cLng);
                         const proj = (cLng - avgCityLng) * axisX + (cLat - avgCityLat) * axisY;
 
                         clusters.push({
@@ -5395,8 +5391,8 @@ export const AjusteRota: React.FC = () => {
                         clients: chunk1,
                         centerLat: cLat1,
                         centerLng: cLng1,
-                        polarAngle: calcPolarAngle(centerPortfolioLat, centerPortfolioLng, cLat1, cLng1),
-                        distFromBase: calcDist(baseLat, baseLng, cLat1, cLng1),
+                        polarAngle: calcPolarAngle(refBaseLat, refBaseLng, cLat1, cLng1),
+                        distFromBase: calcDist(refBaseLat, refBaseLng, cLat1, cLng1),
                         linearProj: toSplit.linearProj !== undefined ? toSplit.linearProj - 0.001 : undefined
                     },
                     {
@@ -5406,8 +5402,8 @@ export const AjusteRota: React.FC = () => {
                         clients: chunk2,
                         centerLat: cLat2,
                         centerLng: cLng2,
-                        polarAngle: calcPolarAngle(centerPortfolioLat, centerPortfolioLng, cLat2, cLng2),
-                        distFromBase: calcDist(baseLat, baseLng, cLat2, cLng2),
+                        polarAngle: calcPolarAngle(refBaseLat, refBaseLng, cLat2, cLng2),
+                        distFromBase: calcDist(refBaseLat, refBaseLng, cLat2, cLng2),
                         linearProj: toSplit.linearProj !== undefined ? toSplit.linearProj + 0.001 : undefined
                     }
                 );
@@ -5564,7 +5560,7 @@ export const AjusteRota: React.FC = () => {
             } else {
                 // Cenários angulares com múltiplos pontos de corte rotacionados
                 const sortedAngular = [...clusters].sort((a, b) => a.polarAngle - b.polarAngle);
-                const numAngularStarts = Math.min(sortedAngular.length, 8);
+                const numAngularStarts = Math.min(sortedAngular.length, 16);
 
                 for (let sIdx = 0; sIdx < numAngularStarts; sIdx++) {
                     const cutIdx = Math.floor((sIdx * sortedAngular.length) / numAngularStarts);
@@ -5884,6 +5880,26 @@ export const AjusteRota: React.FC = () => {
                     }
                 });
 
+                // Penalidade severa para dispersão angular no mesmo dia (ex: Cunha a SE e Cruzeiro a NE no mesmo dia)
+                let angularDispersionPenalty = 0;
+                for (let d = 0; d < K; d++) {
+                    const dayCoords = currentPart[d].filter(c => c.lat && c.lng);
+                    if (dayCoords.length >= 2) {
+                        const angles = dayCoords.map(c => calcPolarAngle(refBaseLat, refBaseLng, c.lat, c.lng)).sort((a, b) => a - b);
+                        let maxGap = 0;
+                        for (let i = 0; i < angles.length; i++) {
+                            const next = (i === angles.length - 1) ? (angles[0] + 360) : angles[i + 1];
+                            const gap = next - angles[i];
+                            if (gap > maxGap) maxGap = gap;
+                        }
+                        const dayAngularSpan = 360 - maxGap; // Menor arco angular contendo todos os pontos do dia em relação à base
+                        if (dayAngularSpan > 75) {
+                            // Penaliza fortemente rotas que misturam direções divergentes (> 75 graus)
+                            angularDispersionPenalty += Math.pow(dayAngularSpan - 75, 2) * 35;
+                        }
+                    }
+                }
+
                 // Penalidade severa para estouro do limite diário de clientes (optLimitClients / optMaxClients)
                 let clientLimitExcessTotal = 0;
                 let maxClientLimitExcess = 0;
@@ -5927,7 +5943,8 @@ export const AjusteRota: React.FC = () => {
                             (clientLimitExcessTotal * 10000) +
                             (maxDayOverload * 1500) + 
                             (scenarioOverloadMins * 150) + 
-                            (repeatedIntercityDays * 1200) + 
+                            (repeatedIntercityDays * 1500) + 
+                            (angularDispersionPenalty * 2) +
                             (totalKmSum * 25) + 
                             (stdDevT * 2);
                 } else if (optRoutingBalanceMode === 'HOMOGENEO') {
@@ -5935,7 +5952,8 @@ export const AjusteRota: React.FC = () => {
                             (clientLimitExcessTotal * 10000) +
                             (maxDayOverload * 2000) + 
                             (scenarioOverloadMins * 300) + 
-                            (repeatedIntercityDays * 400) + 
+                            (repeatedIntercityDays * 800) + 
+                            (angularDispersionPenalty * 3) +
                             (totalKmSum * 5) + 
                             (stdDevT * 30) + 
                             (clientDisparityPenalty * 2);
@@ -5945,7 +5963,8 @@ export const AjusteRota: React.FC = () => {
                             (clientLimitExcessTotal * 10000) +
                             (maxDayOverload * 1500) + 
                             (scenarioOverloadMins * 150) + 
-                            (repeatedIntercityDays * 800) + 
+                            (repeatedIntercityDays * 1200) + 
+                            (angularDispersionPenalty * 3) +
                             (totalKmSum * 10) + 
                             (stdDevT * 12) +
                             clientDisparityPenalty;
@@ -6091,10 +6110,11 @@ export const AjusteRota: React.FC = () => {
                         const cityInternalTravelMins = Math.max(0, (cList.length - 1) * interStopTravelMins);
                         const cityTotalWorkloadMins = cityServiceTimeMins + cityInternalTravelMins;
 
-                        // Verifica se a cidade cabe confortavelmente em um único ciclo quinzenal
-                        const canGroupInSingleCycle = optGroupSmallCitiesInSingleCycle &&
-                            cList.length <= optSmallCityThreshold &&
-                            (weeklyWorkloadMins + cityTotalWorkloadMins <= dayLimitMins * 0.95 || cityTotalWorkloadMins <= dayLimitMins * 0.85);
+                        // Verifica se a cidade cabe em um único ciclo quinzenal
+                        // Prioridade máxima: cidades secundárias/distantes NÃO devem ser visitadas toda semana!
+                        // Devem ser 100% alocadas em um único ciclo (1/3 ou 2/4), alternando com outras regiões na quinzena oposta.
+                        const canGroupInSingleCycle = (cList.length <= Math.max(optSmallCityThreshold, 20)) &&
+                            (weeklyWorkloadMins + cityTotalWorkloadMins <= dayLimitMins * 1.15 || cityTotalWorkloadMins <= dayLimitMins * 0.90);
 
                         if (canGroupInSingleCycle) {
                             // Aloca a cidade inteira no ciclo com menor carga atual

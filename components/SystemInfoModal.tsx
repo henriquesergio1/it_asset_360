@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.227.0',
+    date: 'Hoje',
+    title: 'Fuel360: Setorização Radial Cônica da Base e Consolidação Regional de Quinzenas',
+    changes: [
+      'Setorização Cônica Ancorada na Residência: Cálculo rigoroso de ângulos polares e corredores de atendimento emitidos diretamente a partir da casa/base do vendedor, eliminando a mistura de trajetos opostos no mesmo dia.',
+      'Simulador Multi-Ângulo com Penalidade Angular: Avaliação exaustiva de múltiplos cortes rotacionados com penalização severa para dispersões angulares divergentes (> 75°).',
+      'Consolidação Integral de Quinzenas por Região: Cidades secundárias têm 100% de seus clientes quinzenais concentrados em um único ciclo (1/3 ou 2/4), alternando com outras regiões distantes na quinzena oposta para evitar viagens semanais redundantes.'
+    ]
+  },
+  {
     version: '3.226.0',
     date: 'Hoje',
     title: 'Fuel360: Motor Avançado de Simulação e Re-setorização Equitativa por Raio Residencial',
