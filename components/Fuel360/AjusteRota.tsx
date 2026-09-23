@@ -7,7 +7,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, Tooltip
 import L from 'leaflet';
 import * as XLSX from 'xlsx';
 import { ShareSimulationModal } from './ShareSimulationModal';
-import { Calendar, Sun, Sunset, AlertCircle, Info, Edit3, Trash2, Plus, Check, FolderOpen, Share2, MessageSquare, FileSpreadsheet, Map as MapIconLucide, Layers, Download, Palette, CheckSquare, X, Route } from 'lucide-react';
+import { Calendar, Sun, Sunset, AlertCircle, Info, Edit3, Trash2, Plus, Check, FolderOpen, Share2, MessageSquare, FileSpreadsheet, Map as MapIconLucide, Layers, Download, Palette, CheckSquare, X, Route, Sparkles } from 'lucide-react';
 import {
     CogIcon,
     SpinnerIcon,

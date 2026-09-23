@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.225.1',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Importação do Ícone Sparkles no Modal de Otimização',
+    changes: [
+      'Correção de Referência de Componente: Importado o ícone Sparkles do pacote lucide-react, corrigindo o erro em tempo de execução ao clicar em "Otimizar Vendedores".'
+    ]
+  },
+  {
     version: '3.225.0',
     date: 'Hoje',
     title: 'Fuel360: Modal Interativo de Decisão de Roteirização e Re-setorização de Equipe',
