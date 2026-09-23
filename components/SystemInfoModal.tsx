@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.235.1',
+    date: 'Hoje',
+    title: 'Fuel360: Exibição do Código de Vendedor no Menu de Transferência em Lote do Laço',
+    changes: [
+      'Identificação Padronizada no Laço de Seleção: Os colaboradores no menu suspenso de transferência ("Transferir para...") da barra flutuante da Ferramenta de Laço agora exibem seus respectivos códigos e nomes formatados (ex: "401 - Ednaldo da Silva Lima"), facilitando a identificação imediata durante reatribuições.',
+      'Ordenação Alfanumérica Intuitiva: Lista de colaboradores ordenada por nome/código para seleção mais rápida e precisa.'
+    ]
+  },
+  {
     version: '3.235.0',
     date: 'Hoje',
     title: 'Fuel360: Sincronização Bidirecional Total de Filtros entre Mapa e Grade de Roteirização',

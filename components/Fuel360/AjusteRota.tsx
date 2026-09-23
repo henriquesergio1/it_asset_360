@@ -4697,16 +4697,21 @@ export const AjusteRota: React.FC = () => {
         }, 4500);
     };
 
-    // Lista de vendedores presentes no escopo atual para transferência em lote
+    // Lista de vendedores presentes no escopo atual para transferência em lote (formatados com código)
     const teamSellersList = useMemo(() => {
         const sellersMap = new Map<number, string>();
         scopedAdjustedRoutes.forEach(r => {
             if (r.Cod_Vend && !sellersMap.has(r.Cod_Vend)) {
-                sellersMap.set(r.Cod_Vend, r.Nome_Vendedor || `Vendedor ${r.Cod_Vend}`);
+                const colab = getColabBySectorOrName(r.Cod_Vend, r.Nome_Vendedor);
+                const rawName = colab?.Nome || r.Nome_Vendedor || `Vendedor ${r.Cod_Vend}`;
+                const displayName = formatSellerDisplayName(r.Cod_Vend, rawName);
+                sellersMap.set(r.Cod_Vend, displayName);
             }
         });
-        return Array.from(sellersMap.entries()).map(([id, name]) => ({ id, name }));
-    }, [scopedAdjustedRoutes]);
+        return Array.from(sellersMap.entries())
+            .map(([id, name]) => ({ id, name }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [scopedAdjustedRoutes, getColabBySectorOrName, formatSellerDisplayName]);
 
     // Manipuladores de Ações em Lote para a Ferramenta de Laço (Lasso Tool)
     const handleBatchChangeDay = (newDay: string) => {
