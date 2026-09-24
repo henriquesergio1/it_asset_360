@@ -8227,7 +8227,96 @@ export const AjusteRota: React.FC = () => {
             });
             const LOAD_TOLERANCE_MINS = 60;
             const MAX_TRANSFER_REGRET_KM = 40;
+            const MAX_CAPACITY_REGRET_KM = 60;
             let loadTargetMins = 0;
+
+            if (balanceByLoad) {
+                const weeklyCapacityForBalanceMins = activeDays.reduce((sum, day) => sum + ((day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours) * 60, 0);
+                const groupLoad = (group: number[], sIdx: number) => group.reduce((sum, cIdx) => sum + loadMatrix[cIdx][sIdx], 0);
+                const groupCost = (group: number[], sIdx: number) => group.reduce((sum, cIdx) => sum + costMatrix[cIdx][sIdx], 0);
+                const citiesOf = (sIdx: number): Array<string | null> =>
+                    [null, ...Array.from(new Set(sellerAssignedIndices[sIdx].map(cIdx => unassignedClients[cIdx].cidade)))];
+                const cityGroupOf = (sIdx: number, city: string | null): number[] =>
+                    city === null ? [] : sellerAssignedIndices[sIdx].filter(cIdx => unassignedClients[cIdx].cidade === city);
+
+                // (A) Troca de CIDADES INTEIRAS entre dois vendedores (ou passagem de uma cidade de um para o outro):
+                // aplicada quando reduz o custo total do par sem piorar a maior carga do par (ou mantendo-a dentro da capacidade semanal).
+                // Ex.: Campos do Jordão (mais perto do vendedor A) ⇄ Taubaté (mais perto do vendedor B).
+                for (let pass = 0; pass < 10; pass++) {
+                    let improvedPass = false;
+                    for (let s1 = 0; s1 < numSellers; s1++) {
+                        for (let s2 = s1 + 1; s2 < numSellers; s2++) {
+                            const cities1 = citiesOf(s1);
+                            const cities2 = citiesOf(s2);
+                            let applied = false;
+                            for (const city1 of cities1) {
+                                for (const city2 of cities2) {
+                                    if (city1 === null && city2 === null) continue;
+                                    const group1 = cityGroupOf(s1, city1);
+                                    const group2 = cityGroupOf(s2, city2);
+                                    const deltaCost = (groupCost(group1, s2) - groupCost(group1, s1)) + (groupCost(group2, s1) - groupCost(group2, s2));
+                                    if (deltaCost >= -1) continue;
+                                    const newLoad1 = sellerLoadMins[s1] - groupLoad(group1, s1) + groupLoad(group2, s1);
+                                    const newLoad2 = sellerLoadMins[s2] - groupLoad(group2, s2) + groupLoad(group1, s2);
+                                    if (Math.max(newLoad1, newLoad2) > Math.max(sellerLoadMins[s1], sellerLoadMins[s2], weeklyCapacityForBalanceMins)) continue;
+
+                                    const set1 = new Set(group1);
+                                    const set2 = new Set(group2);
+                                    sellerAssignedIndices[s1] = [...sellerAssignedIndices[s1].filter(cIdx => !set1.has(cIdx)), ...group2];
+                                    sellerAssignedIndices[s2] = [...sellerAssignedIndices[s2].filter(cIdx => !set2.has(cIdx)), ...group1];
+                                    sellerLoadMins[s1] = newLoad1;
+                                    sellerLoadMins[s2] = newLoad2;
+                                    applied = true;
+                                    improvedPass = true;
+                                    break;
+                                }
+                                if (applied) break;
+                            }
+                        }
+                    }
+                    if (!improvedPass) break;
+                }
+
+                // (B) Capacidade primeiro: vendedor acima da capacidade semanal (dias ativos x jornada) cede clientes para
+                // QUALQUER colega que permaneça dentro da capacidade (não apenas para quem está abaixo da média da equipe)
+                const blockedCap = new Set<number>();
+                for (let guard = 0; guard < 5000; guard++) {
+                    let overSIdx = -1;
+                    for (let s = 0; s < numSellers; s++) {
+                        if (blockedCap.has(s) || sellerLoadMins[s] <= weeklyCapacityForBalanceMins) continue;
+                        if (overSIdx === -1 || sellerLoadMins[s] > sellerLoadMins[overSIdx]) overSIdx = s;
+                    }
+                    if (overSIdx === -1) break;
+
+                    let bestPos = -1;
+                    let bestTarget = -1;
+                    let minRegret = Infinity;
+                    const overList = sellerAssignedIndices[overSIdx];
+                    for (let pos = 0; pos < overList.length; pos++) {
+                        const cIdx = overList[pos];
+                        for (let t = 0; t < numSellers; t++) {
+                            if (t === overSIdx) continue;
+                            if (sellerLoadMins[t] + loadMatrix[cIdx][t] > weeklyCapacityForBalanceMins) continue;
+                            const regret = costMatrix[cIdx][t] - costMatrix[cIdx][overSIdx];
+                            if (regret < minRegret) {
+                                minRegret = regret;
+                                bestPos = pos;
+                                bestTarget = t;
+                            }
+                        }
+                    }
+                    if (bestPos < 0 || minRegret > MAX_CAPACITY_REGRET_KM) {
+                        blockedCap.add(overSIdx);
+                        continue;
+                    }
+                    const [cIdxMoved] = overList.splice(bestPos, 1);
+                    sellerAssignedIndices[bestTarget].push(cIdxMoved);
+                    sellerLoadMins[overSIdx] -= loadMatrix[cIdxMoved][overSIdx];
+                    sellerLoadMins[bestTarget] += loadMatrix[cIdxMoved][bestTarget];
+                }
+            }
+
+            // (C) Equilíbrio em direção à média da equipe (tolerância ±1h, arrependimento máximo de 40 km equivalentes)
             if (balanceByLoad) {
                 const blockedOver = new Set<number>();
                 for (let guard = 0; guard < 5000; guard++) {

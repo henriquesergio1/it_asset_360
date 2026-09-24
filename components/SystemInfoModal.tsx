@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.250.1',
+    date: 'Hoje',
+    title: 'Fuel360: Re-setorização por Carga com Troca de Cidades e Prioridade à Capacidade',
+    changes: [
+      'Troca de Cidades Inteiras entre Vendedores: Após a divisão inicial, cidades são trocadas (ou passadas) entre dois vendedores quando isso reduz o custo de deslocamento do par sem piorar a maior carga (ex.: Campos do Jordão para quem mora mais perto e Taubaté para o outro).',
+      'Capacidade Primeiro: Vendedor acima da capacidade semanal (dias ativos x jornada) pode ceder clientes a qualquer colega que permaneça dentro da capacidade, e não apenas a quem está abaixo da média da equipe (a média era distorcida por vendedores isolados com pouca carga).'
+    ]
+  },
+  {
     version: '3.250.0',
     date: 'Hoje',
     title: 'Fuel360: Re-setorização Equitativa por Carga de Horas (e não por Quantidade de Clientes)',
