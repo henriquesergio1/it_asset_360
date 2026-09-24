@@ -6631,6 +6631,7 @@ export const AjusteRota: React.FC = () => {
                 const fixed13: typeof uniqueClients = [];
                 const fixed24: typeof uniqueClients = [];
                 const dynamicQuinzenais: typeof uniqueClients = [];
+                const protectedCityGroupedClients = new Set<string | number>();
 
                 quinzenais.forEach(c => {
                     const restr = clienteRestricoesMap.get(c.sampleVisit.Cod_Cliente);
@@ -6781,7 +6782,6 @@ export const AjusteRota: React.FC = () => {
                         }
                     }
 
-                    const protectedCityGroupedClients = new Set<string | number>();
                     const dayLimitHours = (activeDays[d] === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
                     const dayLimitMins = dayLimitHours * 60;
                     const weeklyWorkloadMins = semanais.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit) + interStopTravelMins, 0);

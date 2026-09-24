@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.241.2',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Escopo de protectedCityGroupedClients em Simulações Salvas',
+    changes: [
+      'Correção de ReferenceError em Otimização de Simulações: Elevação da declaração do Set `protectedCityGroupedClients` para o escopo diário principal antes do bloco condicional de balanceamento, eliminando travamento ao otimizar rotas com salvaguarda antivazio e modos sem balanceamento dinâmico pré-ativo.'
+    ]
+  },
+  {
     version: '3.241.1',
     date: 'Hoje',
     title: 'Fuel360: Correção de Build — type alias no lugar de interface em bloco condicional',
