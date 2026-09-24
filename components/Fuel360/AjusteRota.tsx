@@ -6715,7 +6715,7 @@ export const AjusteRota: React.FC = () => {
                     const needed13 = Math.max(0, Math.min(totalDynamic, Math.round((totalDynamic + fixed24.length - fixed13.length) / 2)));
                     const needed24 = totalDynamic - needed13;
 
-                    // CORREÇÃO 2: Processamento e Alocação em Ciclo Único com Salvaguarda Semanal
+                    // CORREÇÃO 2 & AJUSTE V3.239.0: Particionamento Inteligente (Distante vs Próximo) e Backfill Oportunístico Restrito
                     const baseCityClients: typeof uniqueClients = [];
 
                     superBucketList.forEach(bucket => {
@@ -6725,9 +6725,35 @@ export const AjusteRota: React.FC = () => {
                             return;
                         }
 
+                        // Distância e tempo estimado do centróide do cluster até a base de residência do vendedor
+                        const distBucketToBase = calcDist(bucket.centroidLat, bucket.centroidLng, refBaseLat, refBaseLng);
+                        const estMinutesToBase = (distBucketToBase * 1.18 / 45) * 60;
+                        const isDistante = distBucketToBase > 22 || estMinutesToBase > 30;
+
                         const bucketServiceTimeMins = bucket.clients.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
                         const bucketInternalTravelMins = Math.max(0, (bucket.clients.length - 1) * interStopTravelMins);
                         const bucketTotalWorkloadMins = bucketServiceTimeMins + bucketInternalTravelMins;
+
+                        // CASO B: Cluster Próximo (<= 22km da base) com volume expressivo (> 10 PDVs)
+                        // Para evitar sobrecarregar um único ciclo quando o custo de deslocamento é baixo, divide 50/50 contíguo via PCA 1D
+                        if (!isDistante && bucket.clients.length > 10) {
+                            const sortedSec = sortClientsContiguously(bucket.clients);
+                            const half = Math.ceil(sortedSec.length / 2);
+                            const part1 = sortedSec.slice(0, half);
+                            const part2 = sortedSec.slice(half);
+
+                            if (q13.length <= q24.length) {
+                                q13.push(...part1);
+                                q24.push(...part2);
+                            } else {
+                                q24.push(...part1);
+                                q13.push(...part2);
+                            }
+                            return;
+                        }
+
+                        // CASO A: Cluster Distante (> 22km ou > 30min da base) ou Cluster Compacto (<= 10 PDVs)
+                        // Deve ser 100% consolidado em bloco único num ciclo quinzenal para evitar viagem duplicada
 
                         // Nível 1: Cabe 100% no DIA em q13 ou q24 respeitando o teto de clientes diário?
                         const fitsEntireIn13 = (semanais.length + q13.length + bucket.clients.length <= dayClientCap) &&
@@ -6757,8 +6783,8 @@ export const AjusteRota: React.FC = () => {
                             q24.push(...bucket.clients);
                             bucket.clients.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
                         } else {
-                            // Nível 3 (Último Recurso): Se o super-bucket exceder a capacidade física diária,
-                            // divide em setores geográficos contíguos balanceados (ex: Norte na 1/3 e Sul na 2/4) via PCA 1D
+                            // Nível 3 (Último Recurso): Se o super-bucket exceder a capacidade física diária inteira,
+                            // divide em setores geográficos contíguos balanceados via PCA 1D
                             const sortedSec = sortClientsContiguously(bucket.clients);
                             const half = Math.ceil(sortedSec.length / 2);
                             const part1 = sortedSec.slice(0, half);
@@ -6850,15 +6876,15 @@ export const AjusteRota: React.FC = () => {
                 }
 
                 // Salvaguarda Rígida de Não-Vacância Diária (Antivazio):
-                // Só move clientes que NÃO possuem quinzena corporativa fixada!
+                // Só move clientes que NÃO possuem quinzena corporativa fixada E NÃO pertencem a cluster distante protegido!
                 if (bucket.semanais.length + bucket.quinzenais13.length === 0 && bucket.quinzenais24.length >= 2) {
-                    const movableCount = bucket.quinzenais24.filter(c => !fixed24.includes(c)).length;
+                    const movableCount = bucket.quinzenais24.filter(c => !fixed24.includes(c) && !protectedCityGroupedClients.has(c.sampleVisit.Cod_Cliente)).length;
                     if (movableCount > 0) {
                         const moveTarget = Math.min(movableCount, Math.floor(bucket.quinzenais24.length / 2));
                         let movedSoFar = 0;
                         for (let i = bucket.quinzenais24.length - 1; i >= 0 && movedSoFar < moveTarget; i--) {
                             const cand = bucket.quinzenais24[i];
-                            if (!fixed24.includes(cand)) {
+                            if (!fixed24.includes(cand) && !protectedCityGroupedClients.has(cand.sampleVisit.Cod_Cliente)) {
                                 const [moved] = bucket.quinzenais24.splice(i, 1);
                                 moved.tipo = 'QUINZENAL_1_3';
                                 moved.originalPeriodicidade = moved.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (1,3)' : '1 3';
@@ -6868,13 +6894,13 @@ export const AjusteRota: React.FC = () => {
                         }
                     }
                 } else if (bucket.semanais.length + bucket.quinzenais24.length === 0 && bucket.quinzenais13.length >= 2) {
-                    const movableCount = bucket.quinzenais13.filter(c => !fixed13.includes(c)).length;
+                    const movableCount = bucket.quinzenais13.filter(c => !fixed13.includes(c) && !protectedCityGroupedClients.has(c.sampleVisit.Cod_Cliente)).length;
                     if (movableCount > 0) {
                         const moveTarget = Math.min(movableCount, Math.floor(bucket.quinzenais13.length / 2));
                         let movedSoFar = 0;
                         for (let i = bucket.quinzenais13.length - 1; i >= 0 && movedSoFar < moveTarget; i--) {
                             const cand = bucket.quinzenais13[i];
-                            if (!fixed13.includes(cand)) {
+                            if (!fixed13.includes(cand) && !protectedCityGroupedClients.has(cand.sampleVisit.Cod_Cliente)) {
                                 const [moved] = bucket.quinzenais13.splice(i, 1);
                                 moved.tipo = 'QUINZENAL_2_4';
                                 moved.originalPeriodicidade = moved.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
@@ -12761,7 +12787,7 @@ export const AjusteRota: React.FC = () => {
                                                                 Sem 1/3: <strong className="text-amber-700 dark:text-amber-400 font-black">{dayMetrics?.pdvs13 ?? 0} vis</strong> • Sem 2/4: <strong className="text-fuchsia-700 dark:text-fuchsia-400 font-black">{dayMetrics?.pdvs24 ?? 0} vis</strong>
                                                             </span>
                                                         )}
-                                                        {dayOverload && (
+                                                        {dayOverload ? (
                                                             <span 
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -12785,6 +12811,17 @@ export const AjusteRota: React.FC = () => {
                                                                 <span>{dayOverload.isInactiveDay ? 'Fora da Jornada' : (dayOverload.isSevere ? 'Sobrecarga' : 'Atenção')}</span>
                                                                 <span className="text-[9px] font-bold opacity-75 underline ml-0.5">{dayOverload.isInactiveDay ? 'Evacuar' : 'Reequilibrar'}</span>
                                                             </span>
+                                                        ) : (
+                                                            /* Badge Informativa para Cluster Distante Consolidado (sem sobrecarga de jornada) */
+                                                            (!isUnallocated && dayMetrics && ((dayMetrics.pdvs13 > 0 && dayMetrics.pdvs24 > 0 && Math.abs(dayMetrics.pdvs13 - dayMetrics.pdvs24) >= 5) || (dayMetrics.pdvs13 === 0 && dayMetrics.pdvs24 > 0) || (dayMetrics.pdvs24 === 0 && dayMetrics.pdvs13 > 0))) && (
+                                                                <span 
+                                                                    className="text-[10px] font-bold px-2 py-0.5 rounded-md border shadow-2xs shrink-0 whitespace-nowrap inline-flex items-center gap-1 bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 select-none"
+                                                                    title="Cluster distante consolidado em ciclo quinzenal único para economizar percurso e evitar viagem duplicada."
+                                                                >
+                                                                    <span>🔵</span>
+                                                                    <span>Cluster Consolidado</span>
+                                                                </span>
+                                                            )
                                                         )}
                                                     </div>
 

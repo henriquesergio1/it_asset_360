@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.239.0',
+    date: 'Hoje',
+    title: 'Fuel360: Particionamento Quinzenal Inteligente por Distância, Backfill Restrito e Badge de Cluster Consolidado',
+    changes: [
+      'Particionamento Quinzenal Bimodal (Distante vs Próximo): Super-buckets distantes (> 22 km ou > 30 min da base) são blindados com consolidação 100% em quinzena única para eliminar viagens duplicadas caras. Super-buckets próximos (<= 22 km) com volume expressivo (> 10 PDVs) passam a ser divididos 50/50 contiguamente via PCA 1D para equalizar a jornada.',
+      'Salvaguarda Antivazio e Backfill Oportunístico Restrito: O preenchimento de semanas leves só utiliza clientes avulsos não protegidos sem afinidade forte com outros clusters, proibindo o fatiamento forçado de clusters distantes consolidados.',
+      'Badge Informativa 🔵 Cluster Consolidado na Grade de Ajuste: Substituição de avisos indevidos de sobrecarga/atenção por badge informativa azul nos dias com assimetria quinzenal decorrente de clusters distantes protegidos dentro do teto de jornada. A badge 🚨 de Sobrecarga mantém precedência máxima em caso de estouro real de horas ou clientes.'
+    ]
+  },
+  {
     version: '3.238.0',
     date: 'Hoje',
     title: 'Fuel360: Exportação Excel com Abas Individuais por Vendedor e Ordem de Visita Diária',
