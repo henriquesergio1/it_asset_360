@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.248.0',
+    date: 'Hoje',
+    title: 'Segurança: Autenticação da API por Token e Link do Supervisor com Código Aleatório',
+    changes: [
+      'Autenticação da API (JWT): O login passa a emitir um token (validade de 12h) enviado automaticamente em todas as chamadas à API. O servidor inicia em modo de observação, registrando no log ([AUTH-OBSERVACAO]) as chamadas sem token; o bloqueio é ativado pela variável de ambiente API_AUTH_ENFORCE=true.',
+      'Link do Supervisor com Código Aleatório: Os links de revisão passam a usar um código aleatório no lugar do ID sequencial, impedindo a consulta de outras simulações por tentativa. O código é mantido ao atualizar a mesma rota. Links antigos com ID numérico funcionam até 09/10/2026.',
+      'Menos Dados Expostos no Link Público: Retorna somente os colaboradores da própria simulação (antes eram todos os ativos), com a posição da base arredondada (~100 m).'
+    ]
+  },
+  {
     version: '3.247.0',
     date: 'Hoje',
     title: 'Fuel360: Coerência Geográfica dos Dias (Direções Opostas, Jornada Estourada e Cidade Base por Coordenadas)',

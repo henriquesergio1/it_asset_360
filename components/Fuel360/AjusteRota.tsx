@@ -1964,7 +1964,7 @@ export const AjusteRota: React.FC = () => {
     const [itinerarySeller, setItinerarySeller] = useState<string>('');
     const [itineraryQuinzena, setItineraryQuinzena] = useState<'1_3' | '2_4'>('1_3');
     const [copiedItinerary, setCopiedItinerary] = useState(false);
-    const [shareModalData, setShareModalData] = useState<{ isOpen: boolean; simId: number; periodo: string; totalKm?: number } | null>(null);
+    const [shareModalData, setShareModalData] = useState<{ isOpen: boolean; simId: number; shareToken?: string | null; periodo: string; totalKm?: number } | null>(null);
 
     // Gestão de Simulações Salvas e Carregamento Ativo
     const [loadedSimInfo, setLoadedSimInfo] = useState<{ id: number; name: string; desc?: string } | null>(null);
@@ -9805,6 +9805,7 @@ export const AjusteRota: React.FC = () => {
                 setShareModalData({
                     isOpen: true,
                     simId: savedId,
+                    shareToken: (res as any)?.shareToken || null,
                     periodo: simSaveName.trim(),
                     totalKm: kpis.adjusted.totalKm
                 });
@@ -18861,6 +18862,7 @@ export const AjusteRota: React.FC = () => {
                     isOpen={shareModalData.isOpen}
                     onClose={() => setShareModalData(null)}
                     simId={shareModalData.simId}
+                    shareToken={shareModalData.shareToken}
                     periodo={shareModalData.periodo}
                     totalKm={shareModalData.totalKm}
                 />
@@ -19154,6 +19156,7 @@ export const AjusteRota: React.FC = () => {
                                                         setShareModalData({
                                                             isOpen: true,
                                                             simId: sim.ID_RotaHist,
+                                                            shareToken: sim.ShareToken || null,
                                                             periodo: sim.Periodo,
                                                             totalKm: Number(sim.TotalKM) || 0
                                                         });

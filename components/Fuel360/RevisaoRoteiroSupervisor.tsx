@@ -356,7 +356,8 @@ const MapPanToSelected: React.FC<{ targetCoords: [number, number] | null }> = ({
 
 export const RevisaoRoteiroSupervisor: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const simId = Number(id);
+    // Identificador do link: código aleatório da simulação (ou ID numérico dos links antigos, durante a transição)
+    const simId = String(id || '').trim();
 
     // Estados de Carga
     const [loading, setLoading] = useState<boolean>(true);
@@ -395,7 +396,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
 
     // Carregar Dados da Simulação e Canais de Atendimento
     const loadSimulation = async () => {
-        if (!simId || isNaN(simId)) {
+        if (!simId || !/^[a-zA-Z0-9]+$/.test(simId)) {
             setErrorMsg('Identificador de simulação inválido.');
             setLoading(false);
             return;

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { SystemUser, SystemRole } from '../types';
 import { useData } from './DataContext';
 import { resolveUserPermissions } from '../utils/rbac';
@@ -15,7 +16,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
  const { systemUsers, profiles } = useData();
- 
+ const queryClient = useQueryClient();
+
  // Sincronização IMEDIATA na inicialização para evitar que o isAuthenticated seja false por alguns ms
  const [user, setUser] = useState<SystemUser | null>(() => {
  const storedUser = localStorage.getItem('it_asset_user');
@@ -54,6 +56,12 @@ export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ childre
         const resolved = resolveUserPermissions(data.user, profiles);
         setUser(resolved);
         localStorage.setItem('it_asset_user', JSON.stringify(resolved));
+        // Token JWT da API: enviado automaticamente nas chamadas /api (index.tsx) e no módulo Fuel360
+        if (data.token) {
+          localStorage.setItem('AUTH_TOKEN', data.token);
+          // Recarrega os dados já autenticados
+          queryClient.invalidateQueries();
+        }
         return true;
       }
     }
@@ -77,6 +85,7 @@ export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ childre
  const logout = () => {
  setUser(null);
  localStorage.removeItem('it_asset_user');
+ localStorage.removeItem('AUTH_TOKEN');
  };
 
  const value = {

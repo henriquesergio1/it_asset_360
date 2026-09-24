@@ -1420,6 +1420,50 @@ async function startServer() {
         next();
     });
 
+    // --- AUTENTICAÇÃO DA API (JWT) ---
+    // Etapa A (padrão): modo OBSERVAÇÃO — chamadas sem token válido são apenas registradas no log ([AUTH-OBSERVACAO]).
+    // Etapa B: defina API_AUTH_ENFORCE=true para bloquear (401) chamadas sem token válido.
+    // Sem JWT_SECRET no ambiente, usa um segredo aleatório por processo (tokens expiram a cada reinício do servidor).
+    const API_AUTH_ENFORCE = String(process.env.API_AUTH_ENFORCE || '').trim().toLowerCase() === 'true';
+    const AUTH_JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(48).toString('hex');
+    const AUTH_PUBLIC_API_ROUTES = [
+        /^\/api\/health\/?$/,
+        /^\/api\/auth\/login\/?$/,
+        /^\/api\/license\/status\/?$/,
+        /^\/api\/system\/status\/?$/,
+        /^\/api\/fuel360\/system\/status\/?$/,
+        // Link público de revisão do supervisor (acesso validado pelo código do link)
+        /^\/api\/fuel360\/roteiro\/simulacao\/[^/]+\/(public|sugestoes)\/?$/,
+        /^\/api\/fuel360\/canais-atendimento\/?$/,
+        /^\/api\/fuel360\/osrm\/?$/
+    ];
+    app.locals.issueAuthToken = (user) => jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        AUTH_JWT_SECRET,
+        { expiresIn: '12h' }
+    );
+    app.use((req, res, next) => {
+        if (!req.path.startsWith('/api') || req.method === 'OPTIONS') return next();
+
+        const authHeader = req.headers.authorization || '';
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+        if (token) {
+            try {
+                req.authUser = jwt.verify(token, AUTH_JWT_SECRET);
+            } catch (e) {
+                req.authUser = null;
+            }
+        }
+
+        if (req.authUser || AUTH_PUBLIC_API_ROUTES.some(r => r.test(req.path))) return next();
+
+        if (API_AUTH_ENFORCE) {
+            return res.status(401).json({ success: false, error: 'Não autenticado. Faça login novamente.' });
+        }
+        console.warn(`[AUTH-OBSERVACAO] ${req.method} ${req.path} sem token válido (ip ${req.ip})`);
+        next();
+    });
+
     // --- HEALTH CHECK ---
     app.get('/api/health', (req, res) => {
         res.json({ 
@@ -2322,6 +2366,13 @@ async function ensureFuelTablesExist(pool) {
                 await pool.request().query("ALTER TABLE FuelSimulacoesHistorico ADD TipoProcesso NVARCHAR(50) DEFAULT 'COMBUSTIVEL'");
             }
         }
+
+        // Código aleatório do link compartilhado do supervisor (substitui o ID sequencial nas URLs públicas)
+        const shareColRes = await pool.request().query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelSimulacoesHistorico' AND COLUMN_NAME = 'ShareToken'");
+        if (shareColRes.recordset.length === 0) {
+            await pool.request().query("ALTER TABLE FuelSimulacoesHistorico ADD ShareToken NVARCHAR(64) NULL");
+        }
+        await pool.request().query("UPDATE FuelSimulacoesHistorico SET ShareToken = LOWER(REPLACE(CONVERT(NVARCHAR(36), NEWID()), '-', '')) WHERE ShareToken IS NULL");
 
         const checkSugestoes = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelSimulacaoSugestoes'");
         if (checkSugestoes.recordset.length === 0) {
@@ -5417,10 +5468,11 @@ app.post('/api/fuel360/roteiro/historico', async (req, res) => {
                 .input('UsuarioSimulacao', sql.NVarChar, userSim)
                 .input('SnapshotData', sql.NVarChar, snapshotStr)
                 .input('TipoProcesso', sql.NVarChar, tipoProc)
+                .input('ShareToken', sql.NVarChar, crypto.randomBytes(16).toString('hex'))
                 .query(`
-                    INSERT INTO FuelSimulacoesHistorico (Periodo, Descricao, TotalKM, UsuarioSimulacao, SnapshotData, TipoProcesso)
+                    INSERT INTO FuelSimulacoesHistorico (Periodo, Descricao, TotalKM, UsuarioSimulacao, SnapshotData, TipoProcesso, ShareToken)
                     OUTPUT INSERTED.ID_RotaHist
-                    VALUES (@Periodo, @Descricao, @TotalKM, @UsuarioSimulacao, @SnapshotData, @TipoProcesso)
+                    VALUES (@Periodo, @Descricao, @TotalKM, @UsuarioSimulacao, @SnapshotData, @TipoProcesso, @ShareToken)
                 `);
             idRotaHist = histRes.recordset[0].ID_RotaHist;
         }
@@ -5460,19 +5512,47 @@ app.post('/api/fuel360/roteiro/historico', async (req, res) => {
             }
         }
 
-        res.json({ success: true, id: idRotaHist });
+        // Código do link compartilhado (mantido ao atualizar a mesma simulação)
+        let shareToken = null;
+        try {
+            const tokRes = await pool.request().input('ID', sql.Int, idRotaHist).query('SELECT ShareToken FROM FuelSimulacoesHistorico WHERE ID_RotaHist = @ID');
+            shareToken = tokRes.recordset[0]?.ShareToken || null;
+        } catch (e) {
+            shareToken = null;
+        }
+
+        res.json({ success: true, id: idRotaHist, shareToken });
     } catch (err) {
         console.error('Erro ao salvar simulação de roteiro:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
+// Resolução do identificador do link público de revisão:
+// - Código aleatório (ShareToken): acesso público pelo link compartilhado.
+// - ID numérico: permitido a usuários autenticados; sem login, apenas até o fim do período de transição dos links antigos.
+const SHARE_LEGACY_NUMERIC_ID_UNTIL = new Date('2026-10-09T23:59:59-03:00');
+const resolveSimulacaoKey = async (pool, rawKey, req) => {
+    const key = String(rawKey || '').trim();
+    if (/^\d+$/.test(key)) {
+        if (!req.authUser && new Date() > SHARE_LEGACY_NUMERIC_ID_UNTIL) return null;
+        const r = await pool.request().input('ID', sql.Int, parseInt(key, 10)).query('SELECT ID_RotaHist FROM FuelSimulacoesHistorico WHERE ID_RotaHist = @ID');
+        return r.recordset[0] ? r.recordset[0].ID_RotaHist : null;
+    }
+    if (!/^[a-f0-9]{16,64}$/i.test(key)) return null;
+    const r = await pool.request().input('Token', sql.NVarChar, key).query('SELECT ID_RotaHist FROM FuelSimulacoesHistorico WHERE ShareToken = @Token');
+    return r.recordset[0] ? r.recordset[0].ID_RotaHist : null;
+};
+
 // Endpoint público para revisão da simulação pelo supervisor
 app.get('/api/fuel360/roteiro/simulacao/:id/public', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
-        const simId = parseInt(req.params.id, 10);
+        const simId = await resolveSimulacaoKey(pool, req.params.id, req);
+        if (!simId) {
+            return res.status(404).json({ error: 'Simulação não encontrada ou link expirado' });
+        }
         const result = await pool.request()
             .input('ID', sql.Int, simId)
             .query('SELECT ID_RotaHist, Periodo, Descricao, DataSimulacao, TotalKM, UsuarioSimulacao, SnapshotData FROM FuelSimulacoesHistorico WHERE ID_RotaHist = @ID');
@@ -5503,7 +5583,22 @@ app.get('/api/fuel360/roteiro/simulacao/:id/public', async (req, res) => {
 
         try {
             const colabRes = await pool.request().query('SELECT ID_Colaborador, ID_Pulsus, CodigoSetor, Nome, Grupo, EnderecoBase, LatitudeBase, LongitudeBase FROM FuelColaboradores WHERE Ativo = 1');
-            collaborators = colabRes.recordset || [];
+            // Somente os colaboradores da própria simulação (por código de setor ou nome), com a posição da base arredondada (~100 m)
+            const simSellerCodes = new Set();
+            const simSellerNames = new Set();
+            const normName = (n) => String(n || '').replace(/^\d+\s*-\s*/, '').trim().toUpperCase();
+            (Array.isArray(snapshot?.sellers) ? snapshot.sellers : []).forEach(s => {
+                if (s && s.id !== undefined && s.id !== null && !isNaN(Number(s.id))) simSellerCodes.add(Number(s.id));
+                if (s && (s.name || s.Nome)) simSellerNames.add(normName(s.name || s.Nome));
+            });
+            (Array.isArray(snapshot?.visitas) ? snapshot.visitas : []).forEach(v => {
+                if (v && v.Cod_Vend !== undefined && !isNaN(Number(v.Cod_Vend))) simSellerCodes.add(Number(v.Cod_Vend));
+                if (v && v.Nome_Vendedor) simSellerNames.add(normName(v.Nome_Vendedor));
+            });
+            const roundCoord = (value) => (value === null || value === undefined || isNaN(Number(value))) ? value : Math.round(Number(value) * 1000) / 1000;
+            collaborators = (colabRes.recordset || [])
+                .filter(c => simSellerCodes.has(Number(c.CodigoSetor)) || simSellerNames.has(normName(c.Nome)))
+                .map(c => ({ ...c, LatitudeBase: roundCoord(c.LatitudeBase), LongitudeBase: roundCoord(c.LongitudeBase) }));
         } catch (e) {
             console.warn('Aviso: Não foi possível obter FuelColaboradores para base:', e.message);
         }
@@ -5528,7 +5623,6 @@ app.get('/api/fuel360/roteiro/simulacao/:id/public', async (req, res) => {
 // Registrar sugestão de ajuste de rota enviada pelo supervisor
 app.post('/api/fuel360/roteiro/simulacao/:id/sugestoes', async (req, res) => {
     try {
-        const simId = parseInt(req.params.id, 10);
         const {
             supervisorNome,
             codCliente,
@@ -5548,6 +5642,10 @@ app.post('/api/fuel360/roteiro/simulacao/:id/sugestoes', async (req, res) => {
 
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
+        const simId = await resolveSimulacaoKey(pool, req.params.id, req);
+        if (!simId) {
+            return res.status(404).json({ error: 'Simulação não encontrada ou link expirado' });
+        }
 
         const result = await pool.request()
             .input('ID_RotaHist', sql.Int, simId)
@@ -5578,9 +5676,10 @@ app.post('/api/fuel360/roteiro/simulacao/:id/sugestoes', async (req, res) => {
 // Listar sugestões de uma simulação
 app.get('/api/fuel360/roteiro/simulacao/:id/sugestoes', async (req, res) => {
     try {
-        const simId = parseInt(req.params.id, 10);
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
+        const simId = await resolveSimulacaoKey(pool, req.params.id, req);
+        if (!simId) return res.json([]);
         const result = await pool.request()
             .input('ID', sql.Int, simId)
             .query('SELECT * FROM FuelSimulacaoSugestoes WHERE ID_RotaHist = @ID ORDER BY DataCriacao DESC');
@@ -7876,7 +7975,7 @@ async function updateUserPendingStatus(pool, userId) {
                     safeUser.Permissoes = {};
                 }
             }
-            res.json({ success: true, user: safeUser });
+            res.json({ success: true, user: safeUser, token: app.locals.issueAuthToken(safeUser) });
         } catch (err) {
             console.error('ERRO POST /api/auth/login:', err);
             res.status(500).send(err.message);

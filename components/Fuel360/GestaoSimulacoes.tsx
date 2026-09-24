@@ -190,7 +190,7 @@ export const GestaoSimulacoes: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
 
     // Modal de Compartilhamento para Supervisor
-    const [shareModalData, setShareModalData] = useState<{ isOpen: boolean; simId: number; periodo: string; totalKm?: number } | null>(null);
+    const [shareModalData, setShareModalData] = useState<{ isOpen: boolean; simId: number; shareToken?: string | null; periodo: string; totalKm?: number } | null>(null);
 
     const { user: authUser } = useAuth();
 
@@ -561,8 +561,9 @@ export const GestaoSimulacoes: React.FC = () => {
                                                                 e.stopPropagation(); 
                                                                 setShareModalData({ 
                                                                     isOpen: true, 
-                                                                    simId: sim.ID_RotaHist, 
-                                                                    periodo: sim.Periodo, 
+                                                                    simId: sim.ID_RotaHist,
+                                                                    shareToken: sim.ShareToken || null,
+                                                                    periodo: sim.Periodo,
                                                                     totalKm: Number(sim.TotalKM) || 0 
                                                                 }); 
                                                             }} 
@@ -655,6 +656,7 @@ export const GestaoSimulacoes: React.FC = () => {
                     isOpen={shareModalData.isOpen}
                     onClose={() => setShareModalData(null)}
                     simId={shareModalData.simId}
+                    shareToken={shareModalData.shareToken}
                     periodo={shareModalData.periodo}
                     totalKm={shareModalData.totalKm}
                 />

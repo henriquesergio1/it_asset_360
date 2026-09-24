@@ -6,14 +6,16 @@ export const ShareSimulationModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
     simId: number;
+    shareToken?: string | null;
     periodo: string;
     totalKm?: number;
-}> = ({ isOpen, onClose, simId, periodo, totalKm }) => {
+}> = ({ isOpen, onClose, simId, shareToken, periodo, totalKm }) => {
     const [copied, setCopied] = useState(false);
 
     if (!isOpen) return null;
 
-    const shareUrl = `${window.location.origin}${window.location.pathname}#/fuel360/revisao/${simId}`;
+    // Link público usa o código aleatório da simulação (o ID numérico fica apenas como compatibilidade de transição)
+    const shareUrl = `${window.location.origin}${window.location.pathname}#/fuel360/revisao/${shareToken || simId}`;
     const whatsappMsg = encodeURIComponent(
         `Olá Supervisor!\n\nSegue o link para conferência e validação das rotas da sua equipe no Fuel360:\n\n📌 *${periodo}*\n🚗 *KM Total:* ${Math.round(totalKm || 0)} km\n🔗 *Acesse para conferir no mapa e enviar suas sugestões:*\n${shareUrl}`
     );
