@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.238.0',
+    date: 'Hoje',
+    title: 'Fuel360: Exportação Excel com Abas Individuais por Vendedor e Ordem de Visita Diária',
+    changes: [
+      'Abas Individuais por Vendedor na Exportação Geral: A exportação de Excel no escopo consolidado agora inclui abas dedicadas para cada vendedor da base (além da aba consolidada e das abas de supervisão).',
+      'Ordem de Visita Diária Reiniciando em 1: A coluna ORDEM VISITA agora reinicia a contagem em 1 a cada agrupamento diário e ciclo quinzenal do colaborador (Segunda 1-3 sobe de 1 a N, Segunda 2-4 sobe de 1 a N, Terça sobe de 1 a N, etc.), refletindo com exatidão a sequência cronológica real de cada jornada.'
+    ]
+  },
+  {
     version: '3.237.0',
     date: 'Hoje',
     title: 'Fuel360: Barreira da Serra da Mantiqueira, Blindagem Insular e Fusão Bimodal',

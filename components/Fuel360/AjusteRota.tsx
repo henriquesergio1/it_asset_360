@@ -9012,36 +9012,50 @@ export const AjusteRota: React.FC = () => {
             return candidate;
         };
 
-        const mapRow = (v: VisitaPrevista, idx: number) => {
-            const parsed = parsePeriodicidade(v.Periodicidade);
-            let semanaDesc = 'Semanal (Todas as Semanas)';
-            if (parsed.tipo === 'QUINZENAL_1_3') semanaDesc = '1 e 3 (Ímpares)';
-            else if (parsed.tipo === 'QUINZENAL_2_4') semanaDesc = '2 e 4 (Pares)';
+        const formatVisitsWithDailyOrder = (visits: VisitaPrevista[]) => {
+            const dayCounters = new Map<string, number>();
+            return visits.map(v => {
+                const parsed = parsePeriodicidade(v.Periodicidade);
+                let semanaDesc = 'Semanal (Todas as Semanas)';
+                let semanaKey = 'SEM';
+                if (parsed.tipo === 'QUINZENAL_1_3') {
+                    semanaDesc = '1 e 3 (Ímpares)';
+                    semanaKey = 'Q1_3';
+                } else if (parsed.tipo === 'QUINZENAL_2_4') {
+                    semanaDesc = '2 e 4 (Pares)';
+                    semanaKey = 'Q2_4';
+                }
 
-            return {
-                'CARGO': teamType === 'vendedores' ? 'VENDEDOR' : 'PROMOTOR',
-                'CODIGO': v.Cod_Vend,
-                'NOME DO COLABORADOR': v.Nome_Vendedor,
-                'SUPERVISOR': v.Nome_Supervisor || 'Não informado',
-                'FREQUENCIA': v.Periodicidade || 'SEMANAL',
-                'QUINZENA / SEMANA': semanaDesc,
-                'DIA SEMANA': v.Dia_Semana,
-                'ORDEM VISITA': idx + 1,
-                'CODIGO PDV': v.Cod_Cliente,
-                'RAZAO SOCIAL': v.Razao_Social,
-                'ENDERECO': v.Endereco,
-                'BAIRRO': v.Bairro,
-                'CIDADE': v.Cidade,
-                'CEP': v.CEP,
-                'CANAL DE REMUNERAÇÃO': v.Canal_Remuneracao || ''
-            };
+                // Chave de agrupamento para reinicialização da ordem diária por vendedor e quinzena
+                const groupKey = `${v.Cod_Vend || 0}_${(v.Dia_Semana || '').trim().toUpperCase()}_${semanaKey}`;
+                const order = (dayCounters.get(groupKey) || 0) + 1;
+                dayCounters.set(groupKey, order);
+
+                return {
+                    'CARGO': teamType === 'vendedores' ? 'VENDEDOR' : 'PROMOTOR',
+                    'CODIGO': v.Cod_Vend,
+                    'NOME DO COLABORADOR': v.Nome_Vendedor,
+                    'SUPERVISOR': v.Nome_Supervisor || 'Não informado',
+                    'FREQUENCIA': v.Periodicidade || 'SEMANAL',
+                    'QUINZENA / SEMANA': semanaDesc,
+                    'DIA SEMANA': v.Dia_Semana,
+                    'ORDEM VISITA': order,
+                    'CODIGO PDV': v.Cod_Cliente,
+                    'RAZAO SOCIAL': v.Razao_Social,
+                    'ENDERECO': v.Endereco,
+                    'BAIRRO': v.Bairro,
+                    'CIDADE': v.Cidade,
+                    'CEP': v.CEP,
+                    'CANAL DE REMUNERAÇÃO': v.Canal_Remuneracao || ''
+                };
+            });
         };
 
         const wb = XLSX.utils.book_new();
 
         if (scopeMode === 'geral') {
             // 1. Aba Consolidada Geral
-            const wsGeral = XLSX.utils.json_to_sheet(scopedAdjustedRoutes.map(mapRow));
+            const wsGeral = XLSX.utils.json_to_sheet(formatVisitsWithDailyOrder(scopedAdjustedRoutes));
             XLSX.utils.book_append_sheet(wb, wsGeral, getUniqueSheetName("Geral Consolidado", "Geral"));
 
             // 2. Abas individuais para cada Equipe de Supervisão
@@ -9053,15 +9067,29 @@ export const AjusteRota: React.FC = () => {
             });
 
             supMap.forEach((visits, supName) => {
-                const ws = XLSX.utils.json_to_sheet(visits.map(mapRow));
+                const ws = XLSX.utils.json_to_sheet(formatVisitsWithDailyOrder(visits));
                 XLSX.utils.book_append_sheet(wb, ws, getUniqueSheetName(supName, "Equipe"));
+            });
+
+            // 3. Abas individuais para cada Vendedor da base completa
+            const sellerMap = new Map<number, VisitaPrevista[]>();
+            scopedAdjustedRoutes.forEach(v => {
+                if (!sellerMap.has(v.Cod_Vend)) sellerMap.set(v.Cod_Vend, []);
+                sellerMap.get(v.Cod_Vend)?.push(v);
+            });
+
+            sellerMap.forEach((visits, vendId) => {
+                const colab = getColabBySectorOrName(vendId, visits[0]?.Nome_Vendedor);
+                const sellerName = colab?.Nome || visits[0]?.Nome_Vendedor || `Vend ${vendId}`;
+                const wsSeller = XLSX.utils.json_to_sheet(formatVisitsWithDailyOrder(visits));
+                XLSX.utils.book_append_sheet(wb, wsSeller, getUniqueSheetName(sellerName, `Vend_${vendId}`));
             });
         } else if (scopeMode === 'equipe') {
             const currentSup = supervisors.find(s => s.id === selectedSupervisor);
             const supTitle = currentSup?.name ? `Sup. ${currentSup.name}` : `Equipe ${selectedSupervisor || 'Geral'}`;
 
             // 1. Aba Consolidada da Equipe Selecionada
-            const wsTeam = XLSX.utils.json_to_sheet(scopedAdjustedRoutes.map(mapRow));
+            const wsTeam = XLSX.utils.json_to_sheet(formatVisitsWithDailyOrder(scopedAdjustedRoutes));
             XLSX.utils.book_append_sheet(wb, wsTeam, getUniqueSheetName(supTitle, "Equipe"));
 
             // 2. Abas individuais para cada Vendedor da equipe
@@ -9072,8 +9100,9 @@ export const AjusteRota: React.FC = () => {
             });
 
             sellerMap.forEach((visits, vendId) => {
-                const sellerName = visits[0]?.Nome_Vendedor || `Vend ${vendId}`;
-                const wsSeller = XLSX.utils.json_to_sheet(visits.map(mapRow));
+                const colab = getColabBySectorOrName(vendId, visits[0]?.Nome_Vendedor);
+                const sellerName = colab?.Nome || visits[0]?.Nome_Vendedor || `Vend ${vendId}`;
+                const wsSeller = XLSX.utils.json_to_sheet(formatVisitsWithDailyOrder(visits));
                 XLSX.utils.book_append_sheet(wb, wsSeller, getUniqueSheetName(sellerName, `Vend_${vendId}`));
             });
         } else {
@@ -9082,7 +9111,7 @@ export const AjusteRota: React.FC = () => {
             const sellerTitle = currentSeller?.name || `Vendedor ${selectedSeller || 'Individual'}`;
 
             // 1. Aba Consolidada do Vendedor
-            const wsSeller = XLSX.utils.json_to_sheet(scopedAdjustedRoutes.map(mapRow));
+            const wsSeller = XLSX.utils.json_to_sheet(formatVisitsWithDailyOrder(scopedAdjustedRoutes));
             XLSX.utils.book_append_sheet(wb, wsSeller, getUniqueSheetName(sellerTitle, "Vendedor"));
 
             // 2. Abas por Dia da Semana do Vendedor
@@ -9095,7 +9124,7 @@ export const AjusteRota: React.FC = () => {
             WEEKDAYS.forEach(day => {
                 const dayVisits = dayMap.get(day);
                 if (dayVisits && dayVisits.length > 0) {
-                    const wsDay = XLSX.utils.json_to_sheet(dayVisits.map(mapRow));
+                    const wsDay = XLSX.utils.json_to_sheet(formatVisitsWithDailyOrder(dayVisits));
                     XLSX.utils.book_append_sheet(wb, wsDay, getUniqueSheetName(day.split('-')[0], day));
                 }
             });
