@@ -4764,7 +4764,8 @@ export const AjusteRota: React.FC = () => {
     const handleBatchTransferSeller = (targetSellerId: number) => {
         if (selectedLassoClients.length === 0) return;
         const targetColab = getColabBySectorOrName(targetSellerId);
-        const targetName = targetColab?.Nome || `Vendedor ${targetSellerId}`;
+        const isRemoveFromSeller = targetSellerId === 999;
+        const targetName = isRemoveFromSeller ? 'Setor Temporário 999' : (targetColab?.Nome || `Vendedor ${targetSellerId}`);
         const clientCodes = new Set(selectedLassoClients);
         setAdjustedRoutes(prev => prev.map(r => {
             if (r.Cod_Cliente && clientCodes.has(r.Cod_Cliente)) {
@@ -4776,6 +4777,10 @@ export const AjusteRota: React.FC = () => {
             }
             return r;
         }));
+        if (isRemoveFromSeller) {
+            const count = clientCodes.size;
+            setRebalanceToast(`✓ ${count} ${count === 1 ? 'cliente removido' : 'clientes removidos'} do vendedor e enviados ao Setor 999 (dia e ciclo mantidos). Se não aparecerem, inclua o setor 999 no filtro de vendedores.`);
+        }
         setSelectedLassoClients([]);
         setIsLassoActive(false);
     };
@@ -11171,7 +11176,6 @@ export const AjusteRota: React.FC = () => {
                                         {WEEKDAYS.map(d => (
                                             <option key={d} value={d}>{d}</option>
                                         ))}
-                                        <option value="SEM ATENDIMENTO">⚠️ SEM ATENDIMENTO</option>
                                     </select>
                                 </div>
 
@@ -11196,7 +11200,7 @@ export const AjusteRota: React.FC = () => {
                                 </div>
 
                                 {/* Ação 3: Transferir Vendedor */}
-                                {teamSellersList.length > 1 && (
+                                {teamSellersList.length > 0 && (
                                     <div className="flex items-center gap-1">
                                         <span className="text-[10px] uppercase font-bold text-slate-500">Vendedor:</span>
                                         <select
@@ -11213,6 +11217,9 @@ export const AjusteRota: React.FC = () => {
                                             {teamSellersList.map(s => (
                                                 <option key={s.id} value={s.id}>{s.name}</option>
                                             ))}
+                                            {!teamSellersList.some(s => s.id === 999) && (
+                                                <option value="999">🚫 Remover do vendedor (Setor 999)</option>
+                                            )}
                                         </select>
                                     </div>
                                 )}

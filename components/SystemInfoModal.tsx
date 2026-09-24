@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.244.1',
+    date: 'Hoje',
+    title: 'Fuel360: Laço Passa a Remover Clientes do Vendedor (Setor 999) em vez de Sem Atendimento',
+    changes: [
+      'Remover do Vendedor pelo Laço: O seletor "Transferir para..." da barra flutuante da Ferramenta de Laço ganhou a opção "Remover do vendedor (Setor 999)", que desvincula os clientes selecionados do vendedor e os envia ao Setor Temporário 999 mantendo dia e ciclo de atendimento, para posterior transferência a outros setores.',
+      'Ajuste da v3.244.0: A opção "SEM ATENDIMENTO" do seletor de Dia do Laço foi retirada, pois o objetivo é desvincular o cliente do vendedor e não do atendimento.',
+      'Seletor de Vendedor do Laço disponível também quando há apenas um vendedor no escopo.'
+    ]
+  },
+  {
     version: '3.244.0',
     date: 'Hoje',
     title: 'Fuel360: Marcar Clientes como Sem Atendimento pela Ferramenta de Laço',
