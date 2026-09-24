@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.235.3',
+    date: 'Hoje',
+    title: 'Fuel360: Correção Estrutural de Escopo e Resolução Estática de Módulos para Build no Deploy',
+    changes: [
+      'Resolução de Escopo Estático do Bundler (Vite): Reorganizada e antecipada a declaração e exportação da função auxiliar geodésica calcDist no módulo AjusteRota.tsx, assegurando resolução estática limpa durante o processo de build/deploy no Docker.',
+      'Compatibilidade e Integridade de Build: Otimização estrutural dos helpers de cálculo de distância espacial e polilinhas sem efeitos colaterais.'
+    ]
+  },
+  {
     version: '3.235.2',
     date: 'Hoje',
     title: 'Fuel360: Desbloqueio e Aprimoramento do Arrastar e Soltar (Drag & Drop) de Clientes para Equipes de Vendas',

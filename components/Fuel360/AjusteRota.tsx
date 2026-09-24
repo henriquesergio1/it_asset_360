@@ -337,6 +337,19 @@ export function createClientCircleIcon(
     });
 }
 
+// Helper de distância geodésica em KM
+export const calcDist = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+};
+
 // Helper para calcular a menor distância entre um ponto e um segmento de linha rodoviária (em km)
 export function distToSegmentKm(pLat: number, pLng: number, vLat: number, vLng: number, wLat: number, wLng: number): number {
     const l2 = (vLat - wLat) * (vLat - wLat) + (vLng - wLng) * (vLng - wLng);
@@ -571,19 +584,6 @@ const pinClientIcon = new L.Icon({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
     iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
 });
-
-// Helper de distância geodésica em KM
-const calcDist = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-};
 
 // Interface de resultado da verificação de anomalia de base
 export interface BaseAnomalyResult {
