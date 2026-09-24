@@ -6542,16 +6542,16 @@ export const AjusteRota: React.FC = () => {
             // equilibrando a carga horária semanal acumulada do colaborador sem fatiar nenhum cluster.
             const globalClusterAssignedQuinzena = new Map<string, '1_3' | '2_4'>();
 
-            if (optBalanceWorkload) {
-                type WeeklyDistantCluster = {
-                    key: string;
-                    dayIndex: number;
-                    clients: typeof uniqueClients;
-                    workloadMins: number;
-                    centroidLat: number;
-                    centroidLng: number;
-                };
+            type WeeklyDistantCluster = {
+                key: string;
+                dayIndex: number;
+                clients: typeof uniqueClients;
+                workloadMins: number;
+                centroidLat: number;
+                centroidLng: number;
+            };
 
+            if (optBalanceWorkload) {
                 const weeklyDistantClusters: WeeklyDistantCluster[] = [];
                 let baseFixed13Mins = 0;
                 let baseFixed24Mins = 0;
