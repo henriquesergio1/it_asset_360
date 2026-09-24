@@ -6552,17 +6552,25 @@ export const AjusteRota: React.FC = () => {
                             const estMinsToBase = (distToBase * 1.18 / 45) * 60;
                             const isDistante = distToBase > 22 || estMinsToBase > 30;
 
-                            if (isDistante || cList.length <= 10) {
-                                const srvMins = cList.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
-                                const travelMins = Math.max(0, (cList.length - 1) * interStopTravelMins) + (estMinsToBase * 2);
+                            const dayLimitHours = (activeDays[d] === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
+                            const dayLimitMins = dayLimitHours * 60;
+                            const srvMins = cList.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
+                            const travelMins = Math.max(0, (cList.length - 1) * interStopTravelMins) + (estMinsToBase * 2);
+                            const totalMins = srvMins + travelMins;
+                            const isOverload = (totalMins > dayLimitMins * 1.05) || (cList.length > (optLimitClients ? optMaxClients : Infinity));
+
+                            if ((isDistante && !isOverload) || (!isDistante && cList.length <= 10)) {
                                 weeklyDistantClusters.push({
                                     key: `${d}-${cCity}`,
                                     dayIndex: d,
                                     clients: cList,
-                                    workloadMins: srvMins + travelMins,
+                                    workloadMins: totalMins,
                                     centroidLat: cLat,
                                     centroidLng: cLng
                                 });
+                            } else if (isDistante && isOverload) {
+                                baseFixed13Mins += totalMins / 2;
+                                baseFixed24Mins += totalMins / 2;
                             }
                         }
                     });
@@ -6809,15 +6817,18 @@ export const AjusteRota: React.FC = () => {
                         // Distância e tempo estimado do centróide do cluster até a base de residência do vendedor
                         const distBucketToBase = calcDist(bucket.centroidLat, bucket.centroidLng, refBaseLat, refBaseLng);
                         const estMinutesToBase = (distBucketToBase * 1.18 / 45) * 60;
-                        const isDistante = distBucketToBase > 22 || estMinutesToBase > 30;
-
                         const bucketServiceTimeMins = bucket.clients.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
                         const bucketInternalTravelMins = Math.max(0, (bucket.clients.length - 1) * interStopTravelMins);
-                        const bucketTotalWorkloadMins = bucketServiceTimeMins + bucketInternalTravelMins;
+                        const bucketEstimatedTravelToBase = isDistante ? (estMinutesToBase * 2) : 0;
+                        const bucketTotalWorkloadMins = bucketServiceTimeMins + bucketInternalTravelMins + bucketEstimatedTravelToBase;
+
+                        // Valida se o cluster consolidado em ciclo único causaria sobrecarga diária no colaborador
+                        const isOverloadForSingleCycle = (weeklyWorkloadMins + bucketTotalWorkloadMins > dayLimitMins * 1.05) || (bucket.clients.length > dayClientCap);
 
                         // CASO B: Cluster Próximo (<= 22km da base) com volume expressivo (> 10 PDVs)
-                        // Para evitar sobrecarregar um único ciclo quando o custo de deslocamento é baixo, divide 50/50 contíguo via PCA 1D
-                        if (!isDistante && bucket.clients.length > 10) {
+                        // OU Cluster Distante cujo volume EXCEDERIA a jornada máxima de 1 dia (> dayLimitMins ou > dayClientCap)
+                        // Para evitar sobrecarregar um único ciclo quando não cabe ou quando o custo de deslocamento é baixo, divide 50/50 contíguo via PCA 1D
+                        if ((!isDistante && bucket.clients.length > 10) || (isDistante && isOverloadForSingleCycle)) {
                             const sortedSec = sortClientsContiguously(bucket.clients);
                             const half = Math.ceil(sortedSec.length / 2);
                             const part1 = sortedSec.slice(0, half);
@@ -6833,8 +6844,8 @@ export const AjusteRota: React.FC = () => {
                             return;
                         }
 
-                        // CASO A: Cluster Distante (> 22km ou > 30min da base) ou Cluster Compacto (<= 10 PDVs)
-                        // Deve ser 100% consolidado em bloco único num ciclo quinzenal para evitar viagem duplicada
+                        // CASO A: Cluster Distante Viável (cabe na jornada diária) ou Cluster Compacto (<= 10 PDVs)
+                        // É 100% consolidado em bloco único num ciclo quinzenal para evitar viagem duplicada desnecessária
 
                         // Nível 1: Cabe 100% no DIA em q13 ou q24 respeitando o teto de clientes diário?
                         const fitsEntireIn13 = (semanais.length + q13.length + bucket.clients.length <= dayClientCap) &&

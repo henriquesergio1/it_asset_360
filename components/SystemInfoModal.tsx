@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.242.0',
+    date: 'Hoje',
+    title: 'Fuel360: Viabilidade de Jornada Diária e Split 50/50 em Clusters com Sobrecarga',
+    changes: [
+      'Trava de Bom Senso e Viabilidade de Jornada Diária: A consolidação 100% em quinzena única de clusters distantes agora valida rigorosamente a capacidade da jornada diária do colaborador (<= 8h48 ou limite configurado). Clusters com volume excessivo (ex: 23 PDVs somando mais de 10h) são divididos automaticamente 50/50 de forma contígua via PCA 1D entre as semanas 1/3 e 2/4, eliminando dias vazios (0 PDVs) e sobrecargas de horas extras, preservando a consolidação 100% apenas para clusters compactos que cabem no dia.'
+    ]
+  },
+  {
     version: '3.241.2',
     date: 'Hoje',
     title: 'Fuel360: Correção de Escopo de protectedCityGroupedClients em Simulações Salvas',
