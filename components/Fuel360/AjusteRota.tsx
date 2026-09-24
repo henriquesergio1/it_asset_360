@@ -7026,7 +7026,7 @@ export const AjusteRota: React.FC = () => {
             // Clusters consolidados em um único ciclo quinzenal podem gerar dias "pela metade" (ex: Quarta só com Sem 2/4 e
             // Quinta só com Sem 1/3), deixando o vendedor sem visitas em semanas alternadas. Dois dias complementares (sem semanais)
             // são unidos em um único dia — a rota de cada ciclo permanece idêntica, muda apenas o dia da semana — e o dia liberado
-            // recebe clientes da cidade base vindos dos dias mais carregados.
+            // recebe clientes próximos da base do vendedor vindos dos dias mais carregados.
             {
                 const estimateCycleMins = (list: typeof uniqueClients) => {
                     if (list.length === 0) return 0;
@@ -7038,10 +7038,6 @@ export const AjusteRota: React.FC = () => {
                     const serviceMins = list.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
                     return circuit.travelMinutes + serviceMins;
                 };
-                const bucketPeakMins = (b: DayBucket) => Math.max(
-                    estimateCycleMins([...b.semanais, ...b.quinzenais13]),
-                    estimateCycleMins([...b.semanais, ...b.quinzenais24])
-                );
                 const isOnly13 = (b: DayBucket) => b.semanais.length === 0 && b.quinzenais13.length > 0 && b.quinzenais24.length === 0;
                 const isOnly24 = (b: DayBucket) => b.semanais.length === 0 && b.quinzenais24.length > 0 && b.quinzenais13.length === 0;
 
@@ -7075,72 +7071,97 @@ export const AjusteRota: React.FC = () => {
                     }
                 }
 
-                // Etapa 2: Preenchimento do dia liberado com clientes da cidade base dos dias mais carregados
+                // Etapa 2: Preenchimento do dia liberado, equilibrando cada ciclo (Sem 1/3 e Sem 2/4) separadamente.
+                // Elegíveis: clientes a até 22 km da base do vendedor (lat/long), limite de "distante" do motor, preservando
+                // as cidades distantes agrupadas. Nunca esvazia o ciclo do dia doador (não recria dias com 0 visitas).
+                const BACKFILL_MAX_KM_FROM_BASE = 22;
+                type ListKey = 'semanais' | 'quinzenais13' | 'quinzenais24';
+                const cycleList = (b: DayBucket, cycle: '13' | '24') => [...b.semanais, ...(cycle === '13' ? b.quinzenais13 : b.quinzenais24)];
+                const cycleLoad = (b: DayBucket, cycle: '13' | '24') => estimateCycleMins(cycleList(b, cycle));
+                const isEligibleByDistance = (c: typeof uniqueClients[0]) =>
+                    Boolean(c.lat && c.lng && baseLat && baseLng && calcDist(baseLat, baseLng, c.lat, c.lng) <= BACKFILL_MAX_KM_FROM_BASE);
+
                 freedDayIdxs.forEach(fIdx => {
                     const freed = dayBuckets[fIdx];
                     const freedCap = optLimitClients
                         ? ((freed.day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients)
                         : Infinity;
-                    type ListKey = 'semanais' | 'quinzenais13' | 'quinzenais24';
-                    const listKeys: ListKey[] = ['semanais', 'quinzenais13', 'quinzenais24'];
+                    const rejected = new Set<typeof uniqueClients[0]>();
 
-                    for (let iter = 0; iter < 80; iter++) {
-                        const freedPeak = bucketPeakMins(freed);
-                        const freedCoords = [...freed.semanais, ...freed.quinzenais13, ...freed.quinzenais24].filter(c => c.lat && c.lng);
-                        const freedCenter = freedCoords.length > 0
-                            ? { lat: freedCoords.reduce((s, c) => s + c.lat, 0) / freedCoords.length, lng: freedCoords.reduce((s, c) => s + c.lng, 0) / freedCoords.length }
-                            : null;
+                    for (let iter = 0; iter < 150; iter++) {
+                        let chosen: { donorIdx: number; key: ListKey; pos: number; cycle: '13' | '24' } | null = null;
+                        let bestScore = Infinity;
 
-                        // Dias doadores do mais carregado para o menos carregado (somente os que possuem cliente elegível)
-                        const donors = dayBuckets
-                            .map((b, idx) => ({ b, idx, peak: bucketPeakMins(b) }))
-                            .filter(item => item.idx !== fIdx)
-                            .sort((x, y) => y.peak - x.peak);
+                        for (const cycle of ['13', '24'] as const) {
+                            const otherCycle: '13' | '24' = cycle === '13' ? '24' : '13';
+                            const freedLoad = cycleLoad(freed, cycle);
+                            const freedOtherLoad = cycleLoad(freed, otherCycle);
+                            const freedStops = cycleList(freed, cycle).filter(c => c.lat && c.lng);
+                            const freedCenter = freedStops.length > 0
+                                ? { lat: freedStops.reduce((s, c) => s + c.lat, 0) / freedStops.length, lng: freedStops.reduce((s, c) => s + c.lng, 0) / freedStops.length }
+                                : null;
+                            // Semente: cliente elegível mais próximo da base; depois, o mais próximo do grupo já formado no ciclo
+                            const scoreOf = (c: typeof uniqueClients[0]) => freedCenter
+                                ? calcDist(c.lat, c.lng, freedCenter.lat, freedCenter.lng)
+                                : calcDist(baseLat, baseLng, c.lat, c.lng);
 
-                        let chosen: { donorIdx: number; donorPeak: number; key: ListKey; pos: number } | null = null;
-                        for (const donor of donors) {
-                            if (donor.peak - freedPeak <= 30) break;
-                            const donorCoords = [...donor.b.semanais, ...donor.b.quinzenais13, ...donor.b.quinzenais24].filter(c => c.lat && c.lng);
-                            const donorCenter = donorCoords.length > 0
-                                ? { lat: donorCoords.reduce((s, c) => s + c.lat, 0) / donorCoords.length, lng: donorCoords.reduce((s, c) => s + c.lng, 0) / donorCoords.length }
-                                : { lat: baseLat, lng: baseLng };
-                            let bestScore = Infinity;
-                            for (const key of listKeys) {
-                                const list = donor.b[key];
-                                for (let pos = 0; pos < list.length; pos++) {
-                                    const c = list[pos];
-                                    if ((c.sampleVisit.Cidade || '').trim().toUpperCase() !== sellerBaseCity) continue;
-                                    if (!isDayAllowedForClient(c, freed.day)) continue;
-                                    // Semente: cliente mais afastado do centro do dia doador; depois, o mais próximo do dia liberado
-                                    const score = freedCenter
-                                        ? calcDist(c.lat, c.lng, freedCenter.lat, freedCenter.lng)
-                                        : -calcDist(c.lat, c.lng, donorCenter.lat, donorCenter.lng);
-                                    if (score < bestScore) {
-                                        bestScore = score;
-                                        chosen = { donorIdx: donor.idx, donorPeak: donor.peak, key, pos };
+                            for (let idx = 0; idx < dayBuckets.length; idx++) {
+                                if (idx === fIdx) continue;
+                                const donor = dayBuckets[idx];
+                                if (cycleLoad(donor, cycle) - freedLoad <= 30) continue;
+
+                                // Quinzenais do ciclo: somente se o ciclo do doador não ficar vazio
+                                if (cycleList(donor, cycle).length > 1) {
+                                    const key: ListKey = cycle === '13' ? 'quinzenais13' : 'quinzenais24';
+                                    const list = donor[key];
+                                    for (let pos = 0; pos < list.length; pos++) {
+                                        const c = list[pos];
+                                        if (rejected.has(c) || !isEligibleByDistance(c) || !isDayAllowedForClient(c, freed.day)) continue;
+                                        const score = scoreOf(c);
+                                        if (score < bestScore) {
+                                            bestScore = score;
+                                            chosen = { donorIdx: idx, key, pos, cycle };
+                                        }
+                                    }
+                                }
+
+                                // Semanais: somente se os dois ciclos do doador estiverem acima e nenhum deles ficar vazio
+                                if (cycleLoad(donor, otherCycle) - freedOtherLoad > 30 &&
+                                    cycleList(donor, '13').length > 1 && cycleList(donor, '24').length > 1) {
+                                    const list = donor.semanais;
+                                    for (let pos = 0; pos < list.length; pos++) {
+                                        const c = list[pos];
+                                        if (rejected.has(c) || !isEligibleByDistance(c) || !isDayAllowedForClient(c, freed.day)) continue;
+                                        const score = scoreOf(c);
+                                        if (score < bestScore) {
+                                            bestScore = score;
+                                            chosen = { donorIdx: idx, key: 'semanais', pos, cycle };
+                                        }
                                     }
                                 }
                             }
-                            if (chosen) break;
                         }
                         if (!chosen) break;
 
-                        const { donorIdx, key, pos } = chosen;
+                        const { donorIdx, key, pos, cycle } = chosen;
                         const donorBucket = dayBuckets[donorIdx];
                         const cand = donorBucket[key][pos];
-                        const adds13 = key !== 'quinzenais24' ? 1 : 0;
-                        const adds24 = key !== 'quinzenais13' ? 1 : 0;
-                        if (freed.semanais.length + freed.quinzenais13.length + adds13 > freedCap) break;
-                        if (freed.semanais.length + freed.quinzenais24.length + adds24 > freedCap) break;
+                        const affectedCycles: Array<'13' | '24'> = key === 'semanais' ? ['13', '24'] : [cycle];
+
+                        // Teto de clientes por dia no dia liberado
+                        if (affectedCycles.some(cy => cycleList(freed, cy).length + 1 > freedCap)) {
+                            rejected.add(cand);
+                            continue;
+                        }
 
                         donorBucket[key].splice(pos, 1);
                         freed[key].push(cand);
 
-                        // Salvaguarda: não inverter o desequilíbrio (dia liberado mais carregado que o doador)
-                        if (bucketPeakMins(freed) > bucketPeakMins(donorBucket)) {
+                        // Salvaguarda: não inverter o desequilíbrio do ciclo (dia liberado mais carregado que o doador)
+                        if (affectedCycles.some(cy => cycleLoad(freed, cy) > cycleLoad(donorBucket, cy))) {
                             freed[key].pop();
                             donorBucket[key].splice(pos, 0, cand);
-                            break;
+                            rejected.add(cand);
                         }
                     }
                 });

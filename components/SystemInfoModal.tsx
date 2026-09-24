@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.246.2',
+    date: 'Hoje',
+    title: 'Fuel360: Correção do Preenchimento do Dia Liberado (Critério por Lat/Long e Equilíbrio por Ciclo)',
+    changes: [
+      'Elegibilidade por Coordenadas: O preenchimento do dia liberado passa a usar os clientes a até 22 km da base do vendedor (lat/long), em vez do nome da cidade extraído do endereço (que não correspondia às cidades dos clientes e deixava o dia vazio).',
+      'Equilíbrio por Ciclo: Sem 1/3 e Sem 2/4 são equilibradas separadamente; quinzenais movem somente o próprio ciclo e semanais apenas quando os dois ciclos do dia doador estão acima do dia liberado.',
+      'Proteção Anti-Vazio: Um dia doador nunca tem um ciclo esvaziado, evitando recriar dias com 0 visitas em semanas alternadas.',
+      'Busca Contínua: Uma movimentação recusada (teto de clientes ou inversão de carga) não interrompe mais o preenchimento; o próximo candidato é avaliado.'
+    ]
+  },
+  {
     version: '3.246.1',
     date: 'Hoje',
     title: 'Fuel360: Correção de Dias com 0 Visitas em Semanas Alternadas',
