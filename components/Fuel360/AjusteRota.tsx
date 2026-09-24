@@ -10788,19 +10788,6 @@ export const AjusteRota: React.FC = () => {
                                             )}
                                         </button>
                                     </div>
-                                                    : 'text-slate-600 dark:text-slate-400 hover:text-fuchsia-600'
-                                            }`}
-                                            title="Visualizar apenas traçados e clientes da Semana 2 e 4"
-                                        >
-                                            <span className="w-2 h-2 rounded-full bg-fuchsia-300 ring-1 ring-fuchsia-400/50 shrink-0" />
-                                            <span>Sem 2 e 4</span>
-                                            {quinzenaTotals.total24 > 0 && (
-                                                <span className={`text-[10px] px-1 py-0.2 rounded-full ${selectedQuinzenaFilter === '2_4' ? 'bg-fuchsia-700 text-fuchsia-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                                                    {quinzenaTotals.total24}
-                                                </span>
-                                            )}
-                                        </button>
-                                    </div>
 
                                     {/* Botão Heatmap de Concentração de Visitas */}
                                     <button

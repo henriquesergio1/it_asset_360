@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.235.4',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Sintaxe JSX na Barra de Ferramentas e Normalização do .dockerignore',
+    changes: [
+      'Eliminação de Redundância Sintática no Mapa: Removido fragmento JSX residual duplicado no seletor de Quinzenas de AjusteRota.tsx, restabelecendo o balanceamento estrito de chaves e parênteses.',
+      'Normalização do .dockerignore: Reestruturado o arquivo de regras de exclusão do Docker em padrão UTF-8 limpo, evitando corrupção de contexto no Docker BuildKit.',
+      'Desbloqueio Total de Compilação: Build do Vite e container Docker agora finalizam sem erros.'
+    ]
+  },
+  {
     version: '3.235.3',
     date: 'Hoje',
     title: 'Fuel360: Correção Estrutural de Escopo e Resolução Estática de Módulos para Build no Deploy',
