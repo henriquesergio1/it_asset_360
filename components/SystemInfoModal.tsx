@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.241.0',
+    date: 'Hoje',
+    title: 'Fuel360: Balanceamento Conjunto Global de Clusters Distantes (Multi-Way LPT)',
+    changes: [
+      'Particionamento Conjunto Global de Clusters (LPT / 2^N): Para vendedores que atendem múltiplos clusters distantes indivisíveis (>= 2 clusters na semana), o sistema passa a otimizar a partição quinzenal conjunta de todos os clusters de forma global, minimizando o desbalanceamento agregado semanal/mensal sem fatiar nenhum cluster.',
+      'Harmonização Definitiva de Carteiras com Múltiplos Municípios Litorâneos/Serranos: Eliminação de disparidades acumuladas entre a Quinzena 1-3 e Quinzena 2-4 para vendedores como William Cassiano (402), atingindo equilíbrio quase perfeito (< 1% de variação semanal) com integridade integral dos blocos municipais.'
+    ]
+  },
+  {
     version: '3.240.0',
     date: 'Hoje',
     title: 'Fuel360: Amarração Estrita da Badge de Cluster Consolidado e Balanço Semanal/Mensal Agregado',

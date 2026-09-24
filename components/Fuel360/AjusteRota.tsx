@@ -6497,6 +6497,165 @@ export const AjusteRota: React.FC = () => {
 
             const dayAssignedClients: Array<typeof uniqueClients> = bestScenarioPartition || Array.from({ length: K }, () => []);
 
+            // Identifica a cidade base do vendedor (pelo EnderecoBase, proximidade geográfica ou maior concentração de clientes)
+            const sellerBaseCity = (() => {
+                if (colab?.EnderecoBase) {
+                    const parts = colab.EnderecoBase.split('-');
+                    if (parts.length >= 2) {
+                        const possibleCity = parts[parts.length - 2]?.trim().toUpperCase();
+                        if (possibleCity && possibleCity.length > 2) return possibleCity;
+                    }
+                }
+                if (baseLat && baseLng && uniqueClients.length > 0) {
+                    let nearestCity = '';
+                    let minDist = Infinity;
+                    uniqueClients.forEach(c => {
+                        if (c.lat && c.lng && c.sampleVisit.Cidade) {
+                            const d = calcDist(baseLat, baseLng, c.lat, c.lng);
+                            if (d < minDist) {
+                                minDist = d;
+                                nearestCity = c.sampleVisit.Cidade.trim().toUpperCase();
+                            }
+                        }
+                    });
+                    if (nearestCity) return nearestCity;
+                }
+                const cityCounts = new Map<string, number>();
+                uniqueClients.forEach(c => {
+                    const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
+                    if (cCity) cityCounts.set(cCity, (cityCounts.get(cCity) || 0) + 1);
+                });
+                let maxCity = '';
+                let maxCount = 0;
+                cityCounts.forEach((count, cCity) => {
+                    if (count > maxCount) {
+                        maxCount = count;
+                        maxCity = cCity;
+                    }
+                });
+                return maxCity;
+            })();
+
+            // 2.5.1 BALANCEAMENTO CONJUNTO GLOBAL DE CLUSTERS DISTANTES (CATEGORIA A) NA SEMANA
+            // Para vendedores com múltiplos clusters distantes indivisíveis (>= 2 clusters na semana),
+            // resolve o problema de partição em 2 grupos (Quinzena 1-3 vs Quinzena 2-4) via LPT / busca exaustiva 2^N,
+            // equilibrando a carga horária semanal acumulada do colaborador sem fatiar nenhum cluster.
+            const globalClusterAssignedQuinzena = new Map<string, '1_3' | '2_4'>();
+
+            if (optBalanceWorkload) {
+                interface WeeklyDistantCluster {
+                    key: string;
+                    dayIndex: number;
+                    clients: typeof uniqueClients;
+                    workloadMins: number;
+                    centroidLat: number;
+                    centroidLng: number;
+                }
+
+                const weeklyDistantClusters: WeeklyDistantCluster[] = [];
+                let baseFixed13Mins = 0;
+                let baseFixed24Mins = 0;
+
+                for (let d = 0; d < K; d++) {
+                    const clientsInDay = dayAssignedClients[d];
+                    const quinzenais = clientsInDay.filter(c => c.tipo !== 'SEMANAL');
+
+                    quinzenais.forEach(c => {
+                        const restr = clienteRestricoesMap.get(c.sampleVisit.Cod_Cliente);
+                        const srv = getClientServiceTime(c.sampleVisit);
+                        if (restr && restr.Ativo !== false && restr.QuinzenaPermitida === '1_3') {
+                            baseFixed13Mins += srv;
+                        } else if (restr && restr.Ativo !== false && restr.QuinzenaPermitida === '2_4') {
+                            baseFixed24Mins += srv;
+                        }
+                    });
+
+                    const rawCityMap = new Map<string, typeof uniqueClients>();
+                    quinzenais.forEach(c => {
+                        const restr = clienteRestricoesMap.get(c.sampleVisit.Cod_Cliente);
+                        if (!restr || restr.Ativo === false || !restr.QuinzenaPermitida) {
+                            const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase() || 'GERAL';
+                            if (!rawCityMap.has(cCity)) rawCityMap.set(cCity, []);
+                            rawCityMap.get(cCity)!.push(c);
+                        }
+                    });
+
+                    rawCityMap.forEach((cList, cCity) => {
+                        const validCoords = cList.filter(c => c.lat && c.lng);
+                        const cLat = validCoords.length > 0 ? validCoords.reduce((s, c) => s + c.lat, 0) / validCoords.length : refBaseLat;
+                        const cLng = validCoords.length > 0 ? validCoords.reduce((s, c) => s + c.lng, 0) / validCoords.length : refBaseLng;
+                        const isBase = (cCity === sellerBaseCity);
+
+                        if (!isBase) {
+                            const distToBase = calcDist(cLat, cLng, refBaseLat, refBaseLng);
+                            const estMinsToBase = (distToBase * 1.18 / 45) * 60;
+                            const isDistante = distToBase > 22 || estMinsToBase > 30;
+
+                            if (isDistante || cList.length <= 10) {
+                                const srvMins = cList.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
+                                const travelMins = Math.max(0, (cList.length - 1) * interStopTravelMins) + (estMinsToBase * 2);
+                                weeklyDistantClusters.push({
+                                    key: `${d}-${cCity}`,
+                                    dayIndex: d,
+                                    clients: cList,
+                                    workloadMins: srvMins + travelMins,
+                                    centroidLat: cLat,
+                                    centroidLng: cLng
+                                });
+                            }
+                        }
+                    });
+                }
+
+                if (weeklyDistantClusters.length >= 2) {
+                    weeklyDistantClusters.sort((a, b) => b.workloadMins - a.workloadMins);
+
+                    if (weeklyDistantClusters.length <= 10) {
+                        const N = weeklyDistantClusters.length;
+                        const totalStates = 1 << N;
+                        let bestDiff = Infinity;
+                        let bestMask = 0;
+
+                        for (let mask = 0; mask < totalStates; mask++) {
+                            let sum13 = baseFixed13Mins;
+                            let sum24 = baseFixed24Mins;
+
+                            for (let i = 0; i < N; i++) {
+                                if ((mask & (1 << i)) === 0) {
+                                    sum13 += weeklyDistantClusters[i].workloadMins;
+                                } else {
+                                    sum24 += weeklyDistantClusters[i].workloadMins;
+                                }
+                            }
+
+                            const diff = Math.abs(sum13 - sum24);
+                            if (diff < bestDiff) {
+                                bestDiff = diff;
+                                bestMask = mask;
+                            }
+                        }
+
+                        for (let i = 0; i < N; i++) {
+                            const assign = (bestMask & (1 << i)) === 0 ? '1_3' : '2_4';
+                            globalClusterAssignedQuinzena.set(weeklyDistantClusters[i].key, assign);
+                        }
+                    } else {
+                        let cur13 = baseFixed13Mins;
+                        let cur24 = baseFixed24Mins;
+
+                        weeklyDistantClusters.forEach(cl => {
+                            if (cur13 <= cur24) {
+                                globalClusterAssignedQuinzena.set(cl.key, '1_3');
+                                cur13 += cl.workloadMins;
+                            } else {
+                                globalClusterAssignedQuinzena.set(cl.key, '2_4');
+                                cur24 += cl.workloadMins;
+                            }
+                        });
+                    }
+                }
+            }
+
             // 2.6. Distribuição Interna e Equalização Quinzenal Homogênea
             for (let d = 0; d < K; d++) {
                 const bucket = dayBuckets[d];
@@ -6530,45 +6689,6 @@ export const AjusteRota: React.FC = () => {
                 if (optBalanceWorkload) {
                     const q13: typeof uniqueClients = [...fixed13];
                     const q24: typeof uniqueClients = [...fixed24];
-
-                    // Identifica a cidade base do vendedor (pelo EnderecoBase, proximidade geográfica ou maior concentração de clientes)
-                    const sellerBaseCity = (() => {
-                        if (colab?.EnderecoBase) {
-                            const parts = colab.EnderecoBase.split('-');
-                            if (parts.length >= 2) {
-                                const possibleCity = parts[parts.length - 2]?.trim().toUpperCase();
-                                if (possibleCity && possibleCity.length > 2) return possibleCity;
-                            }
-                        }
-                        if (baseLat && baseLng && uniqueClients.length > 0) {
-                            let nearestCity = '';
-                            let minDist = Infinity;
-                            uniqueClients.forEach(c => {
-                                if (c.lat && c.lng && c.sampleVisit.Cidade) {
-                                    const d = calcDist(baseLat, baseLng, c.lat, c.lng);
-                                    if (d < minDist) {
-                                        minDist = d;
-                                        nearestCity = c.sampleVisit.Cidade.trim().toUpperCase();
-                                    }
-                                }
-                            });
-                            if (nearestCity) return nearestCity;
-                        }
-                        const cityCounts = new Map<string, number>();
-                        uniqueClients.forEach(c => {
-                            const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
-                            if (cCity) cityCounts.set(cCity, (cityCounts.get(cCity) || 0) + 1);
-                        });
-                        let maxCity = '';
-                        let maxCount = 0;
-                        cityCounts.forEach((count, cCity) => {
-                            if (count > maxCount) {
-                                maxCount = count;
-                                maxCity = cCity;
-                            }
-                        });
-                        return maxCity;
-                    })();
 
                     // Helper para ordenação espacial contígua por projeção no eixo principal de dispersão (PCA 1D)
                     // Garante divisão em quadrantes/setores contíguos (ex: Norte/Sul ou Leste/Oeste), eliminando sobreposição
@@ -6768,7 +6888,18 @@ export const AjusteRota: React.FC = () => {
                         const canFitIn13Cap = (semanais.length + q13.length + bucket.clients.length <= dayClientCap);
                         const canFitIn24Cap = (semanais.length + q24.length + bucket.clients.length <= dayClientCap);
 
-                        if (fitsEntireIn13 && (q13.length <= q24.length || !fitsEntireIn24)) {
+                        // Nível 0: Se houver quinzena pré-otimizada pelo Balanceamento Conjunto Global da Semana
+                        const bucketKey1 = `${d}-${bucket.cities[0]}`;
+                        const bucketKey2 = `${d}-${bucket.id}`;
+                        const globalAssigned = globalClusterAssignedQuinzena.get(bucketKey1) || globalClusterAssignedQuinzena.get(bucketKey2);
+
+                        if (globalAssigned === '1_3' && canFitIn13Cap) {
+                            q13.push(...bucket.clients);
+                            bucket.clients.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
+                        } else if (globalAssigned === '2_4' && canFitIn24Cap) {
+                            q24.push(...bucket.clients);
+                            bucket.clients.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
+                        } else if (fitsEntireIn13 && (q13.length <= q24.length || !fitsEntireIn24)) {
                             q13.push(...bucket.clients);
                             bucket.clients.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
                         } else if (fitsEntireIn24) {
