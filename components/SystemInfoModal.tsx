@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.247.0',
+    date: 'Hoje',
+    title: 'Fuel360: Coerência Geográfica dos Dias (Direções Opostas, Jornada Estourada e Cidade Base por Coordenadas)',
+    changes: [
+      'Nova Etapa de Coerência de Dias: Dias acima da jornada ou com clientes distantes (> 15 km da base) espalhados por direções opostas (> 75°) são corrigidos movendo ou trocando cidades inteiras entre os dias do vendedor, sem aumentar o tempo total da semana, sem estourar a jornada do dia de destino e sem esvaziar ciclos.',
+      'Correção da Penalidade de Dispersão Angular: O cálculo misturava radianos com graus e nunca era aplicado. Agora considera somente clientes a mais de 15 km da base (os clientes ao redor da residência não contam) com peso moderado de desempate entre cenários.',
+      'Cidade Base por Coordenadas: A cidade base do vendedor passa a ser a cidade do cliente mais próximo da residência (lat/long), em vez do texto livre do endereço, corrigindo a identificação de cidades satélites, o equalizador de dias e a consolidação de clientes órfãos.'
+    ]
+  },
+  {
     version: '3.246.2',
     date: 'Hoje',
     title: 'Fuel360: Correção do Preenchimento do Dia Liberado (Critério por Lat/Long e Equilíbrio por Ciclo)',

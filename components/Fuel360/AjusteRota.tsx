@@ -5733,15 +5733,9 @@ export const AjusteRota: React.FC = () => {
                 linearProj?: number;
             }
 
-            // Identifica antecipadamente a cidade base do vendedor
+            // Identifica antecipadamente a cidade base do vendedor pelas coordenadas (cidade do cliente mais próximo da base).
+            // O texto livre do EnderecoBase não é usado: seu formato ("Rua X - Bairro, Cidade - UF") não corresponde às cidades dos clientes.
             const sellerBaseCity = (() => {
-                if (colab?.EnderecoBase) {
-                    const parts = colab.EnderecoBase.split('-');
-                    if (parts.length >= 2) {
-                        const possibleCity = parts[parts.length - 2]?.trim().toUpperCase();
-                        if (possibleCity && possibleCity.length > 2) return possibleCity;
-                    }
-                }
                 if (baseLat && baseLng && uniqueClients.length > 0) {
                     let nearestCity = '';
                     let minDist = Infinity;
@@ -6400,12 +6394,14 @@ export const AjusteRota: React.FC = () => {
                     }
                 });
 
-                // Penalidade severa para dispersão angular no mesmo dia (ex: Cunha a SE e Cruzeiro a NE no mesmo dia)
+                // Penalidade para dispersão angular no mesmo dia (ex: Cunha a SE e Cruzeiro a NE no mesmo dia)
+                // Considera apenas clientes a mais de 15 km da base (clientes ao redor da residência naturalmente cobrem 360°)
+                // Ângulos convertidos para GRAUS (calcPolarAngle retorna radianos); peso linear moderado atua como desempate
                 let angularDispersionPenalty = 0;
                 for (let d = 0; d < K; d++) {
-                    const dayCoords = currentPart[d].filter(c => c.lat && c.lng);
+                    const dayCoords = currentPart[d].filter(c => c.lat && c.lng && calcDist(refBaseLat, refBaseLng, c.lat, c.lng) > 15);
                     if (dayCoords.length >= 2) {
-                        const angles = dayCoords.map(c => calcPolarAngle(refBaseLat, refBaseLng, c.lat, c.lng)).sort((a, b) => a - b);
+                        const angles = dayCoords.map(c => calcPolarAngle(refBaseLat, refBaseLng, c.lat, c.lng) * 180 / Math.PI).sort((a, b) => a - b);
                         let maxGap = 0;
                         for (let i = 0; i < angles.length; i++) {
                             const next = (i === angles.length - 1) ? (angles[0] + 360) : angles[i + 1];
@@ -6414,8 +6410,8 @@ export const AjusteRota: React.FC = () => {
                         }
                         const dayAngularSpan = 360 - maxGap; // Menor arco angular contendo todos os pontos do dia em relação à base
                         if (dayAngularSpan > 75) {
-                            // Penaliza fortemente rotas que misturam direções divergentes (> 75 graus)
-                            angularDispersionPenalty += Math.pow(dayAngularSpan - 75, 2) * 35;
+                            // Penaliza rotas que misturam direções divergentes (> 75 graus)
+                            angularDispersionPenalty += (dayAngularSpan - 75) * 50;
                         }
                     }
                 }
@@ -7165,6 +7161,134 @@ export const AjusteRota: React.FC = () => {
                         }
                     }
                 });
+
+                // 2.8. COERÊNCIA DE DIAS: corrige dias acima da jornada e dias com clientes distantes (> 15 km da base) espalhados
+                // por direções opostas (> 75°), movendo ou trocando CIDADES INTEIRAS entre os dias do vendedor.
+                // Aceita apenas mudanças que não aumentam o tempo total da semana (até +30 min quando o motivo é jornada estourada),
+                // sem estourar a jornada nem dispersar o dia de destino, sem esvaziar ciclos e respeitando Dias Permitidos e teto.
+                const FAR_KM_FROM_BASE = 15;
+                const MAX_DAY_SPAN_DEG = 75;
+                type DayItems = { semanais: typeof uniqueClients; quinzenais13: typeof uniqueClients; quinzenais24: typeof uniqueClients };
+                const cityOf = (c: typeof uniqueClients[0]) => (c.sampleVisit.Cidade || '').trim().toUpperCase();
+                const itemsOf = (b: DayItems) => [...b.semanais, ...b.quinzenais13, ...b.quinzenais24];
+                const cycleCountOf = (b: DayItems, cy: '13' | '24') => b.semanais.length + (cy === '13' ? b.quinzenais13.length : b.quinzenais24.length);
+                const loadOf = (b: DayItems, cy: '13' | '24') => estimateCycleMins([...b.semanais, ...(cy === '13' ? b.quinzenais13 : b.quinzenais24)]);
+                const totalOf = (b: DayItems) => loadOf(b, '13') + loadOf(b, '24');
+                const peakOf = (b: DayItems) => Math.max(loadOf(b, '13'), loadOf(b, '24'));
+                const gapOf = (b: DayItems) => Math.abs(loadOf(b, '13') - loadOf(b, '24'));
+                const farSpanOf = (b: DayItems) => {
+                    const far = itemsOf(b).filter(c => c.lat && c.lng && calcDist(baseLat, baseLng, c.lat, c.lng) > FAR_KM_FROM_BASE);
+                    if (far.length < 2) return 0;
+                    const angles = far.map(c => calcPolarAngle(baseLat, baseLng, c.lat, c.lng) * 180 / Math.PI).sort((a, b) => a - b);
+                    let maxGap = 0;
+                    for (let i = 0; i < angles.length; i++) {
+                        const next = (i === angles.length - 1) ? (angles[0] + 360) : angles[i + 1];
+                        maxGap = Math.max(maxGap, next - angles[i]);
+                    }
+                    return 360 - maxGap;
+                };
+                const dayLimitMinsOf = (day: string) => ((day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours) * 60;
+                const dayCapOf = (day: string) => optLimitClients
+                    ? ((day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients)
+                    : Infinity;
+                const onlyCity = (b: DayItems, city: string): DayItems => ({
+                    semanais: b.semanais.filter(c => cityOf(c) === city),
+                    quinzenais13: b.quinzenais13.filter(c => cityOf(c) === city),
+                    quinzenais24: b.quinzenais24.filter(c => cityOf(c) === city)
+                });
+                const withoutCity = (b: DayItems, city: string): DayItems => ({
+                    semanais: b.semanais.filter(c => cityOf(c) !== city),
+                    quinzenais13: b.quinzenais13.filter(c => cityOf(c) !== city),
+                    quinzenais24: b.quinzenais24.filter(c => cityOf(c) !== city)
+                });
+                const mergeItems = (a: DayItems, b: DayItems): DayItems => ({
+                    semanais: [...a.semanais, ...b.semanais],
+                    quinzenais13: [...a.quinzenais13, ...b.quinzenais13],
+                    quinzenais24: [...a.quinzenais24, ...b.quinzenais24]
+                });
+                const emptiesCycleOf = (orig: DayItems, next: DayItems) =>
+                    (['13', '24'] as const).some(cy => cycleCountOf(orig, cy) > 0 && cycleCountOf(next, cy) === 0);
+                const exceedsCapOf = (orig: DayItems, next: DayItems, day: string) =>
+                    (['13', '24'] as const).some(cy => cycleCountOf(next, cy) > dayCapOf(day) && cycleCountOf(next, cy) > cycleCountOf(orig, cy));
+
+                for (let cohIter = 0; cohIter < 12; cohIter++) {
+                    // Dia mais crítico: acima da jornada (prioridade) ou com clientes distantes em direções opostas
+                    let worstIdx = -1;
+                    let worstSev = 0;
+                    let worstPeak = 0;
+                    let worstSpan = 0;
+                    let worstIsOver = false;
+                    for (let i = 0; i < dayBuckets.length; i++) {
+                        const p = peakOf(dayBuckets[i]);
+                        const sp = farSpanOf(dayBuckets[i]);
+                        const isOver = Boolean(optLimitHours) && p > dayLimitMinsOf(dayBuckets[i].day);
+                        const sev = isOver ? 1000 + (p - dayLimitMinsOf(dayBuckets[i].day)) : (sp > MAX_DAY_SPAN_DEG ? sp - MAX_DAY_SPAN_DEG : 0);
+                        if (sev > worstSev) {
+                            worstSev = sev;
+                            worstIdx = i;
+                            worstPeak = p;
+                            worstSpan = sp;
+                            worstIsOver = isOver;
+                        }
+                    }
+                    if (worstIdx === -1) break;
+
+                    const src = dayBuckets[worstIdx];
+                    const srcTotal = totalOf(src);
+                    const srcGap = gapOf(src);
+                    const farCities = Array.from(new Set(
+                        itemsOf(src)
+                            .filter(c => c.lat && c.lng && calcDist(baseLat, baseLng, c.lat, c.lng) > FAR_KM_FROM_BASE)
+                            .map(cityOf)
+                    ));
+
+                    let best: { tgtIdx: number; score: number; newSrc: DayItems; newTgt: DayItems } | null = null;
+                    for (const city of farCities) {
+                        const group = onlyCity(src, city);
+                        const srcRest = withoutCity(src, city);
+                        for (let j = 0; j < dayBuckets.length; j++) {
+                            if (j === worstIdx) continue;
+                            const tgt = dayBuckets[j];
+                            if (!itemsOf(group).every(c => isDayAllowedForClient(c, tgt.day))) continue;
+                            const tgtTotal = totalOf(tgt);
+                            const tgtGap = gapOf(tgt);
+                            const tgtPeak = peakOf(tgt);
+                            const tgtSpan = farSpanOf(tgt);
+
+                            // Mover a cidade (null) ou trocá-la por uma cidade inteira do dia de destino
+                            const swapCities: Array<string | null> = [null, ...Array.from(new Set(itemsOf(tgt).map(cityOf)))];
+                            for (const swapCity of swapCities) {
+                                const back = swapCity ? onlyCity(tgt, swapCity) : { semanais: [], quinzenais13: [], quinzenais24: [] } as DayItems;
+                                if (swapCity && !itemsOf(back).every(c => isDayAllowedForClient(c, src.day))) continue;
+                                const newSrc = mergeItems(srcRest, back);
+                                const newTgt = mergeItems(swapCity ? withoutCity(tgt, swapCity) : tgt, group);
+
+                                if (emptiesCycleOf(src, newSrc) || emptiesCycleOf(tgt, newTgt)) continue;
+                                if (exceedsCapOf(src, newSrc, src.day) || exceedsCapOf(tgt, newTgt, tgt.day)) continue;
+                                if (peakOf(newTgt) > Math.max(dayLimitMinsOf(tgt.day), tgtPeak)) continue;
+                                const newSrcPeak = peakOf(newSrc);
+                                if (worstIsOver ? newSrcPeak >= worstPeak : (newSrcPeak > Math.max(dayLimitMinsOf(src.day), worstPeak) || farSpanOf(newSrc) >= worstSpan)) continue;
+                                if (farSpanOf(newTgt) > Math.max(MAX_DAY_SPAN_DEG, tgtSpan)) continue;
+
+                                const net = (totalOf(newSrc) + totalOf(newTgt)) - (srcTotal + tgtTotal);
+                                if (net > (worstIsOver ? 30 : 0)) continue;
+                                const score = net + 0.5 * ((gapOf(newSrc) + gapOf(newTgt)) - (srcGap + tgtGap));
+                                if (!best || score < best.score) {
+                                    best = { tgtIdx: j, score, newSrc, newTgt };
+                                }
+                            }
+                        }
+                    }
+                    if (!best) break;
+
+                    const tgtBucket = dayBuckets[best.tgtIdx];
+                    src.semanais = best.newSrc.semanais;
+                    src.quinzenais13 = best.newSrc.quinzenais13;
+                    src.quinzenais24 = best.newSrc.quinzenais24;
+                    tgtBucket.semanais = best.newTgt.semanais;
+                    tgtBucket.quinzenais13 = best.newTgt.quinzenais13;
+                    tgtBucket.quinzenais24 = best.newTgt.quinzenais24;
+                }
             }
             } else {
                 // MODO REORDENAÇÃO MANTENDO DIAS FIXOS: PRESERVA RIGOROSAMENTE OS DIAS E QUINZENAS DEFINIDOS MANUALMENTE
