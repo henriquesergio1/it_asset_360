@@ -12669,10 +12669,11 @@ export const AjusteRota: React.FC = () => {
 
                                         {quinzenaTotals.isImbalanced && (
                                             <span 
-                                                className="text-[9px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"
-                                                title={`Variação de ${quinzenaTotals.variationPct}% entre as quinzenas (Sem 1/3: ${quinzenaTotals.total13} vs Sem 2/4: ${quinzenaTotals.total24}).`}
+                                                className="text-[9px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow-2xs"
+                                                title={`Variação Semanal Agregada de ${quinzenaTotals.variationPct}% entre as quinzenas:\n• Semanas 1 e 3: ${quinzenaTotals.total13} atendimentos (${formatDuration(operationalSummary.totalTime13)})\n• Semanas 2 e 4: ${quinzenaTotals.total24} atendimentos (${formatDuration(operationalSummary.totalTime24)})`}
                                             >
-                                                ⚠️ {quinzenaTotals.variationPct}% var.
+                                                <span>⚠️</span>
+                                                <span>{quinzenaTotals.variationPct}% var. semanal ({formatDuration(operationalSummary.totalTime13)} vs {formatDuration(operationalSummary.totalTime24)})</span>
                                             </span>
                                         )}
                                     </div>
@@ -12687,6 +12688,32 @@ export const AjusteRota: React.FC = () => {
                                         const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: day, bg: 'bg-indigo-600' };
                                         const dayMetrics = sellerId ? operationalSummary.sellerDayMap?.[`${sellerId}-${day}`] : operationalSummary.dayMap[day];
                                         const isUnallocated = day === 'SEM ATENDIMENTO';
+
+                                        // Identifica se o dia contém cluster distante protegido de Categoria A (> 22 km ou > 30 min da base do vendedor)
+                                        const targetSellerId = sellerId || dayRoutes[0]?.Cod_Vend;
+                                        const targetColab = targetSellerId ? colaboradores.find(c => String(c.Cod_Vend) === String(targetSellerId)) : null;
+                                        const hasDistantClusterInDay = (() => {
+                                            if (dayRoutes.length === 0 || !targetColab) return false;
+                                            const bLat = targetColab.LatitudeBase;
+                                            const bLng = targetColab.LongitudeBase;
+                                            if (!bLat || !bLng) return false;
+
+                                            const quinzenais = dayRoutes.filter(r => {
+                                                const p = parsePeriodicidade(r.Periodicidade).tipo;
+                                                return p === 'QUINZENAL_1_3' || p === 'QUINZENAL_2_4';
+                                            });
+                                            if (quinzenais.length === 0) return false;
+
+                                            return quinzenais.some(r => {
+                                                if (r.Latitude && r.Longitude) {
+                                                    const dist = calcDist(bLat, bLng, r.Latitude, r.Longitude);
+                                                    const estMins = (dist * 1.18 / 45) * 60;
+                                                    return dist > 22 || estMins > 30;
+                                                }
+                                                return false;
+                                            });
+                                        })();
+
                                         const dayOverload = (!isUnallocated && dayMetrics && optLimitHours) ? (() => {
                                             const activeDaysSet = new Set(optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
                                             const isInactiveDay = !activeDaysSet.has(day);
@@ -12812,8 +12839,8 @@ export const AjusteRota: React.FC = () => {
                                                                 <span className="text-[9px] font-bold opacity-75 underline ml-0.5">{dayOverload.isInactiveDay ? 'Evacuar' : 'Reequilibrar'}</span>
                                                             </span>
                                                         ) : (
-                                                            /* Badge Informativa para Cluster Distante Consolidado (sem sobrecarga de jornada) */
-                                                            (!isUnallocated && dayMetrics && ((dayMetrics.pdvs13 > 0 && dayMetrics.pdvs24 > 0 && Math.abs(dayMetrics.pdvs13 - dayMetrics.pdvs24) >= 5) || (dayMetrics.pdvs13 === 0 && dayMetrics.pdvs24 > 0) || (dayMetrics.pdvs24 === 0 && dayMetrics.pdvs13 > 0))) && (
+                                                            /* Badge Informativa para Cluster Distante Consolidado (somente se contiver cluster de Categoria A e sem sobrecarga) */
+                                                            (!isUnallocated && dayMetrics && hasDistantClusterInDay && ((dayMetrics.pdvs13 > 0 && dayMetrics.pdvs24 > 0 && Math.abs(dayMetrics.pdvs13 - dayMetrics.pdvs24) >= 5) || (dayMetrics.pdvs13 === 0 && dayMetrics.pdvs24 > 0) || (dayMetrics.pdvs24 === 0 && dayMetrics.pdvs13 > 0))) && (
                                                                 <span 
                                                                     className="text-[10px] font-bold px-2 py-0.5 rounded-md border shadow-2xs shrink-0 whitespace-nowrap inline-flex items-center gap-1 bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 select-none"
                                                                     title="Cluster distante consolidado em ciclo quinzenal único para economizar percurso e evitar viagem duplicada."

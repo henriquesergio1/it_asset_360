@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.240.0',
+    date: 'Hoje',
+    title: 'Fuel360: Amarração Estrita da Badge de Cluster Consolidado e Balanço Semanal/Mensal Agregado',
+    changes: [
+      'Amarração Geométrica da Badge 🔵 Cluster Consolidado: A badge informativa azul agora valida estritamente a presença física de PDVs pertencentes a clusters distantes de Categoria A (> 22 km ou > 30 min da base residencial), impedindo sua exibição em assimetrias numéricas genéricas e preservando os alertas padrão de reequilíbrio.',
+      'Sinalização e Visibilidade do Balanço Agregado Semanal/Mensal: A barra de totalizadores quinzenais passa a calcular e exibir a variação semanal acumulada de visitas e tempo em trânsito (Sem 1/3 vs Sem 2/4), dando visibilidade imediata ao gestor sobre colaboradores com desbalanceamento quinzenal global.'
+    ]
+  },
+  {
     version: '3.239.0',
     date: 'Hoje',
     title: 'Fuel360: Particionamento Quinzenal Inteligente por Distância, Backfill Restrito e Badge de Cluster Consolidado',
