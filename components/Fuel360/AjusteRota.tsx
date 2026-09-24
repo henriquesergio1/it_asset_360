@@ -7271,12 +7271,78 @@ export const AjusteRota: React.FC = () => {
         return result;
     };
 
+    // Matriz de Tempo Viário Real (OSRM local) Base do Vendedor -> Cliente para a Re-setorização Territorial
+    // Captura rodovias como corredores (acessos rápidos) e como barreiras (travessias com desvio), além de rios e serras.
+    // Retorna minutos por par `${sellerId}|${codCliente}`; pares sem resposta ficam ausentes e usam a distância geodésica.
+    const buildSellerClientRoadTimes = async (sellers: number[], scopeRoutes: VisitaPrevista[]): Promise<Map<string, number>> => {
+        const times = new Map<string, number>();
+
+        // Bases resolvidas com a mesma regra da re-setorização (residência do colaborador ou centroide dos clientes)
+        const bases: Array<{ sellerId: number; lat: number; lng: number }> = [];
+        sellers.forEach(sId => {
+            const sellerVisits = scopeRoutes.filter(r => r.Cod_Vend === sId);
+            const colab = getColabBySectorOrName(sId, sellerVisits[0]?.Nome_Vendedor);
+            const validCoords = sellerVisits.filter(v => v.Lat && v.Long);
+            let bLat = colab?.LatitudeBase || 0;
+            let bLng = colab?.LongitudeBase || 0;
+            if ((!bLat || !bLng) && validCoords.length > 0) {
+                bLat = validCoords.reduce((acc, v) => acc + (v.Lat || 0), 0) / validCoords.length;
+                bLng = validCoords.reduce((acc, v) => acc + (v.Long || 0), 0) / validCoords.length;
+            }
+            if (bLat && bLng) bases.push({ sellerId: sId, lat: bLat, lng: bLng });
+        });
+
+        const clientsMap = new Map<number, { lat: number; lng: number }>();
+        scopeRoutes.forEach(r => {
+            if (r.Cod_Cliente && r.Lat && r.Long && !clientsMap.has(r.Cod_Cliente)) {
+                clientsMap.set(r.Cod_Cliente, { lat: r.Lat, lng: r.Long });
+            }
+        });
+        const clients = Array.from(clientsMap.entries());
+
+        // Limite de 100 coordenadas por consulta de tabela no OSRM: bases fixas + lote de clientes
+        const chunkSize = 100 - bases.length;
+        if (bases.length === 0 || clients.length === 0 || chunkSize < 10) return times;
+
+        const totalChunks = Math.ceil(clients.length / chunkSize);
+        for (let i = 0, chunkIdx = 0; i < clients.length; i += chunkSize, chunkIdx++) {
+            const chunk = clients.slice(i, i + chunkSize);
+            setOptimizeProgress({
+                current: chunkIdx + 1,
+                total: totalChunks,
+                percentage: Math.round((chunkIdx / totalChunks) * 100),
+                currentSellerName: `Calculando tempos viários reais (rodovias e acessos) • lote ${chunkIdx + 1}/${totalChunks}`
+            });
+            try {
+                const tableRes = await getOSRMTable([
+                    ...bases.map(b => ({ lat: b.lat, lng: b.lng })),
+                    ...chunk.map(([, c]) => c)
+                ]);
+                if (!tableRes || !Array.isArray(tableRes.durations) || tableRes.durations.length < bases.length) continue;
+                bases.forEach((b, bIdx) => {
+                    const row = tableRes.durations[bIdx];
+                    if (!row) return;
+                    chunk.forEach(([cod], cIdx) => {
+                        const sec = row[bases.length + cIdx];
+                        if (typeof sec === 'number' && sec > 0) {
+                            times.set(`${b.sellerId}|${cod}`, sec / 60);
+                        }
+                    });
+                });
+            } catch (e) {
+                // Lote sem resposta: os pares deste lote usam a distância geodésica (comportamento anterior)
+            }
+        }
+        return times;
+    };
+
     // Função de Re-setorização Territorial Multi-Vendedor (Transferência, Balanceamento, Minimização e Centroides Puros)
     const resectorizeSellersTerritories = (
         sellers: number[],
         allRoutes: VisitaPrevista[],
         targetScopeRoutes: VisitaPrevista[],
-        isPureCentroid: boolean = false
+        isPureCentroid: boolean = false,
+        roadTimesMin?: Map<string, number>
     ) => {
         if (sellers.length <= 1) {
             return {
@@ -7559,6 +7625,41 @@ export const AjusteRota: React.FC = () => {
             }
         }
 
+        // Calibração do Tempo Viário Real (OSRM) em "km equivalentes": fator = mediana(geodésica) / mediana(tempo) da equipe.
+        // Mantém o peso das penalidades existentes e altera apenas a proximidade relativa (rodovias, acessos, rios e serras).
+        let roadTimeToKmFactor = 0;
+        if (roadTimesMin && roadTimesMin.size > 0 && !isPureCentroid) {
+            const geoList: number[] = [];
+            const timeList: number[] = [];
+            unassignedClients.forEach(c => {
+                sellerProfiles.forEach(sp => {
+                    const t = roadTimesMin.get(`${sp.id}|${c.cod}`);
+                    if (t !== undefined) {
+                        geoList.push(calcDist(sp.baseLat || teamAvgLat, sp.baseLng || teamAvgLng, c.lat, c.lng));
+                        timeList.push(t);
+                    }
+                });
+            });
+            if (timeList.length > 0) {
+                const median = (arr: number[]) => {
+                    const sorted = [...arr].sort((a, b) => a - b);
+                    return sorted[Math.floor(sorted.length / 2)];
+                };
+                const medTime = median(timeList);
+                const medGeo = median(geoList);
+                if (medTime > 0 && medGeo > 0) roadTimeToKmFactor = medGeo / medTime;
+            }
+        }
+
+        // Distância efetiva Base -> Cliente: tempo viário real calibrado quando disponível; senão distância geodésica
+        const getSellerClientDist = (sp: SellerProfile, c: ClientInfo): number => {
+            if (roadTimeToKmFactor > 0) {
+                const t = roadTimesMin!.get(`${sp.id}|${c.cod}`);
+                if (t !== undefined) return t * roadTimeToKmFactor;
+            }
+            return calcDist(sp.baseLat || teamAvgLat, sp.baseLng || teamAvgLng, c.lat, c.lng);
+        };
+
         // Matriz de distâncias e afinidades espaciais com Barreira Topográfica da Serra do Mar
         const costMatrix: number[][] = unassignedClients.map(c => {
             if (isPureCentroid && centroidSeeds.length === sellerProfiles.length) {
@@ -7580,7 +7681,7 @@ export const AjusteRota: React.FC = () => {
             return sellerProfiles.map(sp => {
                 const bLat = sp.baseLat || teamAvgLat;
                 const bLng = sp.baseLng || teamAvgLng;
-                const rawDist = calcDist(bLat, bLng, c.lat, c.lng);
+                const rawDist = getSellerClientDist(sp, c);
 
                 // Barreira Topográfica da Serra do Mar e Mantiqueira: Cruzamento entre Litoral e Planalto/Vale ou Serra da Mantiqueira
                 let crossRegionPenalty = 0;
@@ -7637,8 +7738,8 @@ export const AjusteRota: React.FC = () => {
                 const candidates = unassignedClients
                     .filter(c => !assignmentMap.has(c.cod))
                     .sort((a, b) => {
-                        const dA = calcDist(bLat, bLng, a.lat, a.lng);
-                        const dB = calcDist(bLat, bLng, b.lat, b.lng);
+                        const dA = getSellerClientDist(sp, a);
+                        const dB = getSellerClientDist(sp, b);
                         return dA - dB;
                     });
 
@@ -7655,7 +7756,7 @@ export const AjusteRota: React.FC = () => {
                     let bestSeller = orderedSellers[0];
                     let bestDist = Infinity;
                     orderedSellers.forEach(sp => {
-                        const d = calcDist(sp.baseLat || teamAvgLat, sp.baseLng || teamAvgLng, c.lat, c.lng);
+                        const d = getSellerClientDist(sp, c);
                         if (d < bestDist) {
                             bestDist = d;
                             bestSeller = sp;
@@ -7950,7 +8051,9 @@ export const AjusteRota: React.FC = () => {
 
         // 1. Quando solicitado "Re-setorizar e Redistribuir" ou "Setorização Pura", a fusão e balanceamento territorial ocorrem PRIMEIRO!
         if (!preserveDays && shouldResectorize && sellers.length > 1) {
-            const resectorizeResult = resectorizeSellersTerritories(sellers, adjustedRoutes, effectiveScopedRoutes, isPureCentroid);
+            // Tempo viário real Base -> Cliente (OSRM) para setorizar respeitando rodovias, acessos e travessias (exceto centroides puros)
+            const roadTimesMin = !isPureCentroid ? await buildSellerClientRoadTimes(sellers, effectiveScopedRoutes) : undefined;
+            const resectorizeResult = resectorizeSellersTerritories(sellers, adjustedRoutes, effectiveScopedRoutes, isPureCentroid, roadTimesMin);
             if (resectorizeResult.transferredClientsCount > 0 || resectorizeResult.idleSellers.length > 0) {
                 baseRoutesForOptimization = resectorizeResult.updatedRoutes;
                 resectorizedCount = resectorizeResult.transferredClientsCount;

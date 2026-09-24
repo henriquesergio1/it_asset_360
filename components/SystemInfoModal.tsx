@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.246.0',
+    date: 'Hoje',
+    title: 'Fuel360: Re-setorização por Tempo Viário Real (Rodovias, Acessos e Travessias)',
+    changes: [
+      'Setorização Sensível a Rodovias: A re-setorização territorial entre vendedores passa a medir a proximidade Base -> Cliente pelo tempo viário real do OSRM local, em vez da distância em linha reta. Rodovias sem travessia próxima passam a separar naturalmente os setores (cada vendedor fica com o seu lado), enquanto acessos rápidos pela rodovia aproximam clientes do corredor.',
+      'Consulta em Lotes: Matriz Bases x Clientes calculada em lotes de até 100 coordenadas com indicador de progresso.',
+      'Calibração Automática: O tempo viário é convertido em km equivalentes pela mediana da equipe, preservando o peso das penalidades existentes (Serra do Mar, Mantiqueira, macro-regiões e coesão municipal).',
+      'Fallback Seguro: Clientes sem resposta do OSRM utilizam a distância geodésica anterior. A Setorização Pura por Centroides permanece inalterada.'
+    ]
+  },
+  {
     version: '3.245.0',
     date: 'Hoje',
     title: 'Fuel360: Rotas Coloridas por Vendedor no Link do Supervisor e Link Permanente ao Atualizar Rota',
