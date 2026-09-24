@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.243.1',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Ordem de Inicialização de effectiveScopedRoutes (TDZ)',
+    changes: [
+      'Correção de ReferenceError na Abertura do Mapa: Reordenação das variáveis `effectiveScopedRoutes` e `effectiveScopedOriginalRoutes` para antes do cálculo dos polígonos de envoltória dos setores (`mapSectorsData`), eliminando a falha de inicialização (TDZ) ao carregar a tela de Ajuste de Rotas.'
+    ]
+  },
+  {
     version: '3.243.0',
     date: 'Hoje',
     title: 'Fuel360: Blindagem Reativa do Mapa e do Laço para Vendedores Desmarcados',

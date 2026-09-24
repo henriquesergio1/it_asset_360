@@ -3617,6 +3617,33 @@ export const AjusteRota: React.FC = () => {
         return map;
     }, [scopedAdjustedRoutes, originalRoutes]);
 
+    // Escopo efetivo de rotas refinado pelo filtro unificado de vendedores (tabela e mapa)
+    const effectiveScopedRoutes = useMemo(() => {
+        if (selectedTeamSellers.size > 0) {
+            return scopedAdjustedRoutes.filter(r => selectedTeamSellers.has(String(r.Cod_Vend)));
+        }
+        if (focusedMapSellerId !== null) {
+            return scopedAdjustedRoutes.filter(r => r.Cod_Vend === focusedMapSellerId);
+        }
+        if (selectedPromoter !== 'ALL') {
+            return scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter);
+        }
+        return scopedAdjustedRoutes;
+    }, [scopedAdjustedRoutes, selectedTeamSellers, focusedMapSellerId, selectedPromoter]);
+
+    const effectiveScopedOriginalRoutes = useMemo(() => {
+        if (selectedTeamSellers.size > 0) {
+            return scopedOriginalRoutes.filter(r => selectedTeamSellers.has(String(r.Cod_Vend)));
+        }
+        if (focusedMapSellerId !== null) {
+            return scopedOriginalRoutes.filter(r => r.Cod_Vend === focusedMapSellerId);
+        }
+        if (selectedPromoter !== 'ALL') {
+            return scopedOriginalRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter);
+        }
+        return scopedOriginalRoutes;
+    }, [scopedOriginalRoutes, selectedTeamSellers, focusedMapSellerId, selectedPromoter]);
+
     // Lista de vendedores pertencentes ao escopo atual para o filtro multi-select no Ajuste Fino
     const availableTeamSellers = useMemo(() => {
         const sellerIds = Array.from(new Set(scopedAdjustedRoutes.map(r => String(r.Cod_Vend)))).filter(Boolean);
@@ -3838,33 +3865,6 @@ export const AjusteRota: React.FC = () => {
         setSelectedPromoter('ALL');
         setFocusedMapSellerId(null);
     };
-
-    // Escopo efetivo de rotas refinado pelo filtro unificado de vendedores (tabela e mapa)
-    const effectiveScopedRoutes = useMemo(() => {
-        if (selectedTeamSellers.size > 0) {
-            return scopedAdjustedRoutes.filter(r => selectedTeamSellers.has(String(r.Cod_Vend)));
-        }
-        if (focusedMapSellerId !== null) {
-            return scopedAdjustedRoutes.filter(r => r.Cod_Vend === focusedMapSellerId);
-        }
-        if (selectedPromoter !== 'ALL') {
-            return scopedAdjustedRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter);
-        }
-        return scopedAdjustedRoutes;
-    }, [scopedAdjustedRoutes, selectedTeamSellers, focusedMapSellerId, selectedPromoter]);
-
-    const effectiveScopedOriginalRoutes = useMemo(() => {
-        if (selectedTeamSellers.size > 0) {
-            return scopedOriginalRoutes.filter(r => selectedTeamSellers.has(String(r.Cod_Vend)));
-        }
-        if (focusedMapSellerId !== null) {
-            return scopedOriginalRoutes.filter(r => r.Cod_Vend === focusedMapSellerId);
-        }
-        if (selectedPromoter !== 'ALL') {
-            return scopedOriginalRoutes.filter(r => String(r.Cod_Vend) === selectedPromoter);
-        }
-        return scopedOriginalRoutes;
-    }, [scopedOriginalRoutes, selectedTeamSellers, focusedMapSellerId, selectedPromoter]);
 
     const effectiveSellersList = useMemo(() => {
         return Array.from(new Set(effectiveScopedRoutes.map(r => String(r.Cod_Vend))))
