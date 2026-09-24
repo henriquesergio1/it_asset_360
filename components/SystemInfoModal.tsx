@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.236.0',
+    date: 'Hoje',
+    title: 'Fuel360: Super-Buckets Geográficos e Consolidação Quinzenal Intermunicipal (1-3 vs 2-4)',
+    changes: [
+      'Pré-Agrupamento por Proximidade Real de Centróides (Super-Buckets): Municípios vizinhos e conurbados a menos de 15 km de distância viária/geodésica (CLUSTER_MERGE_DISTANCE_KM) agora são fundidos automaticamente em super-buckets geográficos contíguos antes da partição quinzenal.',
+      'Consolidação de Ciclo Quinzenal na Semana: A árvore de decisão prioriza a alocação do super-bucket completo em um único ciclo quinzenal (todo na Quinzena 1-3 ou todo na Quinzena 2-4), distribuindo o volume entre múltiplos dias da mesma semana antes de recorrer ao fatiamento alternado.',
+      'Eliminação da Dispersão Intermunicipal: Cidades vizinhas como Taubaté/Tremembé, Guará/Aparecida, Pinda/Roseira e Suzano/Poá deixam de ter visitas divididas forçadamente entre quinzenas opostas, reduzindo quilometragem e custos operacionais de deslocamento.'
+    ]
+  },
+  {
     version: '3.235.4',
     date: 'Hoje',
     title: 'Fuel360: Correção de Sintaxe JSX na Barra de Ferramentas e Normalização do .dockerignore',

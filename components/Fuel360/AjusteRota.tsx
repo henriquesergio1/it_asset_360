@@ -198,6 +198,10 @@ export interface SectorPolygonData {
     hullPoints: Array<[number, number]>;
 }
 
+// Parâmetros de Agrupamento Geográfico de Super-Buckets e Fusão de Municípios Conurbados
+export const CLUSTER_MERGE_DISTANCE_KM = 15.0; // Distância viária/geodésica máxima entre centróides para fusão em super-bucket (15 km)
+export const CLUSTER_MERGE_MAX_MINUTES = 20.0;  // Tempo viário estimado máximo entre centróides para consolidação de ciclo
+
 // Algoritmo Andrew's Monotone Chain (Graham Scan) para cálculo de Envoltória Convexa (Convex Hull) dos setores
 export const computeConvexHull = (points: Array<[number, number]>): Array<[number, number]> => {
     if (points.length < 3) return points;
@@ -6586,13 +6590,83 @@ export const AjusteRota: React.FC = () => {
                         });
                     };
 
-                    // Agrupamento dos clientes quinzenais do dia por cidade
-                    const cityBuckets = new Map<string, typeof uniqueClients>();
+                    // Agrupamento inicial dos clientes quinzenais do dia por cidade
+                    const rawCityBuckets = new Map<string, typeof uniqueClients>();
                     dynamicQuinzenais.forEach(c => {
                         const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase() || 'GERAL';
-                        if (!cityBuckets.has(cCity)) cityBuckets.set(cCity, []);
-                        cityBuckets.get(cCity)!.push(c);
+                        if (!rawCityBuckets.has(cCity)) rawCityBuckets.set(cCity, []);
+                        rawCityBuckets.get(cCity)!.push(c);
                     });
+
+                    // CORREÇÃO 1: Pré-agrupamento por proximidade geográfica real entre centróides municipais (Super-Buckets)
+                    interface SuperBucketGroup {
+                        id: string;
+                        cities: string[];
+                        clients: typeof uniqueClients;
+                        centroidLat: number;
+                        centroidLng: number;
+                        isBaseCityGroup: boolean;
+                    }
+
+                    const superBucketList: SuperBucketGroup[] = [];
+                    rawCityBuckets.forEach((cList, cCity) => {
+                        const validCoords = cList.filter(c => c.lat && c.lng);
+                        const cLat = validCoords.length > 0 ? validCoords.reduce((s, c) => s + c.lat, 0) / validCoords.length : refBaseLat;
+                        const cLng = validCoords.length > 0 ? validCoords.reduce((s, c) => s + c.lng, 0) / validCoords.length : refBaseLng;
+                        const isBase = (cCity === sellerBaseCity);
+                        superBucketList.push({
+                            id: cCity,
+                            cities: [cCity],
+                            clients: [...cList],
+                            centroidLat: cLat,
+                            centroidLng: cLng,
+                            isBaseCityGroup: isBase
+                        });
+                    });
+
+                    // Fusão iterativa de municípios vizinhos e conurbados (distância entre centróides <= CLUSTER_MERGE_DISTANCE_KM)
+                    let mergedClusters = true;
+                    while (mergedClusters && superBucketList.length > 1) {
+                        mergedClusters = false;
+                        let bestPair: [number, number] | null = null;
+                        let minCentroidDist = Infinity;
+
+                        for (let i = 0; i < superBucketList.length; i++) {
+                            for (let j = i + 1; j < superBucketList.length; j++) {
+                                const bA = superBucketList[i];
+                                const bB = superBucketList[j];
+                                // Não funde cidade base secundária com cidades satélites se houver dispersão
+                                if (bA.isBaseCityGroup && bB.isBaseCityGroup) continue;
+
+                                const d = calcDist(bA.centroidLat, bA.centroidLng, bB.centroidLat, bB.centroidLng);
+                                if (d <= CLUSTER_MERGE_DISTANCE_KM && d < minCentroidDist) {
+                                    minCentroidDist = d;
+                                    bestPair = [i, j];
+                                }
+                            }
+                        }
+
+                        if (bestPair) {
+                            const [i, j] = bestPair;
+                            const bA = superBucketList[i];
+                            const bB = superBucketList[j];
+                            const combined = [...bA.clients, ...bB.clients];
+                            const valid = combined.filter(c => c.lat && c.lng);
+                            const nLat = valid.length > 0 ? valid.reduce((s, c) => s + c.lat, 0) / valid.length : bA.centroidLat;
+                            const nLng = valid.length > 0 ? valid.reduce((s, c) => s + c.lng, 0) / valid.length : bA.centroidLng;
+
+                            superBucketList[i] = {
+                                id: `${bA.id} + ${bB.id}`,
+                                cities: [...bA.cities, ...bB.cities],
+                                clients: combined,
+                                centroidLat: nLat,
+                                centroidLng: nLng,
+                                isBaseCityGroup: bA.isBaseCityGroup || bB.isBaseCityGroup
+                            };
+                            superBucketList.splice(j, 1);
+                            mergedClusters = true;
+                        }
+                    }
 
                     const protectedCityGroupedClients = new Set<string | number>();
                     const dayLimitHours = (activeDays[d] === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
@@ -6609,39 +6683,51 @@ export const AjusteRota: React.FC = () => {
                     const needed13 = Math.max(0, Math.min(totalDynamic, Math.round((totalDynamic + fixed24.length - fixed13.length) / 2)));
                     const needed24 = totalDynamic - needed13;
 
-                    // 1. Processamento de Cidades Secundárias (distintas da cidade base)
+                    // CORREÇÃO 2: Processamento e Alocação em Ciclo Único com Salvaguarda Semanal
                     const baseCityClients: typeof uniqueClients = [];
 
-                    cityBuckets.forEach((cList, cCity) => {
-                        if (cCity === sellerBaseCity && cityBuckets.size > 1) {
-                            baseCityClients.push(...cList);
+                    superBucketList.forEach(bucket => {
+                        const isPureBaseBucket = bucket.isBaseCityGroup && superBucketList.length > 1;
+                        if (isPureBaseBucket) {
+                            baseCityClients.push(...bucket.clients);
                             return;
                         }
 
-                        const cityServiceTimeMins = cList.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
-                        const cityInternalTravelMins = Math.max(0, (cList.length - 1) * interStopTravelMins);
-                        const cityTotalWorkloadMins = cityServiceTimeMins + cityInternalTravelMins;
+                        const bucketServiceTimeMins = bucket.clients.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
+                        const bucketInternalTravelMins = Math.max(0, (bucket.clients.length - 1) * interStopTravelMins);
+                        const bucketTotalWorkloadMins = bucketServiceTimeMins + bucketInternalTravelMins;
 
-                        // Cabe 100% em q13 sem estourar limite diário nem desbalancear excessivamente?
-                        const fitsEntireIn13 = (semanais.length + q13.length + cList.length <= dayClientCap) &&
-                            (weeklyWorkloadMins + cityTotalWorkloadMins <= dayLimitMins * 1.05) &&
-                            (q13.length + cList.length <= needed13 + 2);
+                        // Nível 1: Cabe 100% no DIA em q13 ou q24 respeitando o teto de clientes diário?
+                        const fitsEntireIn13 = (semanais.length + q13.length + bucket.clients.length <= dayClientCap) &&
+                            (weeklyWorkloadMins + bucketTotalWorkloadMins <= dayLimitMins * 1.05) &&
+                            (q13.length + bucket.clients.length <= needed13 + 3);
 
-                        // Cabe 100% em q24 sem estourar limite diário nem desbalancear excessivamente?
-                        const fitsEntireIn24 = (semanais.length + q24.length + cList.length <= dayClientCap) &&
-                            (weeklyWorkloadMins + cityTotalWorkloadMins <= dayLimitMins * 1.05) &&
-                            (q24.length + cList.length <= needed24 + 2);
+                        const fitsEntireIn24 = (semanais.length + q24.length + bucket.clients.length <= dayClientCap) &&
+                            (weeklyWorkloadMins + bucketTotalWorkloadMins <= dayLimitMins * 1.05) &&
+                            (q24.length + bucket.clients.length <= needed24 + 3);
+
+                        // Nível 2: Se o super-bucket couber no teto físico de um dos ciclos quinzenais, aloca 100% no ciclo mais receptivo
+                        const canFitIn13Cap = (semanais.length + q13.length + bucket.clients.length <= dayClientCap);
+                        const canFitIn24Cap = (semanais.length + q24.length + bucket.clients.length <= dayClientCap);
 
                         if (fitsEntireIn13 && (q13.length <= q24.length || !fitsEntireIn24)) {
-                            q13.push(...cList);
-                            cList.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
+                            q13.push(...bucket.clients);
+                            bucket.clients.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
                         } else if (fitsEntireIn24) {
-                            q24.push(...cList);
-                            cList.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
+                            q24.push(...bucket.clients);
+                            bucket.clients.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
+                        } else if (canFitIn13Cap && (q13.length <= q24.length || !canFitIn24Cap)) {
+                            // Consolidação no ciclo 1-3
+                            q13.push(...bucket.clients);
+                            bucket.clients.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
+                        } else if (canFitIn24Cap) {
+                            // Consolidação no ciclo 2-4
+                            q24.push(...bucket.clients);
+                            bucket.clients.forEach(c => protectedCityGroupedClients.add(c.sampleVisit.Cod_Cliente));
                         } else {
-                            // Se a cidade não cabe inteira em um ciclo sem estourar o limite diário de clientes,
-                            // divide em setores geográficos contíguos balanceados (ex: Norte na 1/3 e Sul na 2/4)
-                            const sortedSec = sortClientsContiguously(cList);
+                            // Nível 3 (Último Recurso): Se o super-bucket exceder a capacidade física diária,
+                            // divide em setores geográficos contíguos balanceados (ex: Norte na 1/3 e Sul na 2/4) via PCA 1D
+                            const sortedSec = sortClientsContiguously(bucket.clients);
                             const half = Math.ceil(sortedSec.length / 2);
                             const part1 = sortedSec.slice(0, half);
                             const part2 = sortedSec.slice(half);
@@ -6657,8 +6743,8 @@ export const AjusteRota: React.FC = () => {
                     });
 
                     // 2. Processamento da Cidade Base / Região Metropolitana Central
-                    if (baseCityClients.length > 0 || (cityBuckets.size === 1 && cityBuckets.has(sellerBaseCity))) {
-                        const targetBaseClients = baseCityClients.length > 0 ? baseCityClients : (cityBuckets.get(sellerBaseCity) || []);
+                    if (baseCityClients.length > 0 || (superBucketList.length === 1 && superBucketList[0].isBaseCityGroup)) {
+                        const targetBaseClients = baseCityClients.length > 0 ? baseCityClients : (superBucketList[0]?.clients || []);
                         const sortedBase = sortClientsContiguously(targetBaseClients);
 
                         // Determina o corte contíguo para equilibrar 50/50 as semanas
