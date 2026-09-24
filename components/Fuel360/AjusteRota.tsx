@@ -11171,6 +11171,7 @@ export const AjusteRota: React.FC = () => {
                                         {WEEKDAYS.map(d => (
                                             <option key={d} value={d}>{d}</option>
                                         ))}
+                                        <option value="SEM ATENDIMENTO">⚠️ SEM ATENDIMENTO</option>
                                     </select>
                                 </div>
 

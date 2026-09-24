@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.244.0',
+    date: 'Hoje',
+    title: 'Fuel360: Marcar Clientes como Sem Atendimento pela Ferramenta de Laço',
+    changes: [
+      'Nova Opção "SEM ATENDIMENTO" no Laço: O seletor "Alterar Dia..." da barra flutuante da Ferramenta de Laço agora permite enviar em lote os clientes selecionados no mapa para a pasta "SEM ATENDIMENTO", liberando-os para posterior reatribuição a outros setores via Transferência em Massa.'
+    ]
+  },
+  {
     version: '3.243.1',
     date: 'Hoje',
     title: 'Fuel360: Correção de Ordem de Inicialização de effectiveScopedRoutes (TDZ)',
