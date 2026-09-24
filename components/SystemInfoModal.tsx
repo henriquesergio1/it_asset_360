@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.246.1',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Dias com 0 Visitas em Semanas Alternadas',
+    changes: [
+      'Pareamento de Dias Complementares: Quando a consolidação de cidades em um único ciclo quinzenal deixava um dia apenas com Sem 1/3 e outro apenas com Sem 2/4 (0 visitas na semana alternada), os dois são unidos em um único dia. A rota de cada ciclo permanece idêntica; muda somente o dia da semana.',
+      'Preenchimento do Dia Liberado: O dia liberado recebe clientes da cidade base vindos dos dias mais carregados (mais próximos entre si, respeitando Dias Permitidos, teto de clientes e sem quebrar cidades distantes agrupadas), até equilibrar a carga horária.'
+    ]
+  },
+  {
     version: '3.246.0',
     date: 'Hoje',
     title: 'Fuel360: Re-setorização por Tempo Viário Real (Rodovias, Acessos e Travessias)',

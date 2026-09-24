@@ -7021,6 +7021,130 @@ export const AjusteRota: React.FC = () => {
                     }
                 }
             }
+
+            // 2.7. PAREAMENTO DE DIAS COMPLEMENTARES E PREENCHIMENTO DO DIA LIBERADO
+            // Clusters consolidados em um único ciclo quinzenal podem gerar dias "pela metade" (ex: Quarta só com Sem 2/4 e
+            // Quinta só com Sem 1/3), deixando o vendedor sem visitas em semanas alternadas. Dois dias complementares (sem semanais)
+            // são unidos em um único dia — a rota de cada ciclo permanece idêntica, muda apenas o dia da semana — e o dia liberado
+            // recebe clientes da cidade base vindos dos dias mais carregados.
+            {
+                const estimateCycleMins = (list: typeof uniqueClients) => {
+                    if (list.length === 0) return 0;
+                    const stops = list.filter(c => c.lat && c.lng).map(c => ({ lat: c.lat, lng: c.lng }));
+                    const ordered = stops.length <= 35
+                        ? optimizeDayCircuit2Opt({ lat: baseLat, lng: baseLng }, stops, optEndAtLastClient)
+                        : stops;
+                    const circuit = calcCircuitMetrics({ lat: baseLat, lng: baseLng }, ordered, optEndAtLastClient);
+                    const serviceMins = list.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
+                    return circuit.travelMinutes + serviceMins;
+                };
+                const bucketPeakMins = (b: DayBucket) => Math.max(
+                    estimateCycleMins([...b.semanais, ...b.quinzenais13]),
+                    estimateCycleMins([...b.semanais, ...b.quinzenais24])
+                );
+                const isOnly13 = (b: DayBucket) => b.semanais.length === 0 && b.quinzenais13.length > 0 && b.quinzenais24.length === 0;
+                const isOnly24 = (b: DayBucket) => b.semanais.length === 0 && b.quinzenais24.length > 0 && b.quinzenais13.length === 0;
+
+                // Etapa 1: Pareamento (o dia receptor não pode ser Sábado de meio período)
+                const freedDayIdxs: number[] = [];
+                let pairedAny = true;
+                while (pairedAny) {
+                    pairedAny = false;
+                    for (let a = 0; a < dayBuckets.length && !pairedAny; a++) {
+                        const target = dayBuckets[a];
+                        if (target.day === 'SÁBADO' && optSatHalfPeriod) continue;
+                        for (let b = 0; b < dayBuckets.length && !pairedAny; b++) {
+                            if (a === b) continue;
+                            const source = dayBuckets[b];
+                            let moveList: typeof uniqueClients | null = null;
+                            let targetList: typeof uniqueClients | null = null;
+                            if (isOnly24(target) && isOnly13(source)) {
+                                moveList = source.quinzenais13;
+                                targetList = target.quinzenais13;
+                            } else if (isOnly13(target) && isOnly24(source)) {
+                                moveList = source.quinzenais24;
+                                targetList = target.quinzenais24;
+                            }
+                            if (!moveList || !targetList) continue;
+                            if (!moveList.every(c => isDayAllowedForClient(c, target.day))) continue;
+
+                            targetList.push(...moveList.splice(0, moveList.length));
+                            freedDayIdxs.push(b);
+                            pairedAny = true;
+                        }
+                    }
+                }
+
+                // Etapa 2: Preenchimento do dia liberado com clientes da cidade base dos dias mais carregados
+                freedDayIdxs.forEach(fIdx => {
+                    const freed = dayBuckets[fIdx];
+                    const freedCap = optLimitClients
+                        ? ((freed.day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients)
+                        : Infinity;
+                    type ListKey = 'semanais' | 'quinzenais13' | 'quinzenais24';
+                    const listKeys: ListKey[] = ['semanais', 'quinzenais13', 'quinzenais24'];
+
+                    for (let iter = 0; iter < 80; iter++) {
+                        const freedPeak = bucketPeakMins(freed);
+                        const freedCoords = [...freed.semanais, ...freed.quinzenais13, ...freed.quinzenais24].filter(c => c.lat && c.lng);
+                        const freedCenter = freedCoords.length > 0
+                            ? { lat: freedCoords.reduce((s, c) => s + c.lat, 0) / freedCoords.length, lng: freedCoords.reduce((s, c) => s + c.lng, 0) / freedCoords.length }
+                            : null;
+
+                        // Dias doadores do mais carregado para o menos carregado (somente os que possuem cliente elegível)
+                        const donors = dayBuckets
+                            .map((b, idx) => ({ b, idx, peak: bucketPeakMins(b) }))
+                            .filter(item => item.idx !== fIdx)
+                            .sort((x, y) => y.peak - x.peak);
+
+                        let chosen: { donorIdx: number; donorPeak: number; key: ListKey; pos: number } | null = null;
+                        for (const donor of donors) {
+                            if (donor.peak - freedPeak <= 30) break;
+                            const donorCoords = [...donor.b.semanais, ...donor.b.quinzenais13, ...donor.b.quinzenais24].filter(c => c.lat && c.lng);
+                            const donorCenter = donorCoords.length > 0
+                                ? { lat: donorCoords.reduce((s, c) => s + c.lat, 0) / donorCoords.length, lng: donorCoords.reduce((s, c) => s + c.lng, 0) / donorCoords.length }
+                                : { lat: baseLat, lng: baseLng };
+                            let bestScore = Infinity;
+                            for (const key of listKeys) {
+                                const list = donor.b[key];
+                                for (let pos = 0; pos < list.length; pos++) {
+                                    const c = list[pos];
+                                    if ((c.sampleVisit.Cidade || '').trim().toUpperCase() !== sellerBaseCity) continue;
+                                    if (!isDayAllowedForClient(c, freed.day)) continue;
+                                    // Semente: cliente mais afastado do centro do dia doador; depois, o mais próximo do dia liberado
+                                    const score = freedCenter
+                                        ? calcDist(c.lat, c.lng, freedCenter.lat, freedCenter.lng)
+                                        : -calcDist(c.lat, c.lng, donorCenter.lat, donorCenter.lng);
+                                    if (score < bestScore) {
+                                        bestScore = score;
+                                        chosen = { donorIdx: donor.idx, donorPeak: donor.peak, key, pos };
+                                    }
+                                }
+                            }
+                            if (chosen) break;
+                        }
+                        if (!chosen) break;
+
+                        const { donorIdx, key, pos } = chosen;
+                        const donorBucket = dayBuckets[donorIdx];
+                        const cand = donorBucket[key][pos];
+                        const adds13 = key !== 'quinzenais24' ? 1 : 0;
+                        const adds24 = key !== 'quinzenais13' ? 1 : 0;
+                        if (freed.semanais.length + freed.quinzenais13.length + adds13 > freedCap) break;
+                        if (freed.semanais.length + freed.quinzenais24.length + adds24 > freedCap) break;
+
+                        donorBucket[key].splice(pos, 1);
+                        freed[key].push(cand);
+
+                        // Salvaguarda: não inverter o desequilíbrio (dia liberado mais carregado que o doador)
+                        if (bucketPeakMins(freed) > bucketPeakMins(donorBucket)) {
+                            freed[key].pop();
+                            donorBucket[key].splice(pos, 0, cand);
+                            break;
+                        }
+                    }
+                });
+            }
             } else {
                 // MODO REORDENAÇÃO MANTENDO DIAS FIXOS: PRESERVA RIGOROSAMENTE OS DIAS E QUINZENAS DEFINIDOS MANUALMENTE
                 const clientDays = Array.from(new Set(sellerVisits.map(v => normalizeDiaSemana(v.Dia_Semana || '', v.Data_da_Visita)).filter(Boolean)));
