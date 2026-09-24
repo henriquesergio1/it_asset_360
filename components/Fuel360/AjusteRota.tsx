@@ -768,9 +768,19 @@ const checkCoordinateAnomaly = (
 };
 
 // ==========================================
-// BLINDAGEM E COESÃO DE MACRO-REGIÕES E BARREIRA DA SERRA DO MAR
+// BLINDAGEM E COESÃO DE MACRO-REGIÕES E BARREIRA DA SERRA DO MAR E MANTIQUEIRA
 // ==========================================
-export type MacroRegionType = 'LITORAL_NORTE' | 'LITORAL_SUL' | 'ALTO_TIETE' | 'VALE_PARAIBA' | 'BRAGANTINA' | 'CAPITAL_METROPOLITANA' | 'OUTRO';
+export type MacroRegionType = 'LITORAL_NORTE' | 'LITORAL_SUL' | 'ALTO_TIETE' | 'VALE_PARAIBA' | 'SERRA_MANTIQUEIRA' | 'BRAGANTINA' | 'CAPITAL_METROPOLITANA' | 'OUTRO';
+
+export const CIDADES_INSULARES_BALSA = new Set([
+    'ILHABELA', 'ILHA BELA'
+]);
+
+export const CIDADES_SERRA_MANTIQUEIRA = new Set([
+    'CAMPOS DO JORDAO', 'CAMPOS DO JORDÃO', 'SANTO ANTONIO DO PINHAL', 'SANTO ANTÔNIO DO PINHAL',
+    'SAO BENTO DO SAPUCAI', 'SÃO BENTO DO SAPUCAÍ', 'CUNHA', 'SAO LUIS DO PARAITINGA', 
+    'SÃO LUÍS DO PARAITINGA', 'NATIVIDADE DA SERRA', 'REDENCAO DA SERRA', 'REDENÇÃO DA SERRA', 'MONTEIRO LOBATO'
+]);
 
 export const CIDADES_LITORAL_NORTE = new Set([
     'BERTIOGA', 'SAO SEBASTIAO', 'SÃO SEBASTIÃO', 'ILHABELA', 'CARAGUATATUBA', 'UBATUBA',
@@ -787,9 +797,7 @@ export const CIDADES_VALE_PARAIBA = new Set([
     'TAUBATE', 'TAUBATÉ', 'TREMEMBE', 'TREMEMBÉ', 'PINDAMONHANGABA', 'GUARATINGUETA', 'GUARATINGUETÁ',
     'APARECIDA', 'LORENA', 'CRUZEIRO', 'CACHOEIRA PAULISTA', 'ROSEIRA', 'POTIM', 'CANAS', 'LAVRINHAS',
     'QUELUZ', 'SILVEIRAS', 'AREIAS', 'SAO JOSE DO BARREIRO', 'SÃO JOSÉ DO BARREIRO', 'BANANAL',
-    'CAMPOS DO JORDAO', 'CAMPOS DO JORDÃO', 'SANTO ANTONIO DO PINHAL', 'SANTO ANTÔNIO DO PINHAL',
-    'SAO BENTO DO SAPUCAI', 'SÃO BENTO DO SAPUCAÍ', 'REDENCAO DA SERRA', 'REDENÇÃO DA SERRA',
-    'NATIVIDADE DA SERRA', 'SAO LUIS DO PARAITINGA', 'SÃO LUÍS DO PARAITINGA', 'CUNHA', 'JAMBEIRO', 'PARAIBUNA', 'MONTEIRO LOBATO'
+    'JAMBEIRO', 'PARAIBUNA'
 ]);
 
 export const CIDADES_BRAGANTINA = new Set([
@@ -802,8 +810,11 @@ export const getMacroRegion = (cidade?: string, lat?: number, lng?: number): Mac
     const rawCity = (cidade || '').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const cleanOrig = (cidade || '').trim().toUpperCase();
     
-    if (CIDADES_LITORAL_NORTE.has(rawCity) || CIDADES_LITORAL_NORTE.has(cleanOrig)) {
+    if (CIDADES_INSULARES_BALSA.has(rawCity) || CIDADES_INSULARES_BALSA.has(cleanOrig) || CIDADES_LITORAL_NORTE.has(rawCity) || CIDADES_LITORAL_NORTE.has(cleanOrig)) {
         return 'LITORAL_NORTE';
+    }
+    if (CIDADES_SERRA_MANTIQUEIRA.has(rawCity) || CIDADES_SERRA_MANTIQUEIRA.has(cleanOrig)) {
+        return 'SERRA_MANTIQUEIRA';
     }
     if (CIDADES_ALTO_TIETE.has(rawCity) || CIDADES_ALTO_TIETE.has(cleanOrig)) {
         return 'ALTO_TIETE';
@@ -6624,7 +6635,7 @@ export const AjusteRota: React.FC = () => {
                         });
                     });
 
-                    // Fusão iterativa de municípios vizinhos e conurbados (distância entre centróides <= CLUSTER_MERGE_DISTANCE_KM)
+                    // Fusão iterativa de municípios vizinhos e conurbados (distância e tempo viário <= CLUSTER_MERGE_DISTANCE_KM & CLUSTER_MERGE_MAX_MINUTES)
                     let mergedClusters = true;
                     while (mergedClusters && superBucketList.length > 1) {
                         mergedClusters = false;
@@ -6638,8 +6649,29 @@ export const AjusteRota: React.FC = () => {
                                 // Não funde cidade base secundária com cidades satélites se houver dispersão
                                 if (bA.isBaseCityGroup && bB.isBaseCityGroup) continue;
 
+                                // AJUSTE 2: Blindagem para municípios insulares/dependentes de balsa (ex: Ilhabela)
+                                const isInsularA = bA.cities.some(ct => {
+                                    const clean = ct.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                    return CIDADES_INSULARES_BALSA.has(clean) || CIDADES_INSULARES_BALSA.has(ct.trim().toUpperCase());
+                                });
+                                const isInsularB = bB.cities.some(ct => {
+                                    const clean = ct.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                    return CIDADES_INSULARES_BALSA.has(clean) || CIDADES_INSULARES_BALSA.has(ct.trim().toUpperCase());
+                                });
+                                if (isInsularA || isInsularB) continue;
+
+                                // AJUSTE 3: Bloqueio de fronteira entre Serra da Mantiqueira e Vale do Paraíba / Litoral
+                                const macroA = getMacroRegion(bA.cities[0], bA.centroidLat, bA.centroidLng);
+                                const macroB = getMacroRegion(bB.cities[0], bB.centroidLat, bB.centroidLng);
+                                const isCoastalA = macroA === 'LITORAL_NORTE' || macroA === 'LITORAL_SUL';
+                                const isCoastalB = macroB === 'LITORAL_NORTE' || macroB === 'LITORAL_SUL';
+                                if (isCoastalA !== isCoastalB) continue; // Barreira Serra do Mar
+                                if ((macroA === 'SERRA_MANTIQUEIRA' && macroB === 'VALE_PARAIBA') || (macroA === 'VALE_PARAIBA' && macroB === 'SERRA_MANTIQUEIRA')) continue; // Barreira Mantiqueira
+
+                                // AJUSTE 1: Critério bimodal de proximidade (distância viária <= CLUSTER_MERGE_DISTANCE_KM E tempo viário <= CLUSTER_MERGE_MAX_MINUTES)
                                 const d = calcDist(bA.centroidLat, bA.centroidLng, bB.centroidLat, bB.centroidLng);
-                                if (d <= CLUSTER_MERGE_DISTANCE_KM && d < minCentroidDist) {
+                                const estTravelTimeMins = (d * 1.18 / 45) * 60; // Modelo viário com tortuosidade 1.18 a 45 km/h
+                                if (d <= CLUSTER_MERGE_DISTANCE_KM && estTravelTimeMins <= CLUSTER_MERGE_MAX_MINUTES && d < minCentroidDist) {
                                     minCentroidDist = d;
                                     bestPair = [i, j];
                                 }
@@ -7402,6 +7434,8 @@ export const AjusteRota: React.FC = () => {
                     let serraPenalty = 0;
                     if (csIsCoastal !== c.isCoastal) {
                         serraPenalty = 220; // Barreira da serra para centroides neutros
+                    } else if ((csMacro === 'SERRA_MANTIQUEIRA' && c.macroRegion === 'VALE_PARAIBA') || (csMacro === 'VALE_PARAIBA' && c.macroRegion === 'SERRA_MANTIQUEIRA')) {
+                        serraPenalty = 70; // Barreira da Mantiqueira para centroides neutros
                     }
                     return Math.max(0.1, rawDist + serraPenalty);
                 });
@@ -7412,10 +7446,12 @@ export const AjusteRota: React.FC = () => {
                 const bLng = sp.baseLng || teamAvgLng;
                 const rawDist = calcDist(bLat, bLng, c.lat, c.lng);
 
-                // Barreira Topográfica da Serra do Mar: Cruzamento entre Litoral e Planalto/Vale é severamente penalizado
+                // Barreira Topográfica da Serra do Mar e Mantiqueira: Cruzamento entre Litoral e Planalto/Vale ou Serra da Mantiqueira
                 let crossRegionPenalty = 0;
                 if (sp.isCoastal !== c.isCoastal) {
-                    crossRegionPenalty = 220; // +220 km virtuais para impedir categoricamente descida/subida de serra desnecessária
+                    crossRegionPenalty = 220; // +220 km virtuais para impedir categoricamente descida/subida de serra do mar desnecessária
+                } else if ((sp.macroRegion === 'SERRA_MANTIQUEIRA' && c.macroRegion === 'VALE_PARAIBA') || (sp.macroRegion === 'VALE_PARAIBA' && c.macroRegion === 'SERRA_MANTIQUEIRA')) {
+                    crossRegionPenalty = 70; // +70 km virtuais para barreira da Serra da Mantiqueira (evita subidas diárias desnecessárias)
                 } else if (sp.macroRegion !== 'OUTRO' && c.macroRegion !== 'OUTRO' && sp.macroRegion !== c.macroRegion) {
                     crossRegionPenalty = 40; // Penalidade moderada entre macro-regiões distintas do planalto (ex: Bragantina vs Alto Tietê)
                 }

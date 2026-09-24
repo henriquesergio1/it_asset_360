@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.237.0',
+    date: 'Hoje',
+    title: 'Fuel360: Barreira da Serra da Mantiqueira, Blindagem Insular e Fusão Bimodal',
+    changes: [
+      'Fusão Bimodal de Super-Buckets (Tempo + Distância): A fusão de municípios agora valida simultaneamente distância viária (<= 15 km) e tempo de trajeto (<= 20 min), prevenindo super-buckets com relevos íngremes ou travessias demoradas.',
+      'Blindagem Insular para Municípios com Balsa: Cidades insulares como Ilhabela ficam categoricamente impedidas de serem mescladas a municípios continentais (São Sebastião), mantendo rotas marítimas isoladas.',
+      'Barreira Topográfica da Serra da Mantiqueira: Criação da macro-região SERRA_MANTIQUEIRA (Campos do Jordão, Sto Antônio do Pinhal, São Bento do Sapucaí, Cunha, etc.) com penalidade de +70 km virtuais na re-setorização e bloqueio estrito de fusão com o fundo do Vale do Paraíba.'
+    ]
+  },
+  {
     version: '3.236.0',
     date: 'Hoje',
     title: 'Fuel360: Super-Buckets Geográficos e Consolidação Quinzenal Intermunicipal (1-3 vs 2-4)',
