@@ -122,6 +122,45 @@ const calcLegMinutes = (roadKm: number): number => {
     return Math.max(1, Math.round((roadKm / speed) * 60));
 };
 
+// --- SEQUÊNCIA DE VISITA POR CICLO (1/3 prioriza Sequencia_13; 2/4 prioriza Sequencia_24) ---
+const getSeq13 = (c: any): number => Number(c.Sequencia_13 || c.Sequencia_24 || c.sequencia || c.ordem || 999);
+const getSeq24 = (c: any): number => Number(c.Sequencia_24 || c.Sequencia_13 || c.sequencia || c.ordem || 999);
+
+// --- VALIDAÇÃO DE COORDENADAS DA PARADA ---
+const hasValidStopCoords = (v: any): boolean => {
+    const lat = Number(v.Lat || v.Latitude);
+    const lon = Number(v.Long || v.Longitude);
+    return !isNaN(lat) && !isNaN(lon) && Math.abs(lat) > 0.001;
+};
+
+// --- KM VIÁRIO ESTIMADO DE UM CIRCUITO (BASE -> PARADAS -> BASE) ---
+const calcCircuitKm = (base: { lat: number; lng: number } | null | undefined, stops: any[]): number => {
+    let km = 0;
+    let pLat = base?.lat || 0;
+    let pLng = base?.lng || 0;
+    let hasStops = false;
+    stops.forEach((s: any) => {
+        if (!hasValidStopCoords(s)) return;
+        const lat = Number(s.Lat || s.Latitude);
+        const lng = Number(s.Long || s.Longitude);
+        if (pLat && pLng) km += calcDist(pLat, pLng, lat, lng);
+        pLat = lat;
+        pLng = lng;
+        hasStops = true;
+    });
+    if (hasStops && base?.lat && base?.lng) km += calcDist(pLat, pLng, base.lat, base.lng);
+    return km * 1.18;
+};
+
+// --- COMPRIMENTO DE UMA POLILINHA EM KM ---
+const calcPolylineKm = (points: [number, number][]): number => {
+    let km = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+        km += calcDist(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1]);
+    }
+    return km;
+};
+
 // --- PARSER DE PERIODICIDADE PADRONIZADO COM O ROTEIRIZADOR ---
 export type PeriodicidadeTipo = 'SEMANAL' | 'QUINZENAL_1_3' | 'QUINZENAL_2_4';
 
@@ -330,6 +369,10 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     const [selectedWeek, setSelectedWeek] = useState<string>('ALL'); // 'ALL', '13', '24'
     const [selectedDay, setSelectedDay] = useState<string>('SEGUNDA-FEIRA');
 
+    // Vendedores ocultos na legenda do modo TODOS (vazio = todos visíveis) e exibição das rotas no mapa
+    const [hiddenSellerIds, setHiddenSellerIds] = useState<Set<string>>(new Set());
+    const [showRoutes, setShowRoutes] = useState<boolean>(true);
+
     // Cliente Selecionado / Destacado no Mapa e Lista
     const [highlightedClient, setHighlightedClient] = useState<any | null>(null);
 
@@ -486,7 +529,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
     const currentSellerClients = useMemo(() => {
         if (sellersList.length === 0) return [];
         if (selectedSeller === 'ALL') {
-            return sellersList.flatMap(s =>
+            return sellersList.filter(s => !hiddenSellerIds.has(String(s.id))).flatMap(s =>
                 s.clients.map((c: any) => ({
                     ...c,
                     _sellerId: String(s.id),
@@ -500,7 +543,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             _sellerId: String(s.id),
             _sellerName: s.name
         })) : [];
-    }, [sellersList, selectedSeller]);
+    }, [sellersList, selectedSeller, hiddenSellerIds]);
 
     // Identificar tipo de equipe da simulação ('vendedores' ou 'promotores')
     const teamType = useMemo<'vendedores' | 'promotores'>(() => {
@@ -677,6 +720,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         if (!simulacaoData || selectedSeller !== 'ALL') return [];
         const bases: any[] = [];
         sellersList.forEach((s, idx) => {
+            if (hiddenSellerIds.has(String(s.id))) return;
             const firstClient = s.clients[0];
             const rawSellerName = s.name || firstClient?.Nome_Vendedor || '';
             const rawSellerCode = s.id || firstClient?.Cod_Vend || '';
@@ -697,7 +741,49 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             }
         });
         return bases;
-    }, [simulacaoData, selectedSeller, sellersList, getColabForCurrentSeller, sellerColorMap]);
+    }, [simulacaoData, selectedSeller, sellersList, getColabForCurrentSeller, sellerColorMap, hiddenSellerIds]);
+
+    // Ponto de partida/retorno de cada vendedor (base residencial ou, na falta dela, a sede) para traçados e cálculos por setor
+    const sellerBaseMap = useMemo(() => {
+        const map = new Map<string, { lat: number; lng: number }>();
+        if (!simulacaoData) return map;
+        const hq = simulacaoData.headquarters;
+        const hqPoint = hq && hq.headquartersLat && hq.headquartersLong && Math.abs(Number(hq.headquartersLat)) > 0.001
+            ? { lat: Number(hq.headquartersLat), lng: Number(hq.headquartersLong) }
+            : null;
+        sellersList.forEach(s => {
+            const firstClient = s.clients[0];
+            const colab = getColabForCurrentSeller(s.id || firstClient?.Cod_Vend || '', s.name || firstClient?.Nome_Vendedor || '');
+            if (colab && colab.LatitudeBase && colab.LongitudeBase && Math.abs(Number(colab.LatitudeBase)) > 0.001) {
+                map.set(String(s.id), { lat: Number(colab.LatitudeBase), lng: Number(colab.LongitudeBase) });
+            } else if (hqPoint) {
+                map.set(String(s.id), hqPoint);
+            }
+        });
+        return map;
+    }, [simulacaoData, sellersList, getColabForCurrentSeller]);
+
+    // Base a ser usada para um vendedor: no modo individual segue a base ativa; no modo TODOS usa a base de cada setor
+    const getBaseForSeller = useCallback((sellerId: string): { lat: number; lng: number } | null => {
+        if (selectedSeller === 'ALL') return sellerBaseMap.get(sellerId) || null;
+        return activeBaseInfo ? { lat: activeBaseInfo.lat, lng: activeBaseInfo.lng } : null;
+    }, [selectedSeller, sellerBaseMap, activeBaseInfo]);
+
+    // Sequência da visita conforme o ciclo filtrado
+    const getVisitSeq = useCallback((c: any): number => {
+        return selectedWeek === '24' ? getSeq24(c) : getSeq13(c);
+    }, [selectedWeek]);
+
+    // Separação das visitas em circuitos por ciclo: com "Todas" gera o circuito 1/3 e o 2/4 separadamente (rotas reais de cada semana)
+    const splitByCycle = useCallback((visits: any[]): Array<{ cycle: '13' | '24'; stops: any[] }> => {
+        if (selectedWeek === '13') return [{ cycle: '13', stops: [...visits].sort((a, b) => getSeq13(a) - getSeq13(b)) }];
+        if (selectedWeek === '24') return [{ cycle: '24', stops: [...visits].sort((a, b) => getSeq24(a) - getSeq24(b)) }];
+        const tipoOf = (c: any) => parsePeriodicidade(c.Periodicidade || c.periodicidade).tipo;
+        return [
+            { cycle: '13', stops: visits.filter(c => tipoOf(c) !== 'QUINZENAL_2_4').sort((a, b) => getSeq13(a) - getSeq13(b)) },
+            { cycle: '24', stops: visits.filter(c => tipoOf(c) !== 'QUINZENAL_1_3').sort((a, b) => getSeq24(a) - getSeq24(b)) }
+        ];
+    }, [selectedWeek]);
 
     // Filtragem por Semana e Dia
     const filteredVisits = useMemo(() => {
@@ -730,11 +816,29 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                 const idxB = orderDays.indexOf(diaB);
                 if (idxA !== idxB) return idxA - idxB;
             }
-            const seqA = Number(a.Sequencia_13 || a.Sequencia_24 || a.sequencia || a.ordem || 999);
-            const seqB = Number(b.Sequencia_13 || b.Sequencia_24 || b.sequencia || b.ordem || 999);
-            return seqA - seqB;
+            // No modo TODOS mantém a sequência de cada vendedor contígua (evita emendar rotas de setores diferentes)
+            if (selectedSeller === 'ALL') {
+                const sA = String(a._sellerId || '');
+                const sB = String(b._sellerId || '');
+                if (sA !== sB) return sA.localeCompare(sB, undefined, { numeric: true });
+            }
+            return getVisitSeq(a) - getVisitSeq(b);
         });
-    }, [currentSellerClients, selectedDay, selectedWeek]);
+    }, [currentSellerClients, selectedDay, selectedWeek, selectedSeller, getVisitSeq]);
+
+    // Chave única da parada (vendedor + cliente) e numeração da parada dentro do dia de cada vendedor
+    const getStopKey = (v: any): string => `${v._sellerId || ''}|${v.Cod_Cliente || v.id}`;
+    const stopSeqMap = useMemo(() => {
+        const map = new Map<string, number>();
+        const counters = new Map<string, number>();
+        filteredVisits.forEach((v: any) => {
+            const groupKey = `${v._sellerId || ''}|${normalizeDiaSemana(v.Dia_Semana || v.dia)}`;
+            const n = (counters.get(groupKey) || 0) + 1;
+            counters.set(groupKey, n);
+            map.set(getStopKey(v), n);
+        });
+        return map;
+    }, [filteredVisits]);
 
     // Ação ao Clicar / Destacar um Cliente (Sincroniza Semana, Dia e Rota ou Desmarca no clique repetido)
     const handleSelectClient = (client: any) => {
@@ -768,10 +872,20 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
 
     // Paradas com cálculos precisos de deslocamento viário e tempo de atendimento individual
     const itineraryStops = useMemo(() => {
-        let prevLat = activeBaseInfo?.lat || 0;
-        let prevLng = activeBaseInfo?.lng || 0;
+        let prevLat = 0;
+        let prevLng = 0;
+        let currentGroupKey: string | null = null;
 
         return filteredVisits.map((v: any, index: number) => {
+            // Cada vendedor/dia parte da sua própria base (não emenda o último cliente de um circuito no primeiro do próximo)
+            const groupKey = `${v._sellerId || ''}|${normalizeDiaSemana(v.Dia_Semana || v.dia)}`;
+            if (groupKey !== currentGroupKey) {
+                currentGroupKey = groupKey;
+                const base = getBaseForSeller(String(v._sellerId || ''));
+                prevLat = base?.lat || 0;
+                prevLng = base?.lng || 0;
+            }
+
             const curLat = Number(v.Lat || v.Latitude || 0);
             const curLng = Number(v.Long || v.Longitude || 0);
 
@@ -795,7 +909,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                 serviceTime
             };
         });
-    }, [filteredVisits, activeBaseInfo, getClientServiceTime]);
+    }, [filteredVisits, getBaseForSeller, getClientServiceTime]);
 
     // Auto-scroll da lista lateral ao selecionar cliente
     useEffect(() => {
@@ -859,32 +973,29 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         });
 
         daysToInspect.forEach(day => {
-            const dayVisits = clientsInCurrentCycle.filter((c: any) => normalizeDiaSemana(c.Dia_Semana || c.dia) === day)
-                .sort((a: any, b: any) => {
-                    const seqA = Number(a.Sequencia_13 || a.Sequencia_24 || a.sequencia || a.ordem || 999);
-                    const seqB = Number(b.Sequencia_13 || b.Sequencia_24 || b.sequencia || b.ordem || 999);
-                    return seqA - seqB;
-                });
+            const dayVisits = clientsInCurrentCycle.filter((c: any) => normalizeDiaSemana(c.Dia_Semana || c.dia) === day);
             stats[day].count = dayVisits.length;
+
+            // KM por vendedor (circuito Base -> Paradas -> Base); com "Todas" usa a média semanal dos ciclos 1/3 e 2/4
+            const bySeller = new Map<string, any[]>();
+            dayVisits.forEach((c: any) => {
+                const sId = String(c._sellerId || '');
+                if (!bySeller.has(sId)) bySeller.set(sId, []);
+                bySeller.get(sId)!.push(c);
+            });
+
             let km = 0;
-            for (let i = 0; i < dayVisits.length - 1; i++) {
-                const p1 = dayVisits[i];
-                const p2 = dayVisits[i + 1];
-                const lat1 = Number(p1.Lat || p1.Latitude);
-                const lon1 = Number(p1.Long || p1.Longitude);
-                const lat2 = Number(p2.Lat || p2.Latitude);
-                const lon2 = Number(p2.Long || p2.Longitude);
-                if (!isNaN(lat1) && !isNaN(lon1) && !isNaN(lat2) && !isNaN(lon2)) {
-                    const dLat = (lat2 - lat1) * 111;
-                    const dLon = (lon2 - lon1) * 111;
-                    km += Math.sqrt(dLat * dLat + dLon * dLon) * 1.25;
-                }
-            }
+            bySeller.forEach((list, sId) => {
+                const base = getBaseForSeller(sId);
+                const cycleKms = splitByCycle(list).map(g => calcCircuitKm(base, g.stops));
+                const sellerKm = cycleKms.reduce((acc, k) => acc + k, 0);
+                km += selectedWeek === 'ALL' ? sellerKm / 2 : sellerKm;
+            });
             stats[day].estimatedKm = Math.round(km * 10) / 10;
         });
 
         return stats;
-    }, [clientsInCurrentCycle]);
+    }, [clientsInCurrentCycle, getBaseForSeller, splitByCycle, selectedWeek]);
 
     // Mapeamento de visitas agrupadas por dia da semana
     const dayVisitsMap = useMemo(() => {
@@ -899,98 +1010,129 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
 
     // Cache de trajetos viários reais OSRM
     const osrmCacheRef = useRef<Map<string, { geometry: [number, number][]; distance: number }>>(new Map());
-    const [roadTracks, setRoadTracks] = useState<Array<{ day: string; color: string; points: [number, number][]; distance: number }>>([]);
+    const [roadTracks, setRoadTracks] = useState<Array<{
+        key: string;
+        day: string;
+        sellerId: string;
+        cycle: '13' | '24';
+        color: string;
+        dashed: boolean;
+        points: [number, number][];
+        distance: number;
+    }>>([]);
 
     // Efeito para carregar trajetos viários reais OSRM incluindo Ponto de Partida e Retorno na Base
+    // Um circuito por vendedor x dia x ciclo: no modo individual usa a cor do dia; no modo TODOS usa a cor de cada vendedor
     useEffect(() => {
         let isMounted = true;
 
         const calculateTracks = async () => {
-            if (filteredVisits.length === 0 || selectedSeller === 'ALL') {
+            if (filteredVisits.length === 0) {
                 setRoadTracks([]);
                 return;
             }
 
-            const daysToDraw: string[] = selectedDay === 'ALL'
-                ? Array.from(new Set(filteredVisits.map((v: any) => normalizeDiaSemana(v.Dia_Semana || v.dia))))
-                : [selectedDay];
+            const isAllMode = selectedSeller === 'ALL';
 
-            const initialTracks: Array<{ day: string; color: string; points: [number, number][]; distance: number }> = [];
+            // Agrupa as paradas por vendedor e dia (preservando a ordem já sequenciada)
+            const bySellerDay = new Map<string, { sellerId: string; day: string; visits: any[] }>();
+            filteredVisits.forEach((v: any) => {
+                const sellerId = String(v._sellerId || '');
+                const day = normalizeDiaSemana(v.Dia_Semana || v.dia);
+                const k = `${sellerId}|${day}`;
+                if (!bySellerDay.has(k)) bySellerDay.set(k, { sellerId, day, visits: [] });
+                bySellerDay.get(k)!.visits.push(v);
+            });
 
-            daysToDraw.forEach((day: string) => {
-                const dayVisits = filteredVisits.filter((v: any) => normalizeDiaSemana(v.Dia_Semana || v.dia) === day);
-                const dayPts = dayVisits
-                    .map((v: any) => {
-                        const lat = Number(v.Lat || v.Latitude);
-                        const lon = Number(v.Long || v.Longitude);
-                        return (!isNaN(lat) && !isNaN(lon) && Math.abs(lat) > 0.001) ? [lat, lon] as [number, number] : null;
-                    })
-                    .filter(Boolean) as [number, number][];
+            const groups: Array<{
+                key: string;
+                day: string;
+                sellerId: string;
+                cycle: '13' | '24';
+                color: string;
+                dashed: boolean;
+                base: { lat: number; lng: number } | null;
+                stops: any[];
+            }> = [];
 
-                const color = DAY_COLORS[day]?.hex || '#2563eb';
-                const baseKey = activeBaseInfo ? `${activeBaseInfo.lat.toFixed(4)},${activeBaseInfo.lng.toFixed(4)}` : 'nobase';
-                const cacheKey = `${selectedSeller}-${selectedWeek}-${day}-${baseKey}-${dayVisits.map(v => v.Cod_Cliente || v.id).join(',')}`;
-                const cached = osrmCacheRef.current.get(cacheKey);
+            bySellerDay.forEach(({ sellerId, day, visits }) => {
+                const base = getBaseForSeller(sellerId);
+                const color = isAllMode
+                    ? (sellerColorMap.get(sellerId)?.hex || SELLER_COLORS[0].hex)
+                    : (DAY_COLORS[day]?.hex || '#2563eb');
+                const baseKey = base ? `${base.lat.toFixed(4)},${base.lng.toFixed(4)}` : 'nobase';
 
-                if (cached) {
-                    initialTracks.push({ day, color, points: cached.geometry, distance: cached.distance });
-                } else {
-                    const fallbackPoints: [number, number][] = [
-                        ...(activeBaseInfo ? [[activeBaseInfo.lat, activeBaseInfo.lng] as [number, number]] : []),
-                        ...dayPts,
-                        ...(activeBaseInfo ? [[activeBaseInfo.lat, activeBaseInfo.lng] as [number, number]] : [])
-                    ];
-                    initialTracks.push({ day, color, points: fallbackPoints, distance: 0 });
-                }
+                splitByCycle(visits).forEach(g => {
+                    const validStops = g.stops.filter(hasValidStopCoords);
+                    if (validStops.length === 0) return;
+                    groups.push({
+                        key: `${sellerId}-${g.cycle}-${day}-${baseKey}-${validStops.map((v: any) => v.Cod_Cliente || v.id).join(',')}`,
+                        day,
+                        sellerId,
+                        cycle: g.cycle,
+                        color,
+                        dashed: selectedWeek === 'ALL' && g.cycle === '24',
+                        base,
+                        stops: validStops
+                    });
+                });
+            });
+
+            // Exibe imediatamente o traçado em linha reta (ou o cache viário) e depois substitui pelo traçado real
+            const initialTracks = groups.map(g => {
+                const cached = osrmCacheRef.current.get(g.key);
+                const basePt: [number, number][] = g.base ? [[g.base.lat, g.base.lng]] : [];
+                const straight: [number, number][] = [
+                    ...basePt,
+                    ...g.stops.map((v: any) => [Number(v.Lat || v.Latitude), Number(v.Long || v.Longitude)] as [number, number]),
+                    ...basePt
+                ];
+                return {
+                    key: g.key,
+                    day: g.day,
+                    sellerId: g.sellerId,
+                    cycle: g.cycle,
+                    color: g.color,
+                    dashed: g.dashed,
+                    points: cached ? cached.geometry : straight,
+                    distance: cached ? cached.distance : 0
+                };
             });
 
             if (isMounted) setRoadTracks(initialTracks);
 
-            for (const day of daysToDraw) {
-                const dayVisits = filteredVisits.filter((v: any) => normalizeDiaSemana(v.Dia_Semana || v.dia) === day);
-                const validDayVisits = dayVisits.filter((v: any) => {
-                    const lat = Number(v.Lat || v.Latitude);
-                    const lon = Number(v.Long || v.Longitude);
-                    return !isNaN(lat) && !isNaN(lon) && Math.abs(lat) > 0.001;
-                });
+            // Consulta OSRM com no máximo 3 requisições simultâneas (o servidor aplica limite de taxa)
+            const pending = groups.filter(g => !osrmCacheRef.current.has(g.key));
+            let cursor = 0;
+            const worker = async () => {
+                while (isMounted && cursor < pending.length) {
+                    const g = pending[cursor++];
+                    try {
+                        // Ponto de Partida e Retorno na Base (Stop 0 e Chegada)
+                        const basePoint = g.base ? {
+                            Lat: g.base.lat,
+                            Long: g.base.lng,
+                            LatitudeBase: g.base.lat,
+                            LongitudeBase: g.base.lng,
+                            Razao_Social: 'Base'
+                        } : null;
 
-                if (validDayVisits.length === 0) continue;
+                        const pointsForOsrm = basePoint ? [basePoint, ...g.stops] : g.stops;
+                        const osrm = await getOSRMData(pointsForOsrm, Boolean(basePoint));
+                        if (!isMounted) return;
 
-                const baseKey = activeBaseInfo ? `${activeBaseInfo.lat.toFixed(4)},${activeBaseInfo.lng.toFixed(4)}` : 'nobase';
-                const cacheKey = `${selectedSeller}-${selectedWeek}-${day}-${baseKey}-${dayVisits.map(v => v.Cod_Cliente || v.id).join(',')}`;
-                if (osrmCacheRef.current.has(cacheKey)) continue;
-
-                try {
-                    // Ponto de Partida e Retorno na Base (Stop 0 e Chegada)
-                    const basePoint = activeBaseInfo ? {
-                        Lat: activeBaseInfo.lat,
-                        Long: activeBaseInfo.lng,
-                        LatitudeBase: activeBaseInfo.lat,
-                        LongitudeBase: activeBaseInfo.lng,
-                        Razao_Social: activeBaseInfo.label
-                    } : null;
-
-                    const pointsForOsrm = basePoint ? [basePoint, ...validDayVisits] : validDayVisits;
-                    const isRoundTrip = Boolean(basePoint);
-
-                    const osrm = await getOSRMData(pointsForOsrm, isRoundTrip);
-                    if (!isMounted) return;
-
-                    if (osrm && osrm.geometry && osrm.geometry.length > 0) {
-                        const entry = { geometry: osrm.geometry as [number, number][], distance: osrm.distance || 0 };
-                        osrmCacheRef.current.set(cacheKey, entry);
-
-                        setRoadTracks(prev => prev.map(t => {
-                            if (t.day === day) {
-                                return { ...t, points: entry.geometry, distance: entry.distance };
-                            }
-                            return t;
-                        }));
+                        if (osrm && osrm.geometry && osrm.geometry.length > 0) {
+                            const entry = { geometry: osrm.geometry as [number, number][], distance: osrm.distance || 0 };
+                            osrmCacheRef.current.set(g.key, entry);
+                            setRoadTracks(prev => prev.map(t => (t.key === g.key ? { ...t, points: entry.geometry, distance: entry.distance } : t)));
+                        }
+                    } catch (err) {
+                        console.warn(`[OSRM] Falha ao obter traçado viário para ${g.day}:`, err);
                     }
-                } catch (err) {
-                    console.warn(`[OSRM] Falha ao obter traçado viário para ${day}:`, err);
                 }
-            }
+            };
+
+            await Promise.all(Array.from({ length: Math.min(3, pending.length) }, () => worker()));
         };
 
         calculateTracks();
@@ -998,7 +1140,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         return () => {
             isMounted = false;
         };
-    }, [filteredVisits, selectedDay, selectedSeller, selectedWeek, activeBaseInfo]);
+    }, [filteredVisits, selectedSeller, selectedWeek, getBaseForSeller, sellerColorMap, splitByCycle]);
 
     // Métricas de Tempo da Rota Selecionada
     const metrics = useMemo(() => {
@@ -1006,28 +1148,15 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
         const tempoAtendimentoMin = filteredVisits.reduce((acc: number, v: any) => acc + getClientServiceTime(v), 0);
         const mediaAtendimentoMin = totalVisitas > 0 ? Math.round(tempoAtendimentoMin / totalVisitas) : 15;
 
+        // KM por circuito (vendedor x dia x ciclo): distância viária OSRM quando disponível,
+        // senão o comprimento do traçado em linha reta (Base -> Paradas -> Base) com fator de sinuosidade 1.18
         let totalKm = 0;
-        const hasOsrmDistances = roadTracks.some(t => t.distance > 0);
-        if (hasOsrmDistances) {
-            totalKm = roadTracks.reduce((acc, t) => acc + (t.distance || 0), 0);
-        } else {
-            // Fallback calculando circuito viário entre base e paradas
-            let prevLat = activeBaseInfo?.lat || 0;
-            let prevLng = activeBaseInfo?.lng || 0;
-            filteredVisits.forEach((v: any) => {
-                const curLat = Number(v.Lat || v.Latitude || 0);
-                const curLng = Number(v.Long || v.Longitude || 0);
-                if (prevLat && prevLng && curLat && curLng) {
-                    totalKm += calcDist(prevLat, prevLng, curLat, curLng) * 1.18;
-                }
-                if (curLat && curLng) {
-                    prevLat = curLat;
-                    prevLng = curLng;
-                }
-            });
-            if (prevLat && prevLng && activeBaseInfo?.lat && activeBaseInfo?.lng && filteredVisits.length > 0) {
-                totalKm += calcDist(prevLat, prevLng, activeBaseInfo.lat, activeBaseInfo.lng) * 1.18;
-            }
+        roadTracks.forEach(t => {
+            totalKm += t.distance > 0 ? t.distance : calcPolylineKm(t.points) * 1.18;
+        });
+        // Com "Todas" as semanas há um circuito 1/3 e um 2/4 por dia: exibe a média semanal
+        if (selectedWeek === 'ALL') {
+            totalKm = totalKm / 2;
         }
 
         const tempoPercursoMin = Math.round((totalKm / 26) * 60);
@@ -1041,7 +1170,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
             tempoPercursoMin,
             tempoTotalMin
         };
-    }, [filteredVisits, roadTracks, activeBaseInfo, getClientServiceTime]);
+    }, [filteredVisits, roadTracks, selectedWeek, getClientServiceTime]);
 
     // Limites do Mapa (Enquadra a Base e todas as Paradas)
     const mapBounds = useMemo<L.LatLngBoundsExpression | null>(() => {
@@ -1387,7 +1516,7 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                             <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 leading-tight">
                                 {metrics.totalKm} km
                             </div>
-                            <div className="text-[9px] text-slate-400 leading-tight">deslocamento viário</div>
+                            <div className="text-[9px] text-slate-400 leading-tight">{selectedWeek === 'ALL' ? 'média semanal (Sem 1/3 e 2/4)' : 'deslocamento viário'}</div>
                         </div>
 
                         <div className="bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
@@ -1447,22 +1576,37 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                             <div className="flex items-center justify-between gap-2 mb-1.5">
                                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                     <Users size={12} className="text-indigo-500" />
-                                    Cores por Vendedor / Setor (Clique para isolar)
+                                    Cores por Vendedor / Setor (Clique para mostrar/ocultar)
                                 </span>
-                                <span className="text-[10px] text-slate-400 font-bold">
-                                    {sellersList.length} vendedores • {sellersList.reduce((acc, s) => acc + s.clients.length, 0)} PDVs
+                                <span className="text-[10px] text-slate-400 font-bold flex items-center gap-2">
+                                    {hiddenSellerIds.size > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setHiddenSellerIds(new Set())}
+                                            className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer font-black"
+                                        >
+                                            Mostrar todos
+                                        </button>
+                                    )}
+                                    <span>{sellersList.length} vendedores • {sellersList.reduce((acc, s) => acc + s.clients.length, 0)} PDVs</span>
                                 </span>
                             </div>
                             <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto pr-1">
                                 {sellersList.map((s, idx) => {
                                     const colorCfg = sellerColorMap.get(String(s.id)) || SELLER_COLORS[idx % SELLER_COLORS.length];
+                                    const isHidden = hiddenSellerIds.has(String(s.id));
                                     return (
                                         <button
                                             key={s.id}
                                             type="button"
-                                            onClick={() => setSelectedSeller(s.id)}
-                                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-bold border transition hover:scale-105 cursor-pointer bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-2xs"
-                                            title={`Clique para filtrar apenas ${s.name}`}
+                                            onClick={() => setHiddenSellerIds(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(String(s.id))) next.delete(String(s.id));
+                                                else next.add(String(s.id));
+                                                return next;
+                                            })}
+                                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-bold border transition hover:scale-105 cursor-pointer bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-2xs ${isHidden ? 'opacity-40 line-through' : ''}`}
+                                            title={isHidden ? `Clique para mostrar ${s.name}` : `Clique para ocultar ${s.name}`}
                                         >
                                             <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: colorCfg.hex }} />
                                             <span className="truncate max-w-[130px] sm:max-w-[170px] text-slate-800 dark:text-slate-100">{s.name}</span>
@@ -1477,6 +1621,32 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                     )}
 
                     <div className="w-full h-[520px] rounded-2xl overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                        {/* Controles do traçado: mostrar/ocultar rotas e legenda dos ciclos */}
+                        {mapBounds && (
+                            <div className="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowRoutes(prev => !prev)}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-md cursor-pointer hover:border-slate-400"
+                                    title={showRoutes ? 'Ocultar o traçado das rotas no mapa' : 'Exibir o traçado das rotas no mapa'}
+                                >
+                                    <Navigation size={12} className={showRoutes ? 'text-emerald-600' : 'text-slate-400'} />
+                                    <span>{showRoutes ? 'Ocultar rotas' : 'Mostrar rotas'}</span>
+                                </button>
+                                {showRoutes && selectedWeek === 'ALL' && roadTracks.length > 0 && (
+                                    <div className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-white/95 dark:bg-slate-900/95 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-md space-y-0.5">
+                                        <div className="flex items-center gap-1.5">
+                                            <svg width="22" height="4"><line x1="0" y1="2" x2="22" y2="2" stroke="currentColor" strokeWidth="3" /></svg>
+                                            <span>Sem 1/3</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <svg width="22" height="4"><line x1="0" y1="2" x2="22" y2="2" stroke="currentColor" strokeWidth="3" strokeDasharray="5 3" /></svg>
+                                            <span>Sem 2/4</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {mapBounds ? (
                             <MapContainer
                                 style={{ width: '100%', height: '100%' }}
@@ -1490,17 +1660,19 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     attribution='&copy; OpenStreetMap contributors'
                                 />
 
-                                {/* Traçado Viário da Rota com Malha OSRM Real (quando vendedor individual selecionado) */}
-                                {selectedSeller !== 'ALL' && roadTracks.map((track) => {
+                                {/* Traçado Viário da Rota com Malha OSRM Real (individual: cor do dia; TODOS: cor de cada vendedor; Sem 2/4 tracejado quando "Todas") */}
+                                {showRoutes && roadTracks.map((track) => {
                                     if (!track.points || track.points.length < 2) return null;
+                                    const isAllMode = selectedSeller === 'ALL';
                                     return (
                                         <Polyline
-                                            key={`track-${track.day}`}
+                                            key={`track-${track.key}`}
                                             positions={track.points}
                                             pathOptions={{
                                                 color: track.color,
-                                                weight: 4,
-                                                opacity: 0.85
+                                                weight: isAllMode ? 3 : 4,
+                                                opacity: isAllMode ? 0.7 : 0.85,
+                                                dashArray: track.dashed ? '8 6' : undefined
                                             }}
                                         />
                                     );
@@ -1573,12 +1745,8 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                                     if (isNaN(lat) || isNaN(lon) || Math.abs(lat) < 0.001) return null;
 
                                     const dayKey = normalizeDiaSemana(v.Dia_Semana || v.dia);
-                                    const dayVisitsList = dayVisitsMap.get(dayKey) || [];
-                                    const daySeq = dayVisitsList.findIndex((item: any) => 
-                                        (v.Cod_Cliente && item.Cod_Cliente === v.Cod_Cliente) || 
-                                        (v.id && item.id === v.id)
-                                    ) + 1;
-                                    const pinSeq = selectedDay === 'ALL' ? (daySeq > 0 ? daySeq : index + 1) : (index + 1);
+                                    // Numeração da parada dentro do dia de cada vendedor
+                                    const pinSeq = stopSeqMap.get(getStopKey(v)) || (index + 1);
 
                                     // Determinação da Cor: No modo TODOS OS VENDEDORES usa a cor do vendedor; caso contrário usa a cor do dia
                                     const sellerId = String(v._sellerId || v.Cod_Vend || '');
@@ -1740,12 +1908,8 @@ export const RevisaoRoteiroSupervisor: React.FC = () => {
                         ) : (
                             itineraryStops.map((v: any, idx: number) => {
                                 const dayKey = normalizeDiaSemana(v.Dia_Semana || v.dia);
-                                const dayVisitsList = dayVisitsMap.get(dayKey) || [];
-                                const daySeq = dayVisitsList.findIndex((item: any) => 
-                                    (v.Cod_Cliente && item.Cod_Cliente === v.Cod_Cliente) || 
-                                    (v.id && item.id === v.id)
-                                ) + 1;
-                                const pinSeq = selectedDay === 'ALL' ? (daySeq > 0 ? daySeq : idx + 1) : (idx + 1);
+                                // Numeração da parada dentro do dia de cada vendedor
+                                const pinSeq = stopSeqMap.get(getStopKey(v)) || (idx + 1);
 
                                 // Determinação da Cor: No modo TODOS OS VENDEDORES usa a cor do vendedor; caso contrário usa a cor do dia
                                 const sellerId = String(v._sellerId || v.Cod_Vend || '');

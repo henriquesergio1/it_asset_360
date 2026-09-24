@@ -9,6 +9,21 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.245.0',
+    date: 'Hoje',
+    title: 'Fuel360: Rotas Coloridas por Vendedor no Link do Supervisor e Link Permanente ao Atualizar Rota',
+    changes: [
+      'Traçado Multi-Vendedor no Link Compartilhado: No modo "Todos os Vendedores" o mapa agora desenha a rota de cada vendedor (Base -> Paradas -> Base) na cor exclusiva do vendedor, com traçado viário real carregado progressivamente (até 3 consultas simultâneas).',
+      'Ciclos Separados no Traçado: Com o filtro de ciclo "Todas", o circuito da Semana 1/3 é exibido em linha contínua e o da Semana 2/4 em linha tracejada, sem misturar clientes dos dois ciclos numa rota inexistente.',
+      'Correção de KM e Itinerário no Modo Todos: Cada vendedor/dia parte da própria base; o deslocamento não é mais emendado entre setores ou dias diferentes e a numeração das paradas reinicia por vendedor/dia.',
+      'Correção da Ordem no Ciclo 2/4: A sequência das visitas passa a respeitar a Sequência 2/4 quando o filtro "Sem 2/4" está ativo.',
+      'KM Estimado por Dia Recalculado: Distância geodésica por vendedor com saída e retorno à base (média semanal dos ciclos quando "Todas").',
+      'Legenda com Seleção Múltipla: Clique nos vendedores da legenda para mostrar/ocultar cada um (botão "Mostrar todos" para restaurar).',
+      'Botão Mostrar/Ocultar Rotas no mapa do link compartilhado.',
+      'Link Permanente ao Atualizar Rota: Ao salvar substituindo uma simulação existente, o registro é atualizado mantendo o mesmo ID e o mesmo link do supervisor, preservando as sugestões já enviadas. Um novo link só é gerado ao criar uma nova rota.'
+    ]
+  },
+  {
     version: '3.244.1',
     date: 'Hoje',
     title: 'Fuel360: Laço Passa a Remover Clientes do Vendedor (Setor 999) em vez de Sem Atendimento',

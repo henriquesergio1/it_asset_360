@@ -18577,7 +18577,7 @@ export const AjusteRota: React.FC = () => {
                                     <div className="text-xs text-amber-800 dark:text-amber-200">
                                         <span className="font-bold">Substituir Simulação Atual?</span>
                                         <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                                            Atualizará o registro #{loadedSimInfo.id} ({loadedSimInfo.name}) em vez de criar um novo.
+                                            Atualizará o registro #{loadedSimInfo.id} ({loadedSimInfo.name}) em vez de criar um novo, mantendo o mesmo link do supervisor. Desmarque para criar uma nova rota com novo link.
                                         </p>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer ml-3">

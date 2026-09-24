@@ -5382,30 +5382,48 @@ app.post('/api/fuel360/roteiro/historico', async (req, res) => {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
 
-        // Se o operador optou por sobrescrever uma simulação existente com mesmo período e KM
-        if (overwriteId) {
-            await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacaoSugestoes WHERE ID_RotaHist = @OID');
-            await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacoesDiario WHERE ID_RotaHist = @OID');
-            await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacoesDetalhe WHERE ID_RotaHist = @OID');
-            await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacoesHistorico WHERE ID_RotaHist = @OID');
-        }
-
         const snapshotStr = typeof SnapshotData === 'object' ? JSON.stringify(SnapshotData) : (SnapshotData || null);
 
-        const histRes = await pool.request()
-            .input('Periodo', sql.NVarChar, Periodo || 'Simulação sem Título')
-            .input('Descricao', sql.NVarChar, Descricao || null)
-            .input('TotalKM', sql.Float, TotalKM || 0)
-            .input('UsuarioSimulacao', sql.NVarChar, userSim)
-            .input('SnapshotData', sql.NVarChar, snapshotStr)
-            .input('TipoProcesso', sql.NVarChar, tipoProc)
-            .query(`
-                INSERT INTO FuelSimulacoesHistorico (Periodo, Descricao, TotalKM, UsuarioSimulacao, SnapshotData, TipoProcesso)
-                OUTPUT INSERTED.ID_RotaHist
-                VALUES (@Periodo, @Descricao, @TotalKM, @UsuarioSimulacao, @SnapshotData, @TipoProcesso)
-            `);
+        // Se o operador optou por sobrescrever uma simulação existente: atualiza o MESMO registro (mantém o ID e o link
+        // compartilhado do supervisor, preservando as sugestões já enviadas) e recria apenas os detalhes/diários
+        let idRotaHist = null;
+        if (overwriteId) {
+            const updRes = await pool.request()
+                .input('OID', sql.Int, overwriteId)
+                .input('Periodo', sql.NVarChar, Periodo || 'Simulação sem Título')
+                .input('Descricao', sql.NVarChar, Descricao || null)
+                .input('TotalKM', sql.Float, TotalKM || 0)
+                .input('UsuarioSimulacao', sql.NVarChar, userSim)
+                .input('SnapshotData', sql.NVarChar, snapshotStr)
+                .input('TipoProcesso', sql.NVarChar, tipoProc)
+                .query(`
+                    UPDATE FuelSimulacoesHistorico
+                    SET Periodo = @Periodo, Descricao = @Descricao, TotalKM = @TotalKM, UsuarioSimulacao = @UsuarioSimulacao,
+                        SnapshotData = @SnapshotData, TipoProcesso = @TipoProcesso, DataSimulacao = GETDATE()
+                    WHERE ID_RotaHist = @OID
+                `);
+            if (updRes.rowsAffected && updRes.rowsAffected[0] > 0) {
+                await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacoesDiario WHERE ID_RotaHist = @OID');
+                await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacoesDetalhe WHERE ID_RotaHist = @OID');
+                idRotaHist = overwriteId;
+            }
+        }
 
-        const idRotaHist = histRes.recordset[0].ID_RotaHist;
+        if (!idRotaHist) {
+            const histRes = await pool.request()
+                .input('Periodo', sql.NVarChar, Periodo || 'Simulação sem Título')
+                .input('Descricao', sql.NVarChar, Descricao || null)
+                .input('TotalKM', sql.Float, TotalKM || 0)
+                .input('UsuarioSimulacao', sql.NVarChar, userSim)
+                .input('SnapshotData', sql.NVarChar, snapshotStr)
+                .input('TipoProcesso', sql.NVarChar, tipoProc)
+                .query(`
+                    INSERT INTO FuelSimulacoesHistorico (Periodo, Descricao, TotalKM, UsuarioSimulacao, SnapshotData, TipoProcesso)
+                    OUTPUT INSERTED.ID_RotaHist
+                    VALUES (@Periodo, @Descricao, @TotalKM, @UsuarioSimulacao, @SnapshotData, @TipoProcesso)
+                `);
+            idRotaHist = histRes.recordset[0].ID_RotaHist;
+        }
 
         if (Array.isArray(Itens)) {
             for (const item of Itens) {
