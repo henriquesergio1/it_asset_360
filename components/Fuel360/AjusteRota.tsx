@@ -6543,14 +6543,14 @@ export const AjusteRota: React.FC = () => {
             const globalClusterAssignedQuinzena = new Map<string, '1_3' | '2_4'>();
 
             if (optBalanceWorkload) {
-                interface WeeklyDistantCluster {
+                type WeeklyDistantCluster = {
                     key: string;
                     dayIndex: number;
                     clients: typeof uniqueClients;
                     workloadMins: number;
                     centroidLat: number;
                     centroidLng: number;
-                }
+                };
 
                 const weeklyDistantClusters: WeeklyDistantCluster[] = [];
                 let baseFixed13Mins = 0;

@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.241.1',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Build — type alias no lugar de interface em bloco condicional',
+    changes: [
+      'Correção de erro de compilação TypeScript (exit code 1 no CI): A declaração `interface WeeklyDistantCluster` dentro do bloco `if (optBalanceWorkload)` foi substituída por `type WeeklyDistantCluster = { ... }`, que é sintaticamente válido em qualquer escopo de bloco. A declaração de interface em bloco de execução é rejeitada pelo compilador TypeScript no modo estrito usado pelo Docker/Portainer.'
+    ]
+  },
+  {
     version: '3.241.0',
     date: 'Hoje',
     title: 'Fuel360: Balanceamento Conjunto Global de Clusters Distantes (Multi-Way LPT)',
