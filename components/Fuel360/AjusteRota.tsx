@@ -3637,7 +3637,7 @@ export const AjusteRota: React.FC = () => {
     // Polígonos de Envoltória Convexa e Centroides Geométricos por Setor/Vendedor
     const mapSectorsData = useMemo<SectorPolygonData[]>(() => {
         const sellerGroups = new Map<number, VisitaPrevista[]>();
-        scopedAdjustedRoutes.forEach(v => {
+        effectiveScopedRoutes.forEach(v => {
             if (!v.Cod_Vend) return;
             const current = sellerGroups.get(v.Cod_Vend) || [];
             current.push(v);
@@ -3703,7 +3703,7 @@ export const AjusteRota: React.FC = () => {
         });
 
         return sectors.sort((a, b) => a.sellerId - b.sellerId);
-    }, [scopedAdjustedRoutes, getColabBySectorOrName, formatSellerDisplayName, promoterColorMap]);
+    }, [effectiveScopedRoutes, getColabBySectorOrName, formatSellerDisplayName, promoterColorMap]);
 
     // Reatribuir vendedor titular do setor ou efetuar troca bilateral (Swap)
     const handleReassignSectorSeller = useCallback((sourceSellerId: number, targetSellerId: number, isSwap: boolean = true) => {
@@ -11297,7 +11297,7 @@ export const AjusteRota: React.FC = () => {
                                 <MapFlyToHandler target={mapFlyToTarget} markerRefs={markerRefs} />
                                 <LassoSelectionHandler 
                                     isActive={isLassoActive}
-                                    clients={scopedAdjustedRoutes}
+                                    clients={filteredRoutes}
                                     onSelectClients={(codes) => {
                                         setSelectedLassoClients(codes);
                                     }}
@@ -11421,8 +11421,8 @@ export const AjusteRota: React.FC = () => {
                                 {!isDrawingZone && showHeatmap && <HeatmapLayer points={heatmapPoints} />}
 
                                 {/* Casas / Bases dos Colaboradores com Destaque Especial */}
-                                {!isDrawingZone && Array.from(new Set((focusedMapSellerId ? scopedAdjustedRoutes.filter(v => v.Cod_Vend === focusedMapSellerId) : scopedAdjustedRoutes).map(v => v.Cod_Vend))).map(vId => {
-                                    const vVisits = scopedAdjustedRoutes.filter(v => v.Cod_Vend === vId);
+                                {!isDrawingZone && Array.from(new Set(effectiveScopedRoutes.map(v => v.Cod_Vend))).map(vId => {
+                                    const vVisits = effectiveScopedRoutes.filter(v => v.Cod_Vend === vId);
                                     const colab = getColabBySectorOrName(vId, vVisits[0]?.Nome_Vendedor);
                                     if(colab && colab.LatitudeBase && colab.LongitudeBase) {
                                         const pColor = promoterColorMap.get(String(vId)) || '#ef4444';
@@ -11470,7 +11470,7 @@ export const AjusteRota: React.FC = () => {
                                 })}
 
                                 {/* Polilinhas das rotas originais (Tracejado claro se houver comparação) */}
-                                {!isDrawingZone && (focusedMapSellerId ? originalPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : originalPolylines).map((line, idx) => {
+                                {!isDrawingZone && (focusedMapSellerId ? originalPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : originalPolylines.filter((line: any) => selectedTeamSellers.size === 0 || selectedTeamSellers.has(String(line.sellerId)))).map((line, idx) => {
                                     const polyColor = (effectiveMapColorMode === 'DIA' && line.day && DAY_COLORS[line.day]) ? DAY_COLORS[line.day].hex : line.color;
                                     return (
                                         <Polyline 
@@ -11488,7 +11488,7 @@ export const AjusteRota: React.FC = () => {
                                 })}
 
                                 {/* Polilinhas das rotas alternativas sugeridas pelo OSRM (Clique para desviar de estrada de terra) */}
-                                {!isDrawingZone && (focusedMapSellerId ? adjustedPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : adjustedPolylines).map((line: any) => {
+                                {!isDrawingZone && (focusedMapSellerId ? adjustedPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : adjustedPolylines.filter((line: any) => selectedTeamSellers.size === 0 || selectedTeamSellers.has(String(line.sellerId)))).map((line: any) => {
                                     if (!line.alternatives || line.alternatives.length === 0) return null;
                                     return line.alternatives.map((alt: any, altIdx: number) => (
                                         <Polyline 
@@ -11536,7 +11536,7 @@ export const AjusteRota: React.FC = () => {
                                 })}
 
                                 {/* Polilinhas das rotas otimizadas com transição visual animada e Popup Interativo */}
-                                {!isDrawingZone && (focusedMapSellerId ? adjustedPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : adjustedPolylines).map((line: any, idx) => {
+                                {!isDrawingZone && (focusedMapSellerId ? adjustedPolylines.filter((line: any) => line.sellerId === focusedMapSellerId) : adjustedPolylines.filter((line: any) => selectedTeamSellers.size === 0 || selectedTeamSellers.has(String(line.sellerId)))).map((line: any, idx) => {
                                     const polyColor = (effectiveMapColorMode === 'DIA' && line.day && DAY_COLORS[line.day]) ? DAY_COLORS[line.day].hex : line.color;
                                     return (
                                         <Polyline 

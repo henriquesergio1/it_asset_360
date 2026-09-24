@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.243.0',
+    date: 'Hoje',
+    title: 'Fuel360: Blindagem Reativa do Mapa e do Laço para Vendedores Desmarcados',
+    changes: [
+      'Blindagem Estrita do Laço Poligonal (Lasso Selection): O laço agora opera estritamente sobre a lista de clientes visíveis e filtrados (`filteredRoutes`), impedindo categoricamente a seleção ou transferência acidental de clientes pertencentes a vendedores desmarcados.',
+      'Sincronização Visual de Polígonos de Setores e Bases: Os polígonos de envoltória convexa de áreas, marcadores de centroide, bases residenciais e polilinhas de rotas agora desaparecem e reaparecem reativamente ao marcar/desmarcar colaboradores no filtro de equipe do mapa.'
+    ]
+  },
+  {
     version: '3.242.1',
     date: 'Hoje',
     title: 'Fuel360: Correção de Declaração de isDistante em Alocação de Super-Buckets',
