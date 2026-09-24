@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.249.0',
+    date: 'Hoje',
+    title: 'Fuel360: Desfazer as Últimas 3 Alterações no Mapa',
+    changes: [
+      'Botão "Desfazer" na barra do mapa do Ajuste de Rotas: reverte, uma por clique, as últimas 3 alterações feitas no mapa (Laço: mudar dia, mudar ciclo, transferir vendedor ou remover para o Setor 999; arrastar cliente para outro vendedor; atribuir setor a outro vendedor). O botão exibe a quantidade disponível e a descrição da próxima ação a desfazer.',
+      'O histórico é reiniciado quando as rotas são substituídas em bloco (carga de rotas, planilha ou simulação, otimização, re-setorização e extinção de setor).'
+    ]
+  },
+  {
     version: '3.248.0',
     date: 'Hoje',
     title: 'Segurança: Autenticação da API por Token e Link do Supervisor com Código Aleatório',

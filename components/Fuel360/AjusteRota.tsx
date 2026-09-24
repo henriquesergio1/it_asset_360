@@ -1920,6 +1920,18 @@ export const AjusteRota: React.FC = () => {
     // Rota original carregada vs Rota sendo simulada / ajustada
     const [originalRoutes, setOriginalRoutes] = useState<VisitaPrevista[]>([]);
     const [adjustedRoutes, setAdjustedRoutes] = useState<VisitaPrevista[]>([]);
+
+    // Histórico de "Desfazer" das últimas alterações feitas no mapa (estado das rotas imediatamente antes de cada ação)
+    const MAP_UNDO_LIMIT = 3;
+    const adjustedRoutesRef = useRef<VisitaPrevista[]>([]);
+    adjustedRoutesRef.current = adjustedRoutes;
+    const [mapUndoStack, setMapUndoStack] = useState<Array<{ label: string; routes: VisitaPrevista[] }>>([]);
+    const pushMapUndo = useCallback((label: string) => {
+        const snapshot = adjustedRoutesRef.current;
+        setMapUndoStack(prev => [...prev, { label, routes: snapshot }].slice(-MAP_UNDO_LIMIT));
+    }, []);
+    // Zera o histórico quando as rotas são substituídas em bloco (carga, otimização, re-setorização, extinção)
+    const clearMapUndo = useCallback(() => setMapUndoStack([]), []);
     
     // NOVO: Mapping manual
     const [unmatchedNames, setUnmatchedNames] = useState<string[]>([]);
@@ -2698,6 +2710,7 @@ export const AjusteRota: React.FC = () => {
 
         setOriginalRoutes(dataWithCustomCoords);
         setAdjustedRoutes(JSON.parse(JSON.stringify(dataWithCustomCoords)));
+        clearMapUndo();
         setIsPlanilhaSimulationActive(true);
         setPlanilhaSimulationFileName(planilhaFileName);
         setPlanilhaSimulationSummary(planilhaSummary);
@@ -3742,6 +3755,7 @@ export const AjusteRota: React.FC = () => {
         const targetName = targetColab?.Nome || `Colaborador ${targetSellerId}`;
         const sourceName = sourceColab?.Nome || `Colaborador ${sourceSellerId}`;
 
+        pushMapUndo(`Setor ${sourceSellerId} atribuído a ${targetSellerId} - ${targetName}`);
         setAdjustedRoutes(prev => {
             const hasTargetInRoutes = prev.some(v => v.Cod_Vend === targetSellerId);
 
@@ -3766,7 +3780,7 @@ export const AjusteRota: React.FC = () => {
 
         // Limpar modal após atribuição
         setSectorAssignModalData(null);
-    }, [getColabBySectorOrName]);
+    }, [getColabBySectorOrName, pushMapUndo]);
 
     // Arrastar e soltar cliente diretamente no mapa sobre a linha/setor de outro vendedor (Drag-and-Drop)
     const handleClientMarkerDragEnd = useCallback((client: VisitaPrevista, e: L.LeafletEvent) => {
@@ -3797,6 +3811,7 @@ export const AjusteRota: React.FC = () => {
             const targetDisplayName = formatSellerDisplayName(target.sellerId, targetName);
             const sourceDisplayName = formatSellerDisplayName(client.Cod_Vend, sourceName);
 
+            pushMapUndo(`Cliente #${client.Cod_Cliente} arrastado para ${targetDisplayName}`);
             setAdjustedRoutes(prev => prev.map(v => {
                 if (v.Cod_Cliente === client.Cod_Cliente) {
                     return {
@@ -3812,7 +3827,7 @@ export const AjusteRota: React.FC = () => {
         } else {
             setCriticaToast(`ℹ️ Cliente mantido com ${client.Nome_Vendedor}. Solte sobre ou próximo à linha/área de outro vendedor para transferir.`);
         }
-    }, [adjustedPolylines, adjustedRoutes, getColabBySectorOrName, formatSellerDisplayName]);
+    }, [adjustedPolylines, adjustedRoutes, getColabBySectorOrName, formatSellerDisplayName, pushMapUndo]);
 
     const handleToggleTeamSeller = (sellerId: string) => {
         setSelectedTeamSellers(prev => {
@@ -4731,6 +4746,7 @@ export const AjusteRota: React.FC = () => {
     const handleBatchChangeDay = (newDay: string) => {
         if (selectedLassoClients.length === 0) return;
         const clientCodes = new Set(selectedLassoClients);
+        pushMapUndo(`Laço: ${clientCodes.size} ${clientCodes.size === 1 ? 'cliente' : 'clientes'} → ${newDay}`);
         setAdjustedRoutes(prev => prev.map(r => {
             if (r.Cod_Cliente && clientCodes.has(r.Cod_Cliente)) {
                 return {
@@ -4748,6 +4764,8 @@ export const AjusteRota: React.FC = () => {
         if (selectedLassoClients.length === 0) return;
         const clientCodes = new Set(selectedLassoClients);
         const periodicidadeStr = newQuinzenaType === 'QUINZENAL_1_3' ? '1 3' : (newQuinzenaType === 'QUINZENAL_2_4' ? '2 4' : 'SEMANAL');
+        const cicloLabel = newQuinzenaType === 'QUINZENAL_1_3' ? 'Sem 1/3' : (newQuinzenaType === 'QUINZENAL_2_4' ? 'Sem 2/4' : 'Semanal');
+        pushMapUndo(`Laço: ${clientCodes.size} ${clientCodes.size === 1 ? 'cliente' : 'clientes'} → ciclo ${cicloLabel}`);
         setAdjustedRoutes(prev => prev.map(r => {
             if (r.Cod_Cliente && clientCodes.has(r.Cod_Cliente)) {
                 return {
@@ -4767,6 +4785,7 @@ export const AjusteRota: React.FC = () => {
         const isRemoveFromSeller = targetSellerId === 999;
         const targetName = isRemoveFromSeller ? 'Setor Temporário 999' : (targetColab?.Nome || `Vendedor ${targetSellerId}`);
         const clientCodes = new Set(selectedLassoClients);
+        pushMapUndo(`Laço: ${clientCodes.size} ${clientCodes.size === 1 ? 'cliente' : 'clientes'} → ${isRemoveFromSeller ? 'Setor 999 (sem vendedor)' : `${targetSellerId} - ${targetName}`}`);
         setAdjustedRoutes(prev => prev.map(r => {
             if (r.Cod_Cliente && clientCodes.has(r.Cod_Cliente)) {
                 return {
@@ -4783,6 +4802,16 @@ export const AjusteRota: React.FC = () => {
         }
         setSelectedLassoClients([]);
         setIsLassoActive(false);
+    };
+
+    // Desfazer a última alteração feita no mapa (até as 3 últimas, uma por clique)
+    const handleUndoMapAction = () => {
+        if (mapUndoStack.length === 0) return;
+        const last = mapUndoStack[mapUndoStack.length - 1];
+        setAdjustedRoutes(last.routes);
+        setMapUndoStack(prev => prev.slice(0, -1));
+        setSelectedLassoClients([]);
+        setCriticaToast(`↩️ Desfeito: ${last.label}`);
     };
 
     // Gestão de Setor Vago: Manter Setor (atualizando opcionalmente a identificação digitada manualmente)
@@ -5164,6 +5193,7 @@ export const AjusteRota: React.FC = () => {
     useEffect(() => {
         setOriginalRoutes([]);
         setAdjustedRoutes([]);
+        clearMapUndo();
         setOriginalPolylines([]);
         setAdjustedPolylines([]);
         setCustomRouteWaypoints(new Map());
@@ -5222,6 +5252,7 @@ export const AjusteRota: React.FC = () => {
 
             setOriginalRoutes(dataWithCustomCoords);
             setAdjustedRoutes(JSON.parse(JSON.stringify(dataWithCustomCoords)));
+            clearMapUndo();
 
             if (vacantSectorsSet.size > 0) {
                 setCriticaToast(`⚠️ Atenção: ${vacantSectorsSet.size} setor(es) vago(s) identificado(s) (${vacantClientsCount} clientes). Você pode atribuir novos titulares ou redistribuir a carteira.`);
@@ -5256,6 +5287,7 @@ export const AjusteRota: React.FC = () => {
 
         setOriginalRoutes(dataWithCustomCoords);
         setAdjustedRoutes(JSON.parse(JSON.stringify(dataWithCustomCoords)));
+        clearMapUndo();
         setLoading(false);
         alert(`Sucesso! ${finalData.length} clientes únicos carregados da planilha.`);
     };
@@ -7502,6 +7534,7 @@ export const AjusteRota: React.FC = () => {
         }
 
         if (result.length > 0) {
+            clearMapUndo();
             setAdjustedRoutes(prev => {
                 const targetSellers = new Set(sellers);
                 const sourceBase = baseRoutes && baseRoutes.length > 0 ? baseRoutes : prev;
@@ -8330,6 +8363,7 @@ export const AjusteRota: React.FC = () => {
                 idleSellersCount = resectorizeResult.idleSellers.length;
                 idleSellerNames = resectorizeResult.idleSellerNames;
                 setAdjustedRoutes(resectorizeResult.updatedRoutes);
+                clearMapUndo();
             }
         }
 
@@ -8720,6 +8754,7 @@ export const AjusteRota: React.FC = () => {
         }
 
         setAdjustedRoutes(newAdjustedRoutes);
+        clearMapUndo();
 
         const breakdown = receptors.map(r => ({
             targetId: r.id,
@@ -8753,6 +8788,7 @@ export const AjusteRota: React.FC = () => {
         if (!backupRoutesBeforeExtinguish) return;
         if (!confirm("Deseja restaurar as rotas para o estado anterior à redistribuição do setor?")) return;
         setAdjustedRoutes(backupRoutesBeforeExtinguish);
+        clearMapUndo();
         setBackupRoutesBeforeExtinguish(null);
         setExtinguishFeedback(null);
         alert("Redistribuição desfeita com sucesso! O setor e todas as suas visitas foram restaurados.");
@@ -10090,6 +10126,7 @@ export const AjusteRota: React.FC = () => {
             }
 
             setAdjustedRoutes(finalVisits);
+            clearMapUndo();
             setOriginalRoutes(finalVisits);
             setScopeMode('geral');
             setSelectedSeller('');
@@ -10140,6 +10177,7 @@ export const AjusteRota: React.FC = () => {
             const syncRes = await syncVisitsCoordinatesWithBaseCentral(adjustedRoutes);
             if (syncRes.updatedCount > 0) {
                 setAdjustedRoutes(syncRes.updatedVisits);
+                clearMapUndo();
                 setOriginalRoutes(prev => prev.map(orig => {
                     const updated = syncRes.updatedVisits.find(u => u.Cod_Cliente === orig.Cod_Cliente);
                     return updated ? { ...orig, Lat: updated.Lat, Long: updated.Long } : orig;
@@ -11500,6 +11538,24 @@ export const AjusteRota: React.FC = () => {
                                     </button>
                                 </>
                             )}
+
+                            {/* Botão Desfazer: reverte as últimas alterações feitas no mapa (até 3), uma por clique */}
+                            <button
+                                type="button"
+                                onClick={handleUndoMapAction}
+                                disabled={mapUndoStack.length === 0}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-slate-200/80 dark:border-slate-800 ${
+                                    mapUndoStack.length === 0
+                                        ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-60'
+                                        : 'text-slate-700 dark:text-slate-200 hover:border-amber-500 hover:text-amber-600 cursor-pointer'
+                                }`}
+                                title={mapUndoStack.length > 0
+                                    ? `Desfazer: ${mapUndoStack[mapUndoStack.length - 1].label}`
+                                    : 'Nenhuma alteração do mapa para desfazer'}
+                            >
+                                <span className="text-sm leading-none">↩️</span>
+                                <span>Desfazer{mapUndoStack.length > 0 ? ` (${mapUndoStack.length})` : ''}</span>
+                            </button>
 
                             {/* Botão Maximizar / Tela Cheia */}
                             <button
