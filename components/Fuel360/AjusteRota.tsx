@@ -6497,45 +6497,6 @@ export const AjusteRota: React.FC = () => {
 
             const dayAssignedClients: Array<typeof uniqueClients> = bestScenarioPartition || Array.from({ length: K }, () => []);
 
-            // Identifica a cidade base do vendedor (pelo EnderecoBase, proximidade geográfica ou maior concentração de clientes)
-            const sellerBaseCity = (() => {
-                if (colab?.EnderecoBase) {
-                    const parts = colab.EnderecoBase.split('-');
-                    if (parts.length >= 2) {
-                        const possibleCity = parts[parts.length - 2]?.trim().toUpperCase();
-                        if (possibleCity && possibleCity.length > 2) return possibleCity;
-                    }
-                }
-                if (baseLat && baseLng && uniqueClients.length > 0) {
-                    let nearestCity = '';
-                    let minDist = Infinity;
-                    uniqueClients.forEach(c => {
-                        if (c.lat && c.lng && c.sampleVisit.Cidade) {
-                            const d = calcDist(baseLat, baseLng, c.lat, c.lng);
-                            if (d < minDist) {
-                                minDist = d;
-                                nearestCity = c.sampleVisit.Cidade.trim().toUpperCase();
-                            }
-                        }
-                    });
-                    if (nearestCity) return nearestCity;
-                }
-                const cityCounts = new Map<string, number>();
-                uniqueClients.forEach(c => {
-                    const cCity = (c.sampleVisit.Cidade || '').trim().toUpperCase();
-                    if (cCity) cityCounts.set(cCity, (cityCounts.get(cCity) || 0) + 1);
-                });
-                let maxCity = '';
-                let maxCount = 0;
-                cityCounts.forEach((count, cCity) => {
-                    if (count > maxCount) {
-                        maxCount = count;
-                        maxCity = cCity;
-                    }
-                });
-                return maxCity;
-            })();
-
             // 2.5.1 BALANCEAMENTO CONJUNTO GLOBAL DE CLUSTERS DISTANTES (CATEGORIA A) NA SEMANA
             // Para vendedores com múltiplos clusters distantes indivisíveis (>= 2 clusters na semana),
             // resolve o problema de partição em 2 grupos (Quinzena 1-3 vs Quinzena 2-4) via LPT / busca exaustiva 2^N,
