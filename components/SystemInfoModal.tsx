@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.242.1',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Declaração de isDistante em Alocação de Super-Buckets',
+    changes: [
+      'Correção de ReferenceError em Otimização de Rotas: Restauração da declaração local da constante booleana `isDistante` no loop de particionamento de super-buckets, eliminando falha de execução ao calcular deslocamento de clusters.'
+    ]
+  },
+  {
     version: '3.242.0',
     date: 'Hoje',
     title: 'Fuel360: Viabilidade de Jornada Diária e Split 50/50 em Clusters com Sobrecarga',

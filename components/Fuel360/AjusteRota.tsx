@@ -6817,6 +6817,8 @@ export const AjusteRota: React.FC = () => {
                         // Distância e tempo estimado do centróide do cluster até a base de residência do vendedor
                         const distBucketToBase = calcDist(bucket.centroidLat, bucket.centroidLng, refBaseLat, refBaseLng);
                         const estMinutesToBase = (distBucketToBase * 1.18 / 45) * 60;
+                        const isDistante = distBucketToBase > 22 || estMinutesToBase > 30;
+
                         const bucketServiceTimeMins = bucket.clients.reduce((sum, c) => sum + getClientServiceTime(c.sampleVisit), 0);
                         const bucketInternalTravelMins = Math.max(0, (bucket.clients.length - 1) * interStopTravelMins);
                         const bucketEstimatedTravelToBase = isDistante ? (estMinutesToBase * 2) : 0;
