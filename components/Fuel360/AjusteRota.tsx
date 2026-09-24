@@ -7713,6 +7713,7 @@ export const AjusteRota: React.FC = () => {
             originalSellerName: string;
             isLocked: boolean;
             tipo: PeriodicidadeTipo;
+            serviceMin: number;
         }
 
         const clientsMap = new Map<number, ClientInfo>();
@@ -7737,7 +7738,8 @@ export const AjusteRota: React.FC = () => {
                     originalSellerId: r.Cod_Vend,
                     originalSellerName: r.Nome_Vendedor,
                     isLocked,
-                    tipo: parsedP.tipo
+                    tipo: parsedP.tipo,
+                    serviceMin: getClientServiceTime(r)
                 });
             }
         });
@@ -7961,6 +7963,16 @@ export const AjusteRota: React.FC = () => {
             }
             return calcDist(sp.baseLat || teamAvgLat, sp.baseLng || teamAvgLng, c.lat, c.lng);
         };
+        const hasRoadTimeFor = (sp: SellerProfile, c: ClientInfo): boolean =>
+            roadTimeToKmFactor > 0 && roadTimesMin!.has(`${sp.id}|${c.cod}`);
+
+        // Carga semanal estimada (minutos) do cliente quando atendido pelo vendedor: atendimento + deslocamento.
+        // Deslocamento calibrado com simulações reais (erro médio ~11%): ~6 min por visita + 0,28 min por km (equivalente) da base.
+        // Quinzenais contam metade (uma visita a cada duas semanas).
+        const estimateClientWeeklyLoadMins = (c: ClientInfo, sp: SellerProfile): number => {
+            const freq = c.tipo === 'SEMANAL' ? 1 : 0.5;
+            return freq * (c.serviceMin + 6 + 0.28 * getSellerClientDist(sp, c));
+        };
 
         // Matriz de distâncias e afinidades espaciais com Barreira Topográfica da Serra do Mar
         const costMatrix: number[][] = unassignedClients.map(c => {
@@ -7986,8 +7998,15 @@ export const AjusteRota: React.FC = () => {
                 const rawDist = getSellerClientDist(sp, c);
 
                 // Barreira Topográfica da Serra do Mar e Mantiqueira: Cruzamento entre Litoral e Planalto/Vale ou Serra da Mantiqueira
+                // Quando há tempo viário real (OSRM) do par, a subida/descida da serra já está medida: as barreiras virtuais
+                // de 220/70 km não são somadas novamente (ex.: Mogi -> Bertioga pela SP-098).
+                const roadTimeKnown = hasRoadTimeFor(sp, c);
                 let crossRegionPenalty = 0;
-                if (sp.isCoastal !== c.isCoastal) {
+                if (roadTimeKnown && (sp.isCoastal !== c.isCoastal ||
+                    (sp.macroRegion === 'SERRA_MANTIQUEIRA' && c.macroRegion === 'VALE_PARAIBA') ||
+                    (sp.macroRegion === 'VALE_PARAIBA' && c.macroRegion === 'SERRA_MANTIQUEIRA'))) {
+                    crossRegionPenalty = 0;
+                } else if (sp.isCoastal !== c.isCoastal) {
                     crossRegionPenalty = 220; // +220 km virtuais para impedir categoricamente descida/subida de serra do mar desnecessária
                 } else if ((sp.macroRegion === 'SERRA_MANTIQUEIRA' && c.macroRegion === 'VALE_PARAIBA') || (sp.macroRegion === 'VALE_PARAIBA' && c.macroRegion === 'SERRA_MANTIQUEIRA')) {
                     crossRegionPenalty = 70; // +70 km virtuais para barreira da Serra da Mantiqueira (evita subidas diárias desnecessárias)
@@ -8025,6 +8044,9 @@ export const AjusteRota: React.FC = () => {
                 return Math.max(0.1, rawDist + crossRegionPenalty + distancePenalty - cityCohesionBonus - coastalAlignmentBonus);
             });
         });
+
+        // Aviso de capacidade semanal (preenchido no modo Equitativo por carga)
+        let capacityWarning = '';
 
         if (!isPureCentroid && (isWhatIfActive || optResectorizeMode === 'MINIMIZE_SELLERS')) {
             const candidateSellers = isWhatIfActive ? sellerProfiles.filter(s => s.maxTarget > 0) : sellerProfiles;
@@ -8087,7 +8109,11 @@ export const AjusteRota: React.FC = () => {
             const potentials = new Array(numSellers).fill(0);
             const clientSellerAssignment: number[] = new Array(unassignedClients.length).fill(0);
 
-            for (let iter = 0; iter < 150; iter++) {
+            // v3.250.0: fora da Setorização Pura, o equilíbrio é pela CARGA SEMANAL ESTIMADA (horas) e não pela quantidade de clientes.
+            // Nesse caso a atribuição inicial é o vendedor de menor custo (1 passada, potenciais zerados) e o equilíbrio ocorre na fronteira.
+            const balanceByLoad = !isPureCentroid;
+
+            for (let iter = 0; iter < (balanceByLoad ? 1 : 150); iter++) {
                 const sellerCounts = new Array(numSellers).fill(0);
 
                 // Atribuição de cada cliente ao setor com menor custo efetivo (distância + potencial)
@@ -8127,9 +8153,9 @@ export const AjusteRota: React.FC = () => {
                 sellerAssignedIndices[sIdx].push(cIdx);
             });
 
-            // Balanceamento Exato de Fronteira com Menor Arrependimento de Distância (min Delta)
+            // Balanceamento Exato de Fronteira com Menor Arrependimento de Distância (min Delta) — por quantidade (Setorização Pura)
             let safetyLimit = 4000;
-            while (safetyLimit > 0) {
+            while (!balanceByLoad && safetyLimit > 0) {
                 safetyLimit--;
 
                 // Identifica setores sobrecarregados (acima da cota exata)
@@ -8186,6 +8212,73 @@ export const AjusteRota: React.FC = () => {
                 }
             }
 
+            // Balanceamento de Fronteira por CARGA semanal estimada (fora da Setorização Pura):
+            // move, do vendedor mais carregado para quem está abaixo da meta, o cliente de menor arrependimento de custo.
+            // Transferências com arrependimento acima de 40 km equivalentes são recusadas; o vendedor sem transferência viável é pulado.
+            const loadMatrix: number[][] = balanceByLoad
+                ? unassignedClients.map(c => sellerProfiles.map(sp => estimateClientWeeklyLoadMins(c, sp)))
+                : [];
+            const sellerLoadMins: number[] = sellerProfiles.map((sp, sIdx) => {
+                if (!balanceByLoad) return 0;
+                const lockedLoad = allClients
+                    .filter(c => c.isLocked && sp.assignedClients.has(c.cod))
+                    .reduce((sum, c) => sum + estimateClientWeeklyLoadMins(c, sp), 0);
+                return lockedLoad + sellerAssignedIndices[sIdx].reduce((sum, cIdx) => sum + loadMatrix[cIdx][sIdx], 0);
+            });
+            const LOAD_TOLERANCE_MINS = 60;
+            const MAX_TRANSFER_REGRET_KM = 40;
+            let loadTargetMins = 0;
+            if (balanceByLoad) {
+                const blockedOver = new Set<number>();
+                for (let guard = 0; guard < 5000; guard++) {
+                    loadTargetMins = sellerLoadMins.reduce((a, b) => a + b, 0) / numSellers;
+                    let overSIdx = -1;
+                    let maxLoad = -Infinity;
+                    for (let s = 0; s < numSellers; s++) {
+                        if (blockedOver.has(s)) continue;
+                        if (sellerLoadMins[s] > loadTargetMins + LOAD_TOLERANCE_MINS && sellerLoadMins[s] > maxLoad) {
+                            maxLoad = sellerLoadMins[s];
+                            overSIdx = s;
+                        }
+                    }
+                    if (overSIdx === -1) break;
+
+                    let bestPos = -1;
+                    let bestTarget = -1;
+                    let minRegret = Infinity;
+                    const overList = sellerAssignedIndices[overSIdx];
+                    for (let pos = 0; pos < overList.length; pos++) {
+                        const cIdx = overList[pos];
+                        for (let t = 0; t < numSellers; t++) {
+                            if (t === overSIdx || sellerLoadMins[t] >= loadTargetMins) continue;
+                            const regret = costMatrix[cIdx][t] - costMatrix[cIdx][overSIdx];
+                            if (regret < minRegret) {
+                                minRegret = regret;
+                                bestPos = pos;
+                                bestTarget = t;
+                            }
+                        }
+                    }
+                    if (bestPos < 0 || minRegret > MAX_TRANSFER_REGRET_KM) {
+                        blockedOver.add(overSIdx);
+                        continue;
+                    }
+                    const [cIdxMoved] = overList.splice(bestPos, 1);
+                    sellerAssignedIndices[bestTarget].push(cIdxMoved);
+                    sellerLoadMins[overSIdx] -= loadMatrix[cIdxMoved][overSIdx];
+                    sellerLoadMins[bestTarget] += loadMatrix[cIdxMoved][bestTarget];
+                }
+                loadTargetMins = sellerLoadMins.reduce((a, b) => a + b, 0) / numSellers;
+            }
+            // Na troca bilateral (abaixo), no modo por carga, nenhum dos dois vendedores pode ultrapassar a meta + tolerância
+            const swapKeepsLoadBalance = (s1: number, s2: number, c1: number, c2: number): boolean => {
+                if (!balanceByLoad) return true;
+                const newLoad1 = sellerLoadMins[s1] - loadMatrix[c1][s1] + loadMatrix[c2][s1];
+                const newLoad2 = sellerLoadMins[s2] - loadMatrix[c2][s2] + loadMatrix[c1][s2];
+                const cap = loadTargetMins + LOAD_TOLERANCE_MINS;
+                return newLoad1 <= Math.max(cap, sellerLoadMins[s1]) && newLoad2 <= Math.max(cap, sellerLoadMins[s2]);
+            };
+
             // Simulação de Trocas Bilaterais Locais (2-Exchange Optimization) para eliminar cruzamentos residuais
             for (let pass = 0; pass < 12; pass++) {
                 let improved = false;
@@ -8199,8 +8292,12 @@ export const AjusteRota: React.FC = () => {
                                 const currentCost = costMatrix[c1][s1] + costMatrix[c2][s2];
                                 const swapCost = costMatrix[c1][s2] + costMatrix[c2][s1];
 
-                                if (swapCost < currentCost - 0.05) {
+                                if (swapCost < currentCost - 0.05 && swapKeepsLoadBalance(s1, s2, c1, c2)) {
                                     // Executa a troca direta
+                                    if (balanceByLoad) {
+                                        sellerLoadMins[s1] += loadMatrix[c2][s1] - loadMatrix[c1][s1];
+                                        sellerLoadMins[s2] += loadMatrix[c1][s2] - loadMatrix[c2][s2];
+                                    }
                                     sellerAssignedIndices[s1][i] = c2;
                                     sellerAssignedIndices[s2][j] = c1;
                                     improved = true;
@@ -8210,6 +8307,18 @@ export const AjusteRota: React.FC = () => {
                     }
                 }
                 if (!improved) break;
+            }
+
+            // Aviso de capacidade: vendedores cuja carga semanal estimada supera os dias ativos x jornada configurada
+            if (balanceByLoad) {
+                const weeklyCapacityMins = activeDays.reduce((sum, day) => sum + ((day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours) * 60, 0);
+                const overCapacity = sellerProfiles
+                    .map((sp, sIdx) => ({ sp, excess: sellerLoadMins[sIdx] - weeklyCapacityMins }))
+                    .filter(item => item.excess > 0);
+                if (overCapacity.length > 0) {
+                    const fmtH = (mins: number) => `${Math.floor(mins / 60)}h${String(Math.round(mins % 60)).padStart(2, '0')}`;
+                    capacityWarning = `Equipe acima da capacidade semanal estimada: ${overCapacity.map(item => `${item.sp.id} (+${fmtH(item.excess)})`).join(', ')}`;
+                }
             }
 
             // No modo Puro por Centroides, emparelha os K setores formados aos K vendedores mais próximos de forma 1:1
@@ -8312,7 +8421,8 @@ export const AjusteRota: React.FC = () => {
             transferredClientsCount: transferredClientsSet.size,
             activeSellers,
             idleSellers,
-            idleSellerNames
+            idleSellerNames,
+            capacityWarning
         };
     };
 
@@ -8346,6 +8456,7 @@ export const AjusteRota: React.FC = () => {
         let activeSellersToOptimize = sellers;
         let idleSellersCount = 0;
         let idleSellerNames: string[] = [];
+        let capacityWarningDesc = '';
 
         const shouldResectorize = overrideResectorize !== undefined
             ? overrideResectorize
@@ -8356,6 +8467,7 @@ export const AjusteRota: React.FC = () => {
             // Tempo viário real Base -> Cliente (OSRM) para setorizar respeitando rodovias, acessos e travessias (exceto centroides puros)
             const roadTimesMin = !isPureCentroid ? await buildSellerClientRoadTimes(sellers, effectiveScopedRoutes) : undefined;
             const resectorizeResult = resectorizeSellersTerritories(sellers, adjustedRoutes, effectiveScopedRoutes, isPureCentroid, roadTimesMin);
+            capacityWarningDesc = resectorizeResult.capacityWarning || '';
             if (resectorizeResult.transferredClientsCount > 0 || resectorizeResult.idleSellers.length > 0) {
                 baseRoutesForOptimization = resectorizeResult.updatedRoutes;
                 resectorizedCount = resectorizeResult.transferredClientsCount;
@@ -8387,7 +8499,7 @@ export const AjusteRota: React.FC = () => {
                     : (isPureCentroid
                         ? `Setorização Pura por Centroides Concluída (${activeSellersToOptimize.length} Setores)`
                         : (isWhatIfSimulation ? `Simulação What-If (${activeSellersToOptimize.length} Vendedores)` : 'Otimização e Roteirização Concluída'))),
-            escopoDesc: `Escopo: ${escopoDesc}${resectorizedCount > 0 ? ` (${resectorizedCount} PDVs re-setorizados)` : ''}${preserveDays ? ' • Dias e quinzenas mantidos rigorosamente' : ''}${isPureCentroid ? ' • Centroides Geográficos Neutros' : ''}`,
+            escopoDesc: `Escopo: ${escopoDesc}${resectorizedCount > 0 ? ` (${resectorizedCount} PDVs re-setorizados)` : ''}${preserveDays ? ' • Dias e quinzenas mantidos rigorosamente' : ''}${isPureCentroid ? ' • Centroides Geográficos Neutros' : ''}${capacityWarningDesc ? ` • ⚠️ ${capacityWarningDesc}` : ''}`,
             mode: 'simulate',
             resectorizedCount,
             activeSellersCount: activeSellersToOptimize.length,

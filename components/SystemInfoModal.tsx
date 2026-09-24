@@ -9,6 +9,18 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.250.0',
+    date: 'Hoje',
+    title: 'Fuel360: Re-setorização Equitativa por Carga de Horas (e não por Quantidade de Clientes)',
+    changes: [
+      'Equilíbrio por Carga Semanal: O modo Equitativo da re-setorização deixa de forçar a mesma quantidade de clientes por vendedor e passa a equilibrar a carga semanal estimada (atendimento + deslocamento a partir da residência de cada vendedor), com tolerância de 1h. Vendedores com clientes próximos podem atender mais PDVs; quem roda mais atende menos.',
+      'Fronteira sem Rotas Absurdas: Um cliente só muda de vendedor para equilibrar a carga se ficar no máximo 40 km equivalentes pior; o vendedor sem transferência viável é ignorado em vez de interromper o equilíbrio.',
+      'Serra com Tempo Viário Real: Quando há tempo viário do OSRM entre a base e o cliente, as barreiras virtuais da Serra do Mar e da Mantiqueira não são somadas novamente (ex.: Mogi das Cruzes -> Bertioga pela SP-098).',
+      'Aviso de Capacidade: O resumo da otimização indica os vendedores cuja carga estimada supera a capacidade semanal (dias ativos x jornada).',
+      'A Setorização Pura por Centroides e os modos Minimizar Vendedores e What-If permanecem inalterados.'
+    ]
+  },
+  {
     version: '3.249.0',
     date: 'Hoje',
     title: 'Fuel360: Desfazer as Últimas 3 Alterações no Mapa',
