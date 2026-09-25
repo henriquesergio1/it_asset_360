@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.255.0',
+    date: 'Hoje',
+    title: 'R.H.: Cabeçalhos Redundantes Removidos e Ações ao Lado da Busca',
+    changes: [
+      'Telas de R.H. (Dashboard, Colaboradores, Termos de Comodato, Faltas e Ocorrências, Ativos e Consumíveis): removido o título grande da página, que repetia o nome já exibido na barra superior.',
+      'Os botões de novo cadastro (Adicionar Colaborador, Emitir Novo Termo, Lançar Ocorrência, Cadastrar Novo Item) foram movidos para a barra de busca/filtros, ao lado das exportações, no mesmo padrão das telas de T.I., e ficaram mais compactos.',
+      'O aviso de Modo Somente Leitura e todas as permissões de exibição dos botões foram mantidos.'
+    ]
+  },
+  {
     version: '3.254.0',
     date: 'Hoje',
     title: 'T.I.: Tabelas com Colunas Proporcionais e Barras de Busca Responsivas',

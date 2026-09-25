@@ -210,20 +210,6 @@ export const RhAssetManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 id="rh-assets-title" className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">ESTOQUE DE ATIVOS E CONSUMÍVEIS R.H.</h1>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Gestão de Equipamentos de Proteção, Uniformes, Consumíveis e Brindes</p>
-        </div>
-        <button
-          onClick={openAddForm}
-          className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
-        >
-          <Plus size={16} /> Cadastrar Novo Item
-        </button>
-      </div>
-
       {/* Bento Grid de Indicadores */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center gap-4">
@@ -306,6 +292,12 @@ export const RhAssetManager: React.FC = () => {
               <Briefcase size={14} /> <span className="hidden lg:inline">CSV</span>
             </button>
           </div>
+          <button
+            onClick={openAddForm}
+            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition-all uppercase tracking-wider whitespace-nowrap shrink-0"
+          >
+            <Plus size={16} /> Cadastrar Novo Item
+          </button>
         </div>
       </div>
 

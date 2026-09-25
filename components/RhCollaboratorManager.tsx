@@ -1610,42 +1610,6 @@ export const RhCollaboratorManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 id="rh-collaborators-title" className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">CADASTRO DE COLABORADORES (R.H.)</h1>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Gestão integral de dados pessoais, contratos e documentos regulamentares</p>
-        </div>
-        {canWrite && (
-          <button
-            onClick={() => {
-              setForm({
-                fullName: '', birthDate: '', gender: 'Masculino', maritalStatus: 'Solteiro',
-                motherName: '', fatherName: '', personalPhone: '', corporatePhone: '',
-                emailPersonal: '', emailCorporate: '', cep: '', street: '', number: '',
-                complement: '', neighborhood: '', city: '', state: '', rg: '', cpf: '',
-                pis: '', electorTitle: '', ctps: '', cnhNumber: '', cnhCategory: '',
-                cnhExpiration: '', role: '', sectorId: '', contractType: 'CLT',
-                hireDate: '', salary: 0, weeklyHours: 44,
-                companyCnpj: '', hasVehicle: 'Não', vehicleType: 'Carro', vehiclePlate: '', transportOption: 'Não Optante',
-                registrationNumber: '', isPcd: 'Não', pcdDetails: '',
-                workShiftStart: '', lunchBreakStart: '', lunchBreakEnd: '', workShiftEnd: '',
-                emergencyContactName: '', emergencyContactPhone: '', emergencyContactRelationship: '',
-                vtValue: 0, vtType: 'Diário', vrValue: 0, vrType: 'Diário',
-                hasStability: 'Não', stabilityType: 'CAT', stabilityEndDate: '', stabilityNotes: '',
-                clothingVest: '', clothingErgonomicBelt: '', clothingJacket: '', clothingBoots: '',
-                clothingTshirt: '', clothingShirt: '', clothingShorts: '', clothingPants: '', clothingLabCoat: '',
-                documents: [], photo: ''
-              });
-              setIsCreating(true);
-            }}
-            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
-          >
-            <Plus size={16} /> Adicionar Colaborador
-          </button>
-        )}
-      </div>
-
       {/* Banner de Aviso: Modo Somente Leitura */}
       {(!canWrite || isReadOnly) && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-600 dark:text-amber-400 animate-fade-in shadow-sm">
@@ -1780,6 +1744,34 @@ export const RhCollaboratorManager: React.FC = () => {
               <Briefcase size={14} /> <span className="hidden lg:inline">CSV</span>
             </button>
           </div>
+          {canWrite && (
+            <button
+              onClick={() => {
+                setForm({
+                  fullName: '', birthDate: '', gender: 'Masculino', maritalStatus: 'Solteiro',
+                  motherName: '', fatherName: '', personalPhone: '', corporatePhone: '',
+                  emailPersonal: '', emailCorporate: '', cep: '', street: '', number: '',
+                  complement: '', neighborhood: '', city: '', state: '', rg: '', cpf: '',
+                  pis: '', electorTitle: '', ctps: '', cnhNumber: '', cnhCategory: '',
+                  cnhExpiration: '', role: '', sectorId: '', contractType: 'CLT',
+                  hireDate: '', salary: 0, weeklyHours: 44,
+                  companyCnpj: '', hasVehicle: 'Não', vehicleType: 'Carro', vehiclePlate: '', transportOption: 'Não Optante',
+                  registrationNumber: '', isPcd: 'Não', pcdDetails: '',
+                  workShiftStart: '', lunchBreakStart: '', lunchBreakEnd: '', workShiftEnd: '',
+                  emergencyContactName: '', emergencyContactPhone: '', emergencyContactRelationship: '',
+                  vtValue: 0, vtType: 'Diário', vrValue: 0, vrType: 'Diário',
+                  hasStability: 'Não', stabilityType: 'CAT', stabilityEndDate: '', stabilityNotes: '',
+                  clothingVest: '', clothingErgonomicBelt: '', clothingJacket: '', clothingBoots: '',
+                  clothingTshirt: '', clothingShirt: '', clothingShorts: '', clothingPants: '', clothingLabCoat: '',
+                  documents: [], photo: ''
+                });
+                setIsCreating(true);
+              }}
+              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition-all uppercase tracking-wider whitespace-nowrap shrink-0"
+            >
+              <Plus size={16} /> Adicionar Colaborador
+            </button>
+          )}
         </div>
       </div>
 

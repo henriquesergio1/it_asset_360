@@ -285,13 +285,6 @@ export const RhDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 id="rh-dashboard-title" className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">DASHBOARD DE R.H.</h1>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Gestão Estratégica de Pessoas e Alertas</p>
-        </div>
-      </div>
-
       {/* Grid de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div id="metric-colab" className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center gap-4">

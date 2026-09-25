@@ -271,22 +271,6 @@ export const RhOccurrenceManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 id="rh-occurrence-title" className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">FALTAS, ATESTADOS E OCORRÊNCIAS</h1>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Controle rigoroso de afastamentos, atestados médicos, licenças e férias</p>
-        </div>
-        {canWrite && (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
-          >
-            <Plus size={16} /> Lançar Ocorrência
-          </button>
-        )}
-      </div>
-
       {/* Banner de Aviso: Modo Somente Leitura */}
       {(!canWrite || isReadOnly) && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-600 dark:text-amber-400 animate-fade-in shadow-sm">
@@ -358,6 +342,14 @@ export const RhOccurrenceManager: React.FC = () => {
               <Briefcase size={14} /> <span className="hidden lg:inline">CSV</span>
             </button>
           </div>
+          {canWrite && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition-all uppercase tracking-wider whitespace-nowrap shrink-0"
+            >
+              <Plus size={16} /> Lançar Ocorrência
+            </button>
+          )}
         </div>
       </div>
 
