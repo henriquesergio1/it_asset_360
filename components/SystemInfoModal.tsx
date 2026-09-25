@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.253.0',
+    date: 'Hoje',
+    title: 'T.I.: Ações ao Lado da Busca e Campo de Busca Padronizado',
+    changes: [
+      'Padrão único nas listas de T.I.: exportação, Colunas e o botão de novo cadastro ficam na mesma linha da busca, logo acima da tabela, em Colaboradores, Licenças/Contas, Dispositivos (junto aos filtros) e Consumíveis — como já era em Chips/SIMs e Tarefas.',
+      'Campo de busca com o mesmo visual (altura, cantos, fundo e ícone) em todas as telas de T.I.; em Consumíveis a busca saiu de dentro do cartão da tabela para a linha própria de busca.',
+      'Colaboradores: o total de profissionais passou a ser exibido como selo na linha da busca.'
+    ]
+  },
+  {
     version: '3.252.0',
     date: 'Hoje',
     title: 'T.I.: Remoção do Cabeçalho Redundante das Telas (Mais Espaço Útil)',

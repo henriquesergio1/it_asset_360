@@ -1608,48 +1608,6 @@ const UserManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* AÇÕES DA TELA (o título da tela fica na barra superior do sistema) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 relative z-30">
-        <p className="text-[10px] sm:text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] opacity-80 truncate">Total de {users.length} profissionais mapeados no ecossistema</p>
-        <div className="flex flex-nowrap items-center gap-2 sm:gap-3 shrink-0">
-          <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner shrink-0">
-            <button onClick={() => handleExport('csv')} className="p-2 sm:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 transition-all" title="Exportar CSV"><FileText size={18}/></button>
-            <button onClick={() => handleExport('excel')} className="p-2 sm:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 transition-all" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
-            <button onClick={() => handleExport('pdf')} className="p-2 sm:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 transition-all" title="Exportar PDF"><Download size={18}/></button>
-          </div>
-
-          <div className={`relative shrink-0 ${isColumnSelectorOpen ? 'z-[9999]' : 'z-[10]'}`} ref={columnRef}>
-            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap">
-              <SlidersHorizontal size={18} /> Colunas
-            </button>
-            {isColumnSelectorOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
-                <div className="bg-slate-50 dark:bg-slate-900 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center text-slate-600 dark:text-slate-400">
-                  <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
-                  <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-900 dark:text-white transition-colors"><X size={14}/></button>
-                </div>
-                <div className="p-2 space-y-1 bg-white dark:bg-slate-800/50">
-                  {COLUMN_OPTIONS.map(col => (
-                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : ' hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}>
-                      {col.label}
-                      {visibleColumns.includes(col.id) && <Check size={14}/>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <button 
-            disabled={isReadOnly}
-            onClick={() => handleOpenModal()} 
-            className={`bg-emerald-600 hover:bg-emerald-700 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-900/40 border-b-4 border-b-emerald-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap shrink-0 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <Plus size={18} /> Novo Colaborador
-          </button>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group">
           <div>
@@ -1725,15 +1683,58 @@ const UserManager: React.FC = () => {
         </button>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-4 top-3" size={20} />
-        <input 
-          type="text" 
-          placeholder="Pesquisar por Nome, CPF, E-mail, RG ou PIS..." 
-          className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 transition-colors" 
-          value={searchTerm} 
-          onChange={e => setSearchTerm(e.target.value)}
-        />
+      {/* Busca e ações da lista (o título da tela fica na barra superior do sistema) */}
+      <div className="flex flex-col md:flex-row md:items-center gap-3 relative z-30">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <Search className="text-slate-600 dark:text-slate-400" size={20} />
+          </div>
+          <input 
+            type="text" 
+            placeholder="Pesquisar por Nome, CPF, E-mail, RG ou PIS..." 
+            className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 dark:text-white bg-white dark:bg-slate-800 transition-colors shadow-inner" 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl whitespace-nowrap shrink-0" title="Total de profissionais mapeados no ecossistema">Total: {users.length} profissionais</span>
+        <div className="flex flex-nowrap items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner shrink-0">
+            <button onClick={() => handleExport('csv')} className="p-2 sm:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 transition-all" title="Exportar CSV"><FileText size={18}/></button>
+            <button onClick={() => handleExport('excel')} className="p-2 sm:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 transition-all" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
+            <button onClick={() => handleExport('pdf')} className="p-2 sm:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 transition-all" title="Exportar PDF"><Download size={18}/></button>
+          </div>
+
+          <div className={`relative shrink-0 ${isColumnSelectorOpen ? 'z-[9999]' : 'z-[10]'}`} ref={columnRef}>
+            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap">
+              <SlidersHorizontal size={18} /> Colunas
+            </button>
+            {isColumnSelectorOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
+                <div className="bg-slate-50 dark:bg-slate-900 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center text-slate-600 dark:text-slate-400">
+                  <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
+                  <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-900 dark:text-white transition-colors"><X size={14}/></button>
+                </div>
+                <div className="p-2 space-y-1 bg-white dark:bg-slate-800/50">
+                  {COLUMN_OPTIONS.map(col => (
+                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : ' hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}>
+                      {col.label}
+                      {visibleColumns.includes(col.id) && <Check size={14}/>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button 
+            disabled={isReadOnly}
+            onClick={() => handleOpenModal()} 
+            className={`bg-emerald-600 hover:bg-emerald-700 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-900/40 border-b-4 border-b-emerald-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap shrink-0 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Plus size={18} /> Novo Colaborador
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>

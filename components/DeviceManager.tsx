@@ -999,8 +999,89 @@ const DeviceManager = () => {
 
  return (
     <div className="space-y-6 relative pb-20 animate-fade-in">
-      {/* AÇÕES DA TELA (o título da tela fica na barra superior do sistema) */}
-      <div className="flex flex-wrap items-center justify-end gap-3 relative z-30">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Ativos</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.length}</p>
+          </div>
+          <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Box size={24}/></div>
+        </div>
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Disponíveis</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.filter(d => d.status === DeviceStatus.AVAILABLE).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><CheckCircle size={24}/></div>
+        </div>
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Em Uso</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.filter(d => d.status === DeviceStatus.IN_USE).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-indigo-50 dark:bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><Users size={24}/></div>
+        </div>
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-amber-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-amber-600 dark:text-amber-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Manutenção</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.filter(d => d.status === DeviceStatus.MAINTENANCE).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-amber-50 dark:bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-800/30 group-hover:scale-110 transition-transform"><Wrench size={24}/></div>
+        </div>
+      </div>
+
+      <div className="flex gap-4 border-b border-slate-200 dark:border-slate-700 overflow-x-auto bg-white dark:bg-slate-800 px-4 pt-2 rounded-t-xl transition-colors shadow-inner">
+ {(['ALL', DeviceStatus.AVAILABLE, DeviceStatus.IN_USE, DeviceStatus.MAINTENANCE, DeviceStatus.RETIRED] as (DeviceStatus | 'ALL')[]).map(status => (
+ <button key={status} onClick={() => setViewStatus(status)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${viewStatus === status ? 'border-blue-600 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>{status === 'ALL' ? 'Todos' : status}<span className="ml-2 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-[11px]">{status === 'ALL' ? devices.length : devices.filter(d => d.status === status).length}</span></button>
+ ))}
+ </div>
+
+ <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full relative z-30">
+ <div className="relative flex-1 w-full">
+ <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 pointer-events-none" size={20} />
+ <input type="text"placeholder="Pesquisar por modelo, patrimônio, IMEI, S/N, e-mail, colaborador..."className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white bg-white dark:bg-slate-800 transition-colors shadow-inner"value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
+ </div>
+ <div className="flex flex-wrap items-center justify-end gap-3 xl:gap-4 bg-white dark:bg-slate-800 p-2 rounded-xl">
+ <span className="text-[11px] font-black uppercase tracking-widest hidden lg:inline">Filtros:</span>
+ 
+ <select 
+ value={filterSector} 
+ onChange={(e) => setFilterSector(e.target.value)}
+ className="bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+ >
+ <option value="">Todos Cargos / Funções</option>
+ {sectors.map(sector => (
+ <option key={sector.id} value={sector.id}>{sector.name}</option>
+ ))}
+ </select>
+
+ <select 
+ value={filterAssetType} 
+ onChange={(e) => setFilterAssetType(e.target.value)}
+ className="bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+ >
+ <option value="">Todos os Tipos</option>
+ {assetTypes.map(type => (
+ <option key={type.id} value={type.id}>{type.name}</option>
+ ))}
+ </select>
+ 
+ <label className="flex items-center gap-2 cursor-pointer">
+ <input type="checkbox"checked={filterNoPulsusId} onChange={() => setFilterNoPulsusId(!filterNoPulsusId)} className="h-4 w-4 rounded focus:ring-blue-500 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 transition-colors cursor-pointer"/>
+ <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Sem ID Pulsus</span>
+ </label>
+ <label className="flex items-center gap-2 cursor-pointer">
+ <input type="checkbox"checked={filterNoInvoice} onChange={() => setFilterNoInvoice(!filterNoInvoice)} className="h-4 w-4 rounded focus:ring-blue-500 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 transition-colors cursor-pointer"/>
+ <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Sem Nota Fiscal</span>
+ </label>
+ <button 
+ onClick={clearFilters}
+ className="ml-2 p-2 hover:text-red-500 hover:bg-red-900/20 rounded-lg transition-all"
+ title="Limpar todos os filtros"
+ >
+ <RotateCcw size={18} />
+ </button>
+ </div>
         <div className="flex flex-nowrap items-center gap-2 sm:gap-3 shrink-0">
           <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner shrink-0">
             <button 
@@ -1060,91 +1141,6 @@ const DeviceManager = () => {
             <Plus size={18} /> Novo Ativo
           </button>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
-          <div>
-            <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Ativos</span>
-            <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.length}</p>
-          </div>
-          <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Box size={24}/></div>
-        </div>
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
-          <div>
-            <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Disponíveis</span>
-            <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.filter(d => d.status === DeviceStatus.AVAILABLE).length}</p>
-          </div>
-          <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><CheckCircle size={24}/></div>
-        </div>
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
-          <div>
-            <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Em Uso</span>
-            <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.filter(d => d.status === DeviceStatus.IN_USE).length}</p>
-          </div>
-          <div className="h-12 w-12 bg-indigo-50 dark:bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><Users size={24}/></div>
-        </div>
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-amber-500/30 group shadow-lg">
-          <div>
-            <span className="text-[11px] font-black text-amber-600 dark:text-amber-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Manutenção</span>
-            <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.filter(d => d.status === DeviceStatus.MAINTENANCE).length}</p>
-          </div>
-          <div className="h-12 w-12 bg-amber-50 dark:bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-800/30 group-hover:scale-110 transition-transform"><Wrench size={24}/></div>
-        </div>
-      </div>
-
-      <div className="flex gap-4 border-b border-slate-200 dark:border-slate-700 overflow-x-auto bg-white dark:bg-slate-800 px-4 pt-2 rounded-t-xl transition-colors shadow-inner">
- {(['ALL', DeviceStatus.AVAILABLE, DeviceStatus.IN_USE, DeviceStatus.MAINTENANCE, DeviceStatus.RETIRED] as (DeviceStatus | 'ALL')[]).map(status => (
- <button key={status} onClick={() => setViewStatus(status)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${viewStatus === status ? 'border-blue-600 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>{status === 'ALL' ? 'Todos' : status}<span className="ml-2 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-[11px]">{status === 'ALL' ? devices.length : devices.filter(d => d.status === status).length}</span></button>
- ))}
- </div>
-
- <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full">
- <div className="relative flex-1 w-full">
- <Search className="absolute left-4 top-3.5"size={20} />
- <input type="text"placeholder="Pesquisar por modelo, patrimônio, IMEI, S/N, e-mail, colaborador..."className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 transition-colors"value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
- </div>
- <div className="flex flex-wrap items-center justify-end gap-3 xl:gap-4 bg-white dark:bg-slate-800 p-2 rounded-xl">
- <span className="text-[11px] font-black uppercase tracking-widest hidden lg:inline">Filtros:</span>
- 
- <select 
- value={filterSector} 
- onChange={(e) => setFilterSector(e.target.value)}
- className="bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
- >
- <option value="">Todos Cargos / Funções</option>
- {sectors.map(sector => (
- <option key={sector.id} value={sector.id}>{sector.name}</option>
- ))}
- </select>
-
- <select 
- value={filterAssetType} 
- onChange={(e) => setFilterAssetType(e.target.value)}
- className="bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
- >
- <option value="">Todos os Tipos</option>
- {assetTypes.map(type => (
- <option key={type.id} value={type.id}>{type.name}</option>
- ))}
- </select>
- 
- <label className="flex items-center gap-2 cursor-pointer">
- <input type="checkbox"checked={filterNoPulsusId} onChange={() => setFilterNoPulsusId(!filterNoPulsusId)} className="h-4 w-4 rounded focus:ring-blue-500 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 transition-colors cursor-pointer"/>
- <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Sem ID Pulsus</span>
- </label>
- <label className="flex items-center gap-2 cursor-pointer">
- <input type="checkbox"checked={filterNoInvoice} onChange={() => setFilterNoInvoice(!filterNoInvoice)} className="h-4 w-4 rounded focus:ring-blue-500 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 transition-colors cursor-pointer"/>
- <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Sem Nota Fiscal</span>
- </label>
- <button 
- onClick={clearFilters}
- className="ml-2 p-2 hover:text-red-500 hover:bg-red-900/20 rounded-lg transition-all"
- title="Limpar todos os filtros"
- >
- <RotateCcw size={18} />
- </button>
- </div>
  </div>
 
   <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5">

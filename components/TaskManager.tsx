@@ -386,11 +386,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
       <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl ring-1 ring-white/5">
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="relative flex-1 group">
-            <Search className="absolute left-4 top-3.5 text-slate-500 dark:text-slate-400 group-focus-within:text-indigo-600 dark:text-indigo-400 transition-colors" size={20} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 group-focus-within:text-indigo-600 dark:text-indigo-400 transition-colors pointer-events-none" size={20} />
             <input
               type="text"
               placeholder="Buscar tarefas por título ou descrição..."
-              className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-700 dark:text-slate-200 text-sm shadow-inner"
+              className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white text-sm shadow-inner"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

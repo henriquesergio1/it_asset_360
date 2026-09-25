@@ -326,8 +326,56 @@ const Consumables = () => {
 
     return (
         <div className="space-y-6 animate-fade-in relative pb-20">
-            {/* AÇÕES DA TELA (o título da tela fica na barra superior do sistema) */}
-            <div className="flex flex-wrap items-center justify-end gap-3 relative z-30">
+            {/* Dashboard Cards PADRONIZADOS */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+                    <div>
+                        <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Itens</span>
+                        <p className="text-2xl font-black text-slate-900 dark:text-white">{consumables.length}</p>
+                    </div>
+                    <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Package size={24}/></div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-red-500/30 group shadow-lg">
+                    <div>
+                        <span className="text-[11px] font-black text-rose-600 dark:text-rose-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Estoque Crítico</span>
+                        <p className="text-2xl font-black text-slate-900 dark:text-white">{lowStockItems.length}</p>
+                    </div>
+                    <div className="h-12 w-12 bg-rose-50 dark:bg-rose-900/20 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/30 group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+                    <div>
+                        <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Movimentações</span>
+                        <p className="text-2xl font-black text-slate-900 dark:text-white">{consumableTransactions.length}</p>
+                    </div>
+                    <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><History size={24}/></div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
+                    <div>
+                        <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Categorias</span>
+                        <p className="text-2xl font-black text-slate-900 dark:text-white">{new Set(consumables.map(c => c.Category)).size}</p>
+                    </div>
+                    <div className="h-12 w-12 bg-indigo-50 dark:bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><FileText size={24}/></div>
+                </div>
+            </div>
+
+            {/* Main Content */}
+            {/* Busca e ações da lista (o título da tela fica na barra superior do sistema) */}
+            <div className="flex flex-col md:flex-row md:items-center gap-3 relative z-30">
+                <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Search className="text-slate-600 dark:text-slate-400" size={20} />
+                    </div>
+                    <input 
+                        type="text" 
+                        placeholder="Buscar por nome ou categoria..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white bg-white dark:bg-slate-800 transition-colors shadow-inner"
+                    />
+                </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner">
                         <button 
@@ -384,55 +432,7 @@ const Consumables = () => {
                 </div>
             </div>
 
-            {/* Dashboard Cards PADRONIZADOS */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
-                    <div>
-                        <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Itens</span>
-                        <p className="text-2xl font-black text-slate-900 dark:text-white">{consumables.length}</p>
-                    </div>
-                    <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Package size={24}/></div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-red-500/30 group shadow-lg">
-                    <div>
-                        <span className="text-[11px] font-black text-rose-600 dark:text-rose-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Estoque Crítico</span>
-                        <p className="text-2xl font-black text-slate-900 dark:text-white">{lowStockItems.length}</p>
-                    </div>
-                    <div className="h-12 w-12 bg-rose-50 dark:bg-rose-900/20 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/30 group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
-                    <div>
-                        <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Movimentações</span>
-                        <p className="text-2xl font-black text-slate-900 dark:text-white">{consumableTransactions.length}</p>
-                    </div>
-                    <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><History size={24}/></div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
-                    <div>
-                        <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Categorias</span>
-                        <p className="text-2xl font-black text-slate-900 dark:text-white">{new Set(consumables.map(c => c.Category)).size}</p>
-                    </div>
-                    <div className="h-12 w-12 bg-indigo-50 dark:bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><FileText size={24}/></div>
-                </div>
-            </div>
-
-            {/* Main Content */}
             <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col ring-1 ring-white/5">
-                <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50 dark:bg-slate-900/20">
-                    <div className="relative w-full sm:w-96">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400" size={18} />
-                        <input 
-                            type="text" 
-                            placeholder="Buscar por nome ou categoria..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 w-full border-none rounded-xl py-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 transition-colors text-sm"
-                        />
-                    </div>
-                </div>
 
                 <div className="overflow-x-auto shadow-inner">
                     <table className="w-full text-left table-fixed border-collapse">
