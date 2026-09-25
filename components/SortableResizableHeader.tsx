@@ -7,7 +7,8 @@ interface SortableResizableHeaderProps {
   currentSort: { key: string; direction: 'asc' | 'desc' } | null;
   requestSort: (key: string) => void;
   minWidth?: string;
-  width?: number;
+  // Largura em px (definida pelo usuário ao redimensionar) ou valor CSS (ex.: '18%', proporcional)
+  width?: number | string;
   onResize?: (startX: number, startWidth: number) => void;
 }
 
@@ -35,7 +36,7 @@ export const SortableResizableHeader: React.FC<SortableResizableHeaderProps> = (
   return (
     <th 
       className="p-0 border-b border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400/80 group align-middle relative select-none"
-      style={{ width: width ? `${width}px` : undefined, minWidth }}
+      style={{ width: width ? (typeof width === 'number' ? `${width}px` : width) : undefined, minWidth }}
     >
       <div className="flex items-center h-full min-h-[48px] relative">
         <button

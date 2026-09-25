@@ -1684,8 +1684,8 @@ const UserManager: React.FC = () => {
       </div>
 
       {/* Busca e ações da lista (o título da tela fica na barra superior do sistema) */}
-      <div className="flex flex-col md:flex-row md:items-center gap-3 relative z-30">
-        <div className="relative flex-1">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 relative z-30">
+        <div className="relative flex-1 min-w-0 lg:min-w-[260px]">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <Search className="text-slate-600 dark:text-slate-400" size={20} />
           </div>
@@ -1697,8 +1697,8 @@ const UserManager: React.FC = () => {
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-        <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl whitespace-nowrap shrink-0" title="Total de profissionais mapeados no ecossistema">Total: {users.length} profissionais</span>
-        <div className="flex flex-nowrap items-center gap-2 sm:gap-3 shrink-0">
+        <span className="hidden 2xl:inline text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl whitespace-nowrap shrink-0" title="Total de profissionais mapeados no ecossistema">Total: {users.length} profissionais</span>
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 shrink-0">
           <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner shrink-0">
             <button onClick={() => handleExport('csv')} className="p-2 sm:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 transition-all" title="Exportar CSV"><FileText size={18}/></button>
             <button onClick={() => handleExport('excel')} className="p-2 sm:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 transition-all" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
@@ -1706,8 +1706,8 @@ const UserManager: React.FC = () => {
           </div>
 
           <div className={`relative shrink-0 ${isColumnSelectorOpen ? 'z-[9999]' : 'z-[10]'}`} ref={columnRef}>
-            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap">
-              <SlidersHorizontal size={18} /> Colunas
+            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} title="Colunas" className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap">
+              <SlidersHorizontal size={18} /> <span className="hidden xl:inline">Colunas</span>
             </button>
             {isColumnSelectorOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">

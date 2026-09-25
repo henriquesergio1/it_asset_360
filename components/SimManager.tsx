@@ -282,8 +282,8 @@ const SimManager = () => {
       </div>
 
       {/* Busca e ações da lista (o título da tela fica na barra superior do sistema) */}
-      <div className="flex flex-col md:flex-row md:items-center gap-3 relative z-30">
-        <div className="relative flex-1">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 relative z-30">
+        <div className="relative flex-1 min-w-0 lg:min-w-[260px]">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <Search className="text-slate-600 dark:text-slate-400" size={20} />
           </div>
@@ -303,8 +303,8 @@ const SimManager = () => {
           </div>
 
           <div className={`relative ${isColumnSelectorOpen ? 'z-[9999]' : 'z-[10]'}`} ref={columnRef}>
-            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-black text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
-              <SlidersHorizontal size={18} /> Colunas
+            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} title="Colunas" className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-black text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
+              <SlidersHorizontal size={18} /> <span className="hidden xl:inline">Colunas</span>
             </button>
             {isColumnSelectorOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
@@ -327,7 +327,7 @@ const SimManager = () => {
           <button 
             disabled={isReadOnly}
             onClick={() => handleOpenModal()} 
-            className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/40 border-b-4 border-b-blue-800 active:border-b-0 active:translate-y-[2px] ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 whitespace-nowrap font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/40 border-b-4 border-b-blue-800 active:border-b-0 active:translate-y-[2px] ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <Plus size={18} /> Novo SIM
           </button>

@@ -46,6 +46,17 @@ export function DataTable<T extends { id: string }>({
   
   const allSelected = data.length > 0 && selectedIds.length === data.length;
 
+  // Larguras proporcionais: em tabela "table-fixed" o navegador ignora o minWidth das colunas e as divide
+  // igualmente (ex.: "Nome Completo" ficava do tamanho de "RG"). Cada coluna não redimensionada pelo usuário
+  // recebe um percentual proporcional ao seu minWidth; abaixo de ~70% da soma, a tabela rola na horizontal.
+  const pxOf = (value?: string) => {
+    const n = parseInt(String(value || '120px'), 10);
+    return isNaN(n) ? 120 : n;
+  };
+  const totalMinWidthPx = columns.reduce((sum, col) => sum + pxOf(col.minWidth), 0) + (onSelectAll ? 60 : 0);
+  const proportionalWidth = (col: Column<T>) =>
+    columnWidths[col.key] || `${((pxOf(col.minWidth) / Math.max(1, totalMinWidthPx)) * 100).toFixed(2)}%`;
+
   if (isLoading) {
     return (
       <div className="p-8 text-center text-slate-600 dark:text-slate-400">
@@ -57,7 +68,7 @@ export function DataTable<T extends { id: string }>({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left table-fixed border-collapse">
+      <table className="w-full text-left table-fixed border-collapse" style={{ minWidth: `${Math.round(totalMinWidthPx * 0.7)}px` }}>
         <thead className="bg-slate-50 dark:bg-slate-900/50 text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
           <tr>
             {onSelectAll && (
@@ -79,14 +90,14 @@ export function DataTable<T extends { id: string }>({
                   currentSort={sortConfig}
                   requestSort={requestSort}
                   minWidth={col.minWidth || '120px'}
-                  width={columnWidths[col.key]}
+                  width={proportionalWidth(col)}
                   onResize={(x, w) => onResize(col.key, x, w)}
                 />
               ) : (
                 <th 
                   key={col.key}
                   className="px-6 py-4 border-b border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-[10px] uppercase font-black tracking-widest text-slate-600 dark:text-slate-400"
-                  style={{ width: columnWidths[col.key] || 'auto', minWidth: col.minWidth || '120px' }}
+                  style={{ width: proportionalWidth(col), minWidth: col.minWidth || '120px' }}
                 >
                   {col.label}
                 </th>

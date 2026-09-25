@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.254.0',
+    date: 'Hoje',
+    title: 'T.I.: Tabelas com Colunas Proporcionais e Barras de Busca Responsivas',
+    changes: [
+      'Tabelas padronizadas (componente compartilhado): as colunas passam a ter largura proporcional ao seu tamanho mínimo, em vez de dividir o espaço igualmente — ex.: "Nome Completo" deixa de quebrar em várias linhas. Em telas muito estreitas a tabela rola na horizontal em vez de espremer o conteúdo. Vale para Colaboradores, Dispositivos, Licenças/Contas e para as tabelas do R.H. que usam o mesmo componente.',
+      'Barras de busca responsivas: a busca nunca fica espremida (largura mínima quando divide a linha) e os botões quebram de linha quando falta espaço; abaixo de 1024px busca e botões ficam em linhas separadas.',
+      'Botões mais compactos: "Colunas" e "Catálogo" exibem apenas o ícone em telas médias (com dica ao passar o mouse); botões de novo cadastro, abas e seletores com menos preenchimento; o selo "Total de profissionais" aparece apenas em telas largas.',
+      'Dispositivos: linha 1 com busca e ações, linha 2 com os filtros (antes a busca era reduzida a um ícone em telas largas). Tarefas: busca com largura mínima e filtros que quebram de linha em telas menores.'
+    ]
+  },
+  {
     version: '3.253.0',
     date: 'Hoje',
     title: 'T.I.: Ações ao Lado da Busca e Campo de Busca Padronizado',

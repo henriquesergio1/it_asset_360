@@ -1036,12 +1036,74 @@ const DeviceManager = () => {
  ))}
  </div>
 
- <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full relative z-30">
- <div className="relative flex-1 w-full">
+ {/* Linha 1: busca e ações da lista • Linha 2: filtros (o título da tela fica na barra superior do sistema) */}
+ <div className="flex flex-col gap-3 w-full relative z-30">
+ <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+ <div className="relative flex-1 min-w-0 lg:min-w-[260px] w-full">
  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 pointer-events-none" size={20} />
  <input type="text"placeholder="Pesquisar por modelo, patrimônio, IMEI, S/N, e-mail, colaborador..."className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white bg-white dark:bg-slate-800 transition-colors shadow-inner"value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
  </div>
- <div className="flex flex-wrap items-center justify-end gap-3 xl:gap-4 bg-white dark:bg-slate-800 p-2 rounded-xl">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 shrink-0">
+          <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner shrink-0">
+            <button 
+              onClick={() => handleExport('csv')} 
+              className="p-2 sm:p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400"
+              title="Exportar CSV"
+            >
+              <FileText size={18}/>
+            </button>
+            <button 
+              onClick={() => handleExport('excel')} 
+              className="p-2 sm:p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400"
+              title="Exportar Excel"
+            >
+              <FileSpreadsheet size={18}/>
+            </button>
+            <button 
+              onClick={() => handleExport('pdf')} 
+              className="p-2 sm:p-3 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400"
+              title="Exportar PDF"
+            >
+              <Download size={18}/>
+            </button>
+          </div>
+
+          <div className={`relative shrink-0 ${isColumnSelectorOpen ? 'z-[9999]' : 'z-[10]'}`} ref={columnRef}>
+            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} title="Colunas" className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap">
+              <SlidersHorizontal size={18} /> <span className="hidden xl:inline">Colunas</span>
+            </button>
+            {isColumnSelectorOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
+                <div className="bg-slate-50 dark:bg-slate-900 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center text-slate-600 dark:text-slate-400">
+                  <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
+                  <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-900 dark:text-white transition-colors"><X size={14}/></button>
+                </div>
+                <div className="p-2 space-y-1 bg-white dark:bg-slate-800/50">
+                  {COLUMN_OPTIONS.map(col => (
+                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : ' hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}>
+                      {col.label}
+                      {visibleColumns.includes(col.id) && <Check size={14}/>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button onClick={() => setIsModelSettingsOpen(true)} title="Catálogo de modelos" className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap shrink-0">
+            <Settings size={18} /> <span className="hidden xl:inline">Catálogo</span>
+          </button>
+
+          <button 
+            disabled={isReadOnly}
+            onClick={() => handleOpenModal()} 
+            className={`bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/40 border-b-4 border-b-blue-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap shrink-0 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Plus size={18} /> Novo Ativo
+          </button>
+        </div>
+ </div>
+ <div className="flex flex-wrap items-center gap-3 xl:gap-4 bg-white dark:bg-slate-800 p-2 rounded-xl">
  <span className="text-[11px] font-black uppercase tracking-widest hidden lg:inline">Filtros:</span>
  
  <select 
@@ -1082,65 +1144,6 @@ const DeviceManager = () => {
  <RotateCcw size={18} />
  </button>
  </div>
-        <div className="flex flex-nowrap items-center gap-2 sm:gap-3 shrink-0">
-          <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner shrink-0">
-            <button 
-              onClick={() => handleExport('csv')} 
-              className="p-2 sm:p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400"
-              title="Exportar CSV"
-            >
-              <FileText size={18}/>
-            </button>
-            <button 
-              onClick={() => handleExport('excel')} 
-              className="p-2 sm:p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400"
-              title="Exportar Excel"
-            >
-              <FileSpreadsheet size={18}/>
-            </button>
-            <button 
-              onClick={() => handleExport('pdf')} 
-              className="p-2 sm:p-3 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400"
-              title="Exportar PDF"
-            >
-              <Download size={18}/>
-            </button>
-          </div>
-
-          <div className={`relative shrink-0 ${isColumnSelectorOpen ? 'z-[9999]' : 'z-[10]'}`} ref={columnRef}>
-            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap">
-              <SlidersHorizontal size={18} /> Colunas
-            </button>
-            {isColumnSelectorOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
-                <div className="bg-slate-50 dark:bg-slate-900 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center text-slate-600 dark:text-slate-400">
-                  <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
-                  <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-900 dark:text-white transition-colors"><X size={14}/></button>
-                </div>
-                <div className="p-2 space-y-1 bg-white dark:bg-slate-800/50">
-                  {COLUMN_OPTIONS.map(col => (
-                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : ' hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}>
-                      {col.label}
-                      {visibleColumns.includes(col.id) && <Check size={14}/>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <button onClick={() => setIsModelSettingsOpen(true)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap shrink-0">
-            <Settings size={18} /> Catálogo
-          </button>
-
-          <button 
-            disabled={isReadOnly}
-            onClick={() => handleOpenModal()} 
-            className={`bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/40 border-b-4 border-b-blue-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap shrink-0 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <Plus size={18} /> Novo Ativo
-          </button>
-        </div>
  </div>
 
   <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5">
