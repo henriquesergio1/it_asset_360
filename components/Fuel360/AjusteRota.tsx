@@ -11746,7 +11746,7 @@ export const AjusteRota: React.FC = () => {
                                                             <div className="flex items-center gap-1.5">
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => setSelectedTeamSellers(new Set())}
+                                                                    onClick={handleSelectAllTeamSellers}
                                                                     className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:underline cursor-pointer"
                                                                 >
                                                                     Marcar Todos
@@ -11754,7 +11754,7 @@ export const AjusteRota: React.FC = () => {
                                                                 <span className="text-slate-300 dark:text-slate-600">•</span>
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => setSelectedTeamSellers(new Set())}
+                                                                    onClick={handleSelectAllTeamSellers}
                                                                     className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                                                                 >
                                                                     Resetar

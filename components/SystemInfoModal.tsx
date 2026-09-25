@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.251.1',
+    date: 'Hoje',
+    title: 'Fuel360: Correção do "Marcar Todos" no Filtro de Vendedores',
+    changes: [
+      'Após filtrar um vendedor pelo "apenas", os botões "Marcar Todos" e "Resetar" do filtro de vendedores agora também desfazem o foco do mapa, exibindo novamente todos os vendedores no mapa e na grade.'
+    ]
+  },
+  {
     version: '3.251.0',
     date: 'Hoje',
     title: 'Fuel360: Tela de Ajuste de Rota Reorganizada (Comandos Agrupados e Filtros Únicos)',
