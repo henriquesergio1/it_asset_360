@@ -1932,6 +1932,9 @@ export const AjusteRota: React.FC = () => {
     }, []);
     // Zera o histórico quando as rotas são substituídas em bloco (carga, otimização, re-setorização, extinção)
     const clearMapUndo = useCallback(() => setMapUndoStack([]), []);
+
+    // Menus suspensos da barra de comandos do topo ("Dados" e "Otimizar")
+    const [openTopMenu, setOpenTopMenu] = useState<'dados' | 'otimizar' | null>(null);
     
     // NOVO: Mapping manual
     const [unmatchedNames, setUnmatchedNames] = useState<string[]>([]);
@@ -11257,106 +11260,230 @@ export const AjusteRota: React.FC = () => {
                     )}
                 </div>
 
-                {/* LADO DIREITO: STATUS DO FOCO, REDISTRIBUIR E CARGA */}
+                {/* LADO DIREITO: STATUS DO FOCO E COMANDOS AGRUPADOS (DADOS • OTIMIZAR • SALVAR) */}
                 <div className="flex flex-wrap items-center gap-2">
                     {adjustedRoutes.length > 0 && (
-                        <>
-                            <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-xl text-xs font-bold border border-indigo-100 dark:border-indigo-900/60 flex items-center shadow-2xs h-[34px]">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
-                                {Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).length} Colab • {scopedAdjustedRoutes.length} PDVs em foco
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setSourceSectorToExtinguish('');
-                                    setTargetSectorsSelected([]);
-                                    setShowExtinguishModal(true);
-                                }}
-                                disabled={loading || adjustedRoutes.length === 0}
-                                className="bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer disabled:opacity-50 h-[34px]"
-                                title="Simular a extinção de um setor e redistribuir sua carteira para os demais setores selecionados com balanceamento equilibrado"
-                            >
-                                <UserGroupIcon className="w-3.5 h-3.5 mr-1 text-amber-600 dark:text-amber-400"/>
-                                Redistribuir Setor
-                            </button>
-                            {backupRoutesBeforeExtinguish && (
-                                <button
-                                    type="button"
-                                    onClick={handleUndoExtinguish}
-                                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-bold px-2.5 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer h-[34px]"
-                                    title="Restaurar a carteira do setor extinto de volta ao estado original"
-                                >
-                                    ↩️ Desfazer
-                                </button>
-                            )}
-                        </>
+                        <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-xl text-xs font-bold border border-indigo-100 dark:border-indigo-900/60 flex items-center shadow-2xs h-[34px]">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+                            {Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).length} Colab • {scopedAdjustedRoutes.length} PDVs em foco
+                        </div>
                     )}
-
-                    {/* Botão de Abertura de Simulações Salvas (com Badge de Críticas) */}
-                    <button
-                        type="button"
-                        onClick={handleOpenSavedSimulationsModal}
-                        className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center shadow-xs h-[34px] cursor-pointer relative transition"
-                        title="Abrir simulações salvas e histórico de ajustes de rota"
-                    >
-                        <FolderOpen className="w-4 h-4 mr-1.5 text-amber-500" />
-                        Simulações Salvas
-                        {totalPendingCriticas > 0 && (
-                            <span className="ml-1.5 bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-xs flex items-center">
-                                {totalPendingCriticas}
-                            </span>
-                        )}
-                    </button>
-
-                    {/* Botão de Atualizar Coordenadas (Base Central) no Cabeçalho Superior */}
-                    {adjustedRoutes.length > 0 && (
+                    {backupRoutesBeforeExtinguish && (
                         <button
                             type="button"
-                            onClick={handleManualSyncCoordinatesWithBaseCentral}
-                            disabled={isSyncingErpCoords}
-                            className="bg-white dark:bg-slate-800 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-slate-700 border border-sky-300 dark:border-sky-700 font-bold px-3 py-2 rounded-xl text-xs flex items-center shadow-xs h-[34px] cursor-pointer transition disabled:opacity-50"
-                            title="Rechecar e atualizar as coordenadas dos clientes diretamente da Base Central do banco de dados (ultrarrápido, sem sobrecarregar o ERP)"
+                            onClick={handleUndoExtinguish}
+                            className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-bold px-2.5 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition cursor-pointer h-[34px]"
+                            title="Restaurar a carteira do setor extinto de volta ao estado original"
                         >
-                            {isSyncingErpCoords ? (
-                                <SpinnerIcon className="w-4 h-4 animate-spin mr-1.5 text-sky-600" />
-                            ) : (
-                                <LocationMarkerIcon className="w-4 h-4 mr-1.5 text-sky-600" />
-                            )}
-                            <span>{isSyncingErpCoords ? 'Atualizando...' : 'Atualizar Coordenadas (Base Central)'}</span>
+                            ↩️ Desfazer
                         </button>
                     )}
 
-                    {teamType === 'vendedores' ? (
+                    {/* Sem rota carregada: as ações de carga ficam visíveis diretamente (primeiro passo do usuário) */}
+                    {adjustedRoutes.length === 0 && (
+                        teamType === 'vendedores' ? (
+                            <>
+                                <button
+                                    onClick={handleLoadCurrentRoutes}
+                                    disabled={loading}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm hover:shadow-md transition flex items-center h-[34px] cursor-pointer"
+                                    title="Carregar carteira de clientes integral de cada vendedor a partir do ERP"
+                                >
+                                    {loading ? <SpinnerIcon className="w-4 h-4 animate-spin mr-1.5"/> : <RefreshIcon className="w-4 h-4 mr-1.5"/>}
+                                    Rota ERP
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setParamsActiveTab('planilha');
+                                        setShowParamsModal(true);
+                                    }}
+                                    disabled={loading}
+                                    className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs transition flex items-center h-[34px] cursor-pointer"
+                                    title="Importar e simular rotas customizadas a partir de arquivo Excel (.xlsx, .xls)"
+                                >
+                                    <FileSpreadsheet className="w-4 h-4 mr-1.5 text-emerald-600" />
+                                    Rota via Planilha
+                                </button>
+                            </>
+                        ) : (
+                            <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center transition shadow-sm h-[34px]">
+                                <UploadIcon className="w-4 h-4 mr-1.5"/> Carregar Planilha (.xlsx)
+                                <input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} disabled={loading} className="hidden" />
+                            </label>
+                        )
+                    )}
+
+                    {/* Menu "Dados": carga de rotas, coordenadas e simulações salvas */}
+                    <div className="relative">
+                        {openTopMenu === 'dados' && (
+                            <div className="fixed inset-0 z-40 cursor-default" onClick={() => setOpenTopMenu(null)} />
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setOpenTopMenu(prev => prev === 'dados' ? null : 'dados')}
+                            className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-xs h-[34px] cursor-pointer transition"
+                            title="Carregar rotas, atualizar coordenadas e abrir simulações salvas"
+                        >
+                            <FolderOpen className="w-4 h-4 text-amber-500" />
+                            <span>Dados</span>
+                            {totalPendingCriticas > 0 && (
+                                <span className="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-xs">
+                                    {totalPendingCriticas}
+                                </span>
+                            )}
+                            <ChevronDownIcon className={`w-3 h-3 transition-transform ${openTopMenu === 'dados' ? 'rotate-180' : ''}`} />
+                        </button>
+                        {openTopMenu === 'dados' && (
+                            <div className="absolute right-0 top-full mt-1.5 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 p-1.5 space-y-0.5 animate-in fade-in zoom-in-95">
+                                {adjustedRoutes.length > 0 && (
+                                    teamType === 'vendedores' ? (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setOpenTopMenu(null); handleLoadCurrentRoutes(); }}
+                                                disabled={loading}
+                                                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-50"
+                                                title="Carregar carteira de clientes integral de cada vendedor a partir do ERP"
+                                            >
+                                                <RefreshIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400"/>
+                                                {!isPlanilhaSimulationActive ? 'Recarregar Rota ERP' : 'Rota ERP'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setOpenTopMenu(null);
+                                                    setParamsActiveTab('planilha');
+                                                    setShowParamsModal(true);
+                                                }}
+                                                disabled={loading}
+                                                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-50"
+                                                title="Importar e simular rotas customizadas a partir de arquivo Excel (.xlsx, .xls)"
+                                            >
+                                                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                                                Rota via Planilha
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <label className="w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">
+                                            <UploadIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400"/> Carregar Planilha (.xlsx)
+                                            <input type="file" accept=".xlsx,.xls" onChange={(e) => { setOpenTopMenu(null); handleExcelUpload(e); }} disabled={loading} className="hidden" />
+                                        </label>
+                                    )
+                                )}
+                                {adjustedRoutes.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setOpenTopMenu(null); handleManualSyncCoordinatesWithBaseCentral(); }}
+                                        disabled={isSyncingErpCoords}
+                                        className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-50"
+                                        title="Rechecar e atualizar as coordenadas dos clientes diretamente da Base Central do banco de dados (ultrarrápido, sem sobrecarregar o ERP)"
+                                    >
+                                        {isSyncingErpCoords ? (
+                                            <SpinnerIcon className="w-4 h-4 animate-spin text-sky-600" />
+                                        ) : (
+                                            <LocationMarkerIcon className="w-4 h-4 text-sky-600" />
+                                        )}
+                                        <span>{isSyncingErpCoords ? 'Atualizando...' : 'Atualizar Coordenadas (Base Central)'}</span>
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => { setOpenTopMenu(null); handleOpenSavedSimulationsModal(); }}
+                                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                    title="Abrir simulações salvas e histórico de ajustes de rota"
+                                >
+                                    <FolderOpen className="w-4 h-4 text-amber-500" />
+                                    <span>Simulações Salvas</span>
+                                    {totalPendingCriticas > 0 && (
+                                        <span className="ml-auto bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                                            {totalPendingCriticas}
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Otimizar (ação principal, com opções) e Salvar Simulação */}
+                    {adjustedRoutes.length > 0 && (
                         <>
-                            <button
-                                onClick={handleLoadCurrentRoutes}
-                                disabled={loading}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm hover:shadow-md transition flex items-center h-[34px] cursor-pointer"
-                                title="Carregar carteira de clientes integral de cada vendedor a partir do ERP"
-                            >
-                                {loading ? <SpinnerIcon className="w-4 h-4 animate-spin mr-1.5"/> : <RefreshIcon className="w-4 h-4 mr-1.5"/>}
-                                {adjustedRoutes.length > 0 && !isPlanilhaSimulationActive ? 'Recarregar Rota ERP' : 'Rota ERP'}
-                            </button>
+                            <div className="relative flex">
+                                {openTopMenu === 'otimizar' && (
+                                    <div className="fixed inset-0 z-40 cursor-default" onClick={() => setOpenTopMenu(null)} />
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (effectiveSellersList.length > 1) {
+                                            setShowTeamOptimizeDecisionModal(true);
+                                        } else {
+                                            handleOptimizeSimulate(false);
+                                        }
+                                    }}
+                                    disabled={loading || effectiveScopedRoutes.length === 0}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-black pl-3.5 pr-3 py-2 rounded-l-xl text-xs flex items-center shadow-md transition cursor-pointer disabled:opacity-50 h-[34px]"
+                                    title={isSingleSeller
+                                        ? `Executar algoritmo de otimização de rotas redistribuindo dias para o vendedor selecionado (${effectiveScopedRoutes.length} PDVs)`
+                                        : `Executar algoritmo de otimização de rotas para ${effectiveSellersList.length > 1 ? `${effectiveSellersList.length} vendedores selecionados` : 'os vendedores do escopo'} (${effectiveScopedRoutes.length} PDVs)`
+                                    }
+                                >
+                                    <RefreshIcon className="w-3.5 h-3.5 mr-1.5" />
+                                    <span>{isSingleSeller ? 'Otimizar Vendedor' : (effectiveSellersList.length > 1 ? `Otimizar ${effectiveSellersList.length} Vendedores` : 'Otimizar Rotas')}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setOpenTopMenu(prev => prev === 'otimizar' ? null : 'otimizar')}
+                                    disabled={loading || effectiveScopedRoutes.length === 0}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-2 rounded-r-xl text-xs flex items-center shadow-md transition cursor-pointer disabled:opacity-50 h-[34px] border-l border-indigo-400/60"
+                                    title="Mais opções de otimização"
+                                >
+                                    <ChevronDownIcon className={`w-3.5 h-3.5 transition-transform ${openTopMenu === 'otimizar' ? 'rotate-180' : ''}`} />
+                                </button>
+                                {openTopMenu === 'otimizar' && (
+                                    <div className="absolute right-0 top-full mt-1.5 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 p-1.5 space-y-0.5 animate-in fade-in zoom-in-95">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setOpenTopMenu(null); handleOptimizeSimulate(true); }}
+                                            disabled={loading || effectiveScopedRoutes.length === 0}
+                                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-50"
+                                            title="Reordenar a melhor sequência e traçado viário mantendo rigorosamente os dias da semana e quinzenas definidos pelo operador (acatando as trocas manuais e do laço)"
+                                        >
+                                            <Route className="w-4 h-4 text-emerald-600" />
+                                            Reordenar Rota (Manter Dias)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setOpenTopMenu(null);
+                                                setSourceSectorToExtinguish('');
+                                                setTargetSectorsSelected([]);
+                                                setShowExtinguishModal(true);
+                                            }}
+                                            disabled={loading}
+                                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-50"
+                                            title="Simular a extinção de um setor e redistribuir sua carteira para os demais setores selecionados com balanceamento equilibrado"
+                                        >
+                                            <UserGroupIcon className="w-4 h-4 text-amber-600 dark:text-amber-400"/>
+                                            Redistribuir Setor
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setParamsActiveTab('planilha');
-                                    setShowParamsModal(true);
-                                }}
-                                disabled={loading}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm hover:shadow-md transition flex items-center h-[34px] cursor-pointer"
-                                title="Importar e simular rotas customizadas a partir de arquivo Excel (.xlsx, .xls)"
+                                onClick={handleOpenSaveModal}
+                                disabled={saving || effectiveScopedRoutes.length === 0}
+                                className="bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-700 border border-emerald-300 dark:border-emerald-700 font-black px-3.5 py-2 rounded-xl text-xs flex items-center shadow-xs transition h-[34px] disabled:opacity-50 cursor-pointer"
+                                title={isSingleSeller
+                                    ? `Salvar simulação contendo apenas o vendedor selecionado (${effectiveScopedRoutes.length} PDVs)`
+                                    : `Salvar simulação contendo os ${effectiveScopedRoutes.length} PDVs dos ${effectiveSellersList.length > 1 ? `${effectiveSellersList.length} vendedores selecionados` : 'vendedores da equipe'}`
+                                }
                             >
-                                <FileSpreadsheet className="w-4 h-4 mr-1.5 text-white" />
-                                Rota via Planilha
+                                {saving ? <SpinnerIcon className="w-3.5 h-3.5 animate-spin mr-1.5"/> : <CheckCircleIcon className="w-3.5 h-3.5 mr-1.5"/>}
+                                <span>{isSingleSeller ? 'Salvar Simulação (Vendedor)' : (effectiveSellersList.length > 1 ? `Salvar Simulação (${effectiveSellersList.length} Vendedores)` : 'Salvar Simulação')}</span>
                             </button>
                         </>
-                    ) : (
-                        <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center transition shadow-sm h-[34px]">
-                            <UploadIcon className="w-4 h-4 mr-1.5"/> Carregar Planilha (.xlsx)
-                            <input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} disabled={loading} className="hidden" />
-                        </label>
                     )}
                 </div>
             </div>
@@ -11576,6 +11703,312 @@ export const AjusteRota: React.FC = () => {
 
             {/* ABAIXO: MAPA E GRADE DE AJUSTE FINO (LARGURA TOTAL 100% - FULL-WIDTH) */}
             <div className="flex flex-col space-y-4 w-full min-h-0">
+                {/* BARRA DE FILTROS ÚNICA (VENDEDORES, DIAS E CICLO): VALE PARA O MAPA E A GRADE E FICA FIXA AO ROLAR */}
+                {adjustedRoutes.length > 0 && (
+                    <div className="sticky top-0 z-[1050] flex flex-wrap items-center gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur p-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                                        {/* FILTRO DE VENDEDORES DA EQUIPE (SELEÇÃO ÚNICA OU MÚLTIPLA) */}
+                                        {availableTeamSellers.length > 1 && (
+                                            <div className="relative">
+                                                {showTeamSellerDropdown && (
+                                                    <div 
+                                                        className="fixed inset-0 z-40 cursor-default" 
+                                                        onClick={() => setShowTeamSellerDropdown(false)} 
+                                                    />
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowTeamSellerDropdown(prev => !prev)}
+                                                    className={`px-2.5 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer border shadow-2xs ${
+                                                        selectedTeamSellers.size > 0
+                                                            ? 'bg-indigo-50 dark:bg-indigo-950/80 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 font-black'
+                                                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                                                    }`}
+                                                    title="Filtrar colaboradores da equipe (selecione um ou vários marcando-os)"
+                                                >
+                                                    <UserGroupIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                    <span>
+                                                        {selectedTeamSellers.size === 0
+                                                            ? `Vendedores (${availableTeamSellers.length})`
+                                                            : selectedTeamSellers.size === 1
+                                                                ? `${availableTeamSellers.find(s => selectedTeamSellers.has(s.id))?.name || '1 Vendedor'}`
+                                                                : `${selectedTeamSellers.size} de ${availableTeamSellers.length} Vendedores`
+                                                        }
+                                                    </span>
+                                                    <ChevronDownIcon className={`w-3 h-3 transition-transform ${showTeamSellerDropdown ? 'rotate-180' : ''}`} />
+                                                </button>
+
+                                                {showTeamSellerDropdown && (
+                                                    <div className="absolute top-full left-0 mt-1.5 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 p-2.5 space-y-2 animate-in fade-in zoom-in-95">
+                                                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                                                Vendedores da Equipe
+                                                            </span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSelectedTeamSellers(new Set())}
+                                                                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:underline cursor-pointer"
+                                                                >
+                                                                    Marcar Todos
+                                                                </button>
+                                                                <span className="text-slate-300 dark:text-slate-600">•</span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSelectedTeamSellers(new Set())}
+                                                                    className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                                                                >
+                                                                    Resetar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-1">
+                                                            {availableTeamSellers.map(seller => {
+                                                                const isChecked = selectedTeamSellers.size === 0 || selectedTeamSellers.has(seller.id);
+                                                                return (
+                                                                    <div
+                                                                        key={seller.id}
+                                                                        className={`flex items-center justify-between p-1.5 rounded-xl transition text-xs select-none ${
+                                                                            selectedTeamSellers.has(seller.id)
+                                                                                ? 'bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 font-bold'
+                                                                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                                                                        }`}
+                                                                    >
+                                                                        <label className="flex items-center gap-2 truncate min-w-0 cursor-pointer flex-1">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={isChecked}
+                                                                                onChange={() => {
+                                                                                    if (selectedTeamSellers.size === 0) {
+                                                                                        const allExceptThis = new Set(availableTeamSellers.map(s => s.id).filter(id => id !== seller.id));
+                                                                                        setSelectedTeamSellers(allExceptThis);
+                                                                                    } else {
+                                                                                        handleToggleTeamSeller(seller.id);
+                                                                                    }
+                                                                                }}
+                                                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                                                            />
+                                                                            <span
+                                                                                className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white dark:ring-slate-800"
+                                                                                style={{ backgroundColor: seller.color }}
+                                                                            />
+                                                                            <span className="truncate text-[11px]" title={seller.name}>
+                                                                                {seller.name}
+                                                                            </span>
+                                                                        </label>
+                                                                        <div className="flex items-center gap-1 shrink-0 ml-1">
+                                                                            <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md font-mono">
+                                                                                {seller.count}
+                                                                            </span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.preventDefault();
+                                                                                    e.stopPropagation();
+                                                                                    handleSelectOnlySeller(seller.id);
+                                                                                }}
+                                                                                className="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:underline px-1 py-0.5 rounded cursor-pointer"
+                                                                                title="Exibir apenas este vendedor"
+                                                                            >
+                                                                                apenas
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                        <div className="flex-1 min-w-0">
+                                {/* FAIXA 2: BARRA DE FILTROS E NAVEGAÇÃO RÁPIDA (DIAS DA SEMANA E QUINZENA) */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+                                    {/* FILTRO DE DIAS DA SEMANA */}
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 flex items-center">
+                                            Dias:
+                                        </span>
+                                        {WEEKDAYS.map(day => {
+                                            const shortName = day.split('-')[0].slice(0, 3);
+                                            const count = visitsByDay[day] || 0;
+                                            const isSelected = selectedDaysFilter.includes(day);
+                                            const hasAnySelected = selectedDaysFilter.length > 0;
+                                            const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: shortName, bg: 'bg-indigo-600' };
+                                            const dayMetrics = operationalSummary.dayMap[day];
+                                            const displayKm = selectedQuinzenaFilter === '1_3' 
+                                                ? dayMetrics?.km13 
+                                                : (selectedQuinzenaFilter === '2_4' 
+                                                    ? dayMetrics?.km24 
+                                                    : (dayMetrics ? Math.round(((dayMetrics.km13 + dayMetrics.km24) / 2) * 10) / 10 : 0));
+
+                                            return (
+                                                <button
+                                                    key={day}
+                                                    type="button"
+                                                    onClick={() => handleToggleDayFilter(day)}
+                                                    className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
+                                                        isSelected 
+                                                            ? `${dayCfg.bg} text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-slate-400 font-black` 
+                                                            : hasAnySelected
+                                                                ? 'bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-400 opacity-60 hover:opacity-100 hover:text-slate-700 dark:hover:text-slate-200'
+                                                                : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400'
+                                                    }`}
+                                                    title={`Clique para filtrar ${day}. ${selectedQuinzenaFilter === 'ALL' ? `${count} PDVs cadastrados` : `${count} visitas no ciclo ${selectedQuinzenaFilter === '1_3' ? '1/3' : '2/4'}`}${displayKm ? ` • ~${displayKm} km estimados` : ''}`}
+                                                >
+                                                    <span className="uppercase font-semibold">{shortName}:</span>
+                                                    <span className={isSelected ? 'text-white font-black' : 'text-indigo-600 dark:text-indigo-400 font-black'}>
+                                                        {count}
+                                                    </span>
+                                                    {Boolean(displayKm && displayKm > 0) && (
+                                                        <span className={`text-[9px] font-semibold ml-0.5 ${isSelected ? 'text-white/80' : 'text-slate-400 dark:text-slate-400'}`}>
+                                                            • {displayKm}km
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+
+                                        {operationalSummary.unallocatedCount > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleToggleDayFilter('SEM ATENDIMENTO')}
+                                                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
+                                                    selectedDaysFilter.includes('SEM ATENDIMENTO')
+                                                        ? 'bg-red-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-red-400 font-black animate-pulse'
+                                                        : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100'
+                                                }`}
+                                                title={`Clientes que excederam o limite diário configurado (${operationalSummary.unallocatedCount} PDVs sem atendimento).`}
+                                            >
+                                                <span>⚠️ Sem Atend:</span>
+                                                <span className="font-black">{operationalSummary.unallocatedCount}</span>
+                                            </button>
+                                        )}
+
+                                        {/* FILTRO RÁPIDO PARA DIAS SOBRECARREGADOS (CONDICIONADO A LIMITAR HORAS / DIA) */}
+                                        {optLimitHours && (
+                                            overloadedDays.length > 0 ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const isFilterActive = overloadedDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === overloadedDays.length;
+                                                        if (isFilterActive) {
+                                                            setSelectedDaysFilter([]);
+                                                        } else {
+                                                            setSelectedDaysFilter(overloadedDays);
+                                                        }
+                                                    }}
+                                                    className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
+                                                        overloadedDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === overloadedDays.length
+                                                            ? 'bg-red-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-red-400 font-black animate-pulse'
+                                                            : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40'
+                                                    }`}
+                                                    title={`Isolar com 1 clique apenas os dias com sobrecarga de jornada (${overloadedDays.join(', ')}).`}
+                                                >
+                                                    <span>🚨 Sobrecarga:</span>
+                                                    <span className="font-black">{overloadedDays.length}</span>
+                                                </button>
+                                            ) : (
+                                                attentionDays.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const isFilterActive = attentionDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === attentionDays.length;
+                                                            if (isFilterActive) {
+                                                                setSelectedDaysFilter([]);
+                                                            } else {
+                                                                setSelectedDaysFilter(attentionDays);
+                                                            }
+                                                        }}
+                                                        className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
+                                                            attentionDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === attentionDays.length
+                                                                ? 'bg-amber-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-amber-400 font-black'
+                                                                : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                                                        }`}
+                                                        title={`Isolar com 1 clique os dias em atenção de jornada (${attentionDays.join(', ')}).`}
+                                                    >
+                                                        <span>⚠️ Atenção:</span>
+                                                        <span className="font-black">{attentionDays.length}</span>
+                                                    </button>
+                                                )
+                                            )
+                                        )}
+
+                                        {selectedDaysFilter.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={handleClearDayFilter}
+                                                className="text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition cursor-pointer shadow-2xs"
+                                                title="Limpar filtro de dias e exibir a semana completa"
+                                            >
+                                                Todos os Dias
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* TOTALIZADORES E FILTROS POR QUINZENA (SEMANAS 1/3 E 2/4) */}
+                                    <div className="flex flex-wrap items-center gap-1.5 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-700 pt-1.5 sm:pt-0 sm:pl-2">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1">
+                                            Ciclo:
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedQuinzenaFilter('ALL')}
+                                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
+                                                selectedQuinzenaFilter === 'ALL'
+                                                    ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-2xs font-black'
+                                                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            Todas ({quinzenaTotals.semanalCount + quinzenaTotals.quinzenal13Count + quinzenaTotals.quinzenal24Count})
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedQuinzenaFilter(prev => prev === '1_3' ? 'ALL' : '1_3')}
+                                            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[10px] transition-all active:scale-95 cursor-pointer border ${
+                                                selectedQuinzenaFilter === '1_3'
+                                                    ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400 ring-offset-1 font-black shadow-sm'
+                                                    : selectedQuinzenaFilter !== 'ALL'
+                                                        ? 'bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/40 opacity-50 hover:opacity-100'
+                                                        : 'bg-white dark:bg-slate-900 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 hover:bg-amber-50 font-bold'
+                                            }`}
+                                            title={`Semanas 1 e 3: ${quinzenaTotals.total13} atendimentos (${quinzenaTotals.semanalCount} Semanais + ${quinzenaTotals.quinzenal13Count} Quinzenais 1/3). Clique para filtrar.`}
+                                        >
+                                            <span className="font-semibold">Sem 1/3:</span>
+                                            <span className="font-black">{quinzenaTotals.total13}</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedQuinzenaFilter(prev => prev === '2_4' ? 'ALL' : '2_4')}
+                                            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[10px] transition-all active:scale-95 cursor-pointer border ${
+                                                selectedQuinzenaFilter === '2_4'
+                                                    ? 'bg-fuchsia-600 text-white border-fuchsia-700 ring-2 ring-fuchsia-400 ring-offset-1 font-black shadow-sm'
+                                                    : selectedQuinzenaFilter !== 'ALL'
+                                                        ? 'bg-fuchsia-50/50 dark:bg-fuchsia-950/20 text-fuchsia-800 dark:text-fuchsia-300 border-fuchsia-200/50 dark:border-fuchsia-800/40 opacity-50 hover:opacity-100'
+                                                        : 'bg-white dark:bg-slate-900 text-fuchsia-800 dark:text-fuchsia-300 border-fuchsia-200 dark:border-fuchsia-800/60 hover:bg-fuchsia-50 font-bold'
+                                            }`}
+                                            title={`Semanas 2 e 4: ${quinzenaTotals.total24} atendimentos (${quinzenaTotals.semanalCount} Semanais + ${quinzenaTotals.quinzenal24Count} Quinzenais 2/4). Clique para filtrar.`}
+                                        >
+                                            <span className="font-semibold">Sem 2/4:</span>
+                                            <span className="font-black">{quinzenaTotals.total24}</span>
+                                        </button>
+
+                                        {quinzenaTotals.isImbalanced && (
+                                            <span 
+                                                className="text-[9px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow-2xs"
+                                                title={`Variação Semanal Agregada de ${quinzenaTotals.variationPct}% entre as quinzenas:\n• Semanas 1 e 3: ${quinzenaTotals.total13} atendimentos (${formatDuration(operationalSummary.totalTime13)})\n• Semanas 2 e 4: ${quinzenaTotals.total24} atendimentos (${formatDuration(operationalSummary.totalTime24)})`}
+                                            >
+                                                <span>⚠️</span>
+                                                <span>{quinzenaTotals.variationPct}% var. semanal ({formatDuration(operationalSummary.totalTime13)} vs {formatDuration(operationalSummary.totalTime24)})</span>
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                        </div>
+                    </div>
+                )}
                 {/* BLOCO SUPERIOR: MAPA 100% LARGURA */}
                 <div 
                     id="roteiro-map-container"
@@ -11588,6 +12021,8 @@ export const AjusteRota: React.FC = () => {
                         <div className="absolute top-3 right-3 z-[1000] flex flex-wrap items-center gap-2">
                             {scopedAdjustedRoutes.length > 0 && (
                                 <>
+                                    {isMapFullscreen && (
+                                    <>
                                     {/* Seletor Rápido de Vendedor no Mapa (Foco Individual / Sincronizado com Tabela) */}
                                     {availableTeamSellers.length > 1 && (
                                         <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-md flex items-center gap-1 text-xs">
@@ -11687,6 +12122,8 @@ export const AjusteRota: React.FC = () => {
                                             )}
                                         </button>
                                     </div>
+                                    </>
+                                    )}
 
                                     {/* Botão Heatmap de Concentração de Visitas */}
                                     <button
@@ -12986,121 +13423,6 @@ export const AjusteRota: React.FC = () => {
                                             </button>
                                         </div>
 
-                                        {/* FILTRO DE VENDEDORES DA EQUIPE (SELEÇÃO ÚNICA OU MÚLTIPLA) */}
-                                        {availableTeamSellers.length > 1 && (
-                                            <div className="relative">
-                                                {showTeamSellerDropdown && (
-                                                    <div 
-                                                        className="fixed inset-0 z-40 cursor-default" 
-                                                        onClick={() => setShowTeamSellerDropdown(false)} 
-                                                    />
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowTeamSellerDropdown(prev => !prev)}
-                                                    className={`px-2.5 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer border shadow-2xs ${
-                                                        selectedTeamSellers.size > 0
-                                                            ? 'bg-indigo-50 dark:bg-indigo-950/80 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 font-black'
-                                                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-                                                    }`}
-                                                    title="Filtrar colaboradores da equipe (selecione um ou vários marcando-os)"
-                                                >
-                                                    <UserGroupIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                                                    <span>
-                                                        {selectedTeamSellers.size === 0
-                                                            ? `Vendedores (${availableTeamSellers.length})`
-                                                            : selectedTeamSellers.size === 1
-                                                                ? `${availableTeamSellers.find(s => selectedTeamSellers.has(s.id))?.name || '1 Vendedor'}`
-                                                                : `${selectedTeamSellers.size} de ${availableTeamSellers.length} Vendedores`
-                                                        }
-                                                    </span>
-                                                    <ChevronDownIcon className={`w-3 h-3 transition-transform ${showTeamSellerDropdown ? 'rotate-180' : ''}`} />
-                                                </button>
-
-                                                {showTeamSellerDropdown && (
-                                                    <div className="absolute top-full left-0 mt-1.5 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 p-2.5 space-y-2 animate-in fade-in zoom-in-95">
-                                                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
-                                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                                                                Vendedores da Equipe
-                                                            </span>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setSelectedTeamSellers(new Set())}
-                                                                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:underline cursor-pointer"
-                                                                >
-                                                                    Marcar Todos
-                                                                </button>
-                                                                <span className="text-slate-300 dark:text-slate-600">•</span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setSelectedTeamSellers(new Set())}
-                                                                    className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                                                                >
-                                                                    Resetar
-                                                                </button>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-1">
-                                                            {availableTeamSellers.map(seller => {
-                                                                const isChecked = selectedTeamSellers.size === 0 || selectedTeamSellers.has(seller.id);
-                                                                return (
-                                                                    <div
-                                                                        key={seller.id}
-                                                                        className={`flex items-center justify-between p-1.5 rounded-xl transition text-xs select-none ${
-                                                                            selectedTeamSellers.has(seller.id)
-                                                                                ? 'bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 font-bold'
-                                                                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
-                                                                        }`}
-                                                                    >
-                                                                        <label className="flex items-center gap-2 truncate min-w-0 cursor-pointer flex-1">
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={isChecked}
-                                                                                onChange={() => {
-                                                                                    if (selectedTeamSellers.size === 0) {
-                                                                                        const allExceptThis = new Set(availableTeamSellers.map(s => s.id).filter(id => id !== seller.id));
-                                                                                        setSelectedTeamSellers(allExceptThis);
-                                                                                    } else {
-                                                                                        handleToggleTeamSeller(seller.id);
-                                                                                    }
-                                                                                }}
-                                                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                                                                            />
-                                                                            <span
-                                                                                className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white dark:ring-slate-800"
-                                                                                style={{ backgroundColor: seller.color }}
-                                                                            />
-                                                                            <span className="truncate text-[11px]" title={seller.name}>
-                                                                                {seller.name}
-                                                                            </span>
-                                                                        </label>
-                                                                        <div className="flex items-center gap-1 shrink-0 ml-1">
-                                                                            <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md font-mono">
-                                                                                {seller.count}
-                                                                            </span>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={(e) => {
-                                                                                    e.preventDefault();
-                                                                                    e.stopPropagation();
-                                                                                    handleSelectOnlySeller(seller.id);
-                                                                                }}
-                                                                                className="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:underline px-1 py-0.5 rounded cursor-pointer"
-                                                                                title="Exibir apenas este vendedor"
-                                                                            >
-                                                                                apenas
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
 
                                         {tableViewMode === 'accordion' && (
                                             <div className="flex items-center gap-1 text-[10px]">
@@ -13167,260 +13489,9 @@ export const AjusteRota: React.FC = () => {
                                             <UploadIcon className="w-3.5 h-3.5 mr-1.5 rotate-180"/> Exportar Excel (em Abas)
                                         </button>
 
-                                        {/* GRUPO DE AÇÕES: OTIMIZAÇÃO E SIMULAÇÕES SALVAS */}
-                                        <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-700">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    if (effectiveSellersList.length > 1) {
-                                                        setShowTeamOptimizeDecisionModal(true);
-                                                    } else {
-                                                        handleOptimizeSimulate(false);
-                                                    }
-                                                }}
-                                                disabled={loading || effectiveScopedRoutes.length === 0}
-                                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-3.5 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 h-[32px]"
-                                                title={isSingleSeller
-                                                    ? `Executar algoritmo de otimização de rotas redistribuindo dias para o vendedor selecionado (${effectiveScopedRoutes.length} PDVs)`
-                                                    : `Executar algoritmo de otimização de rotas para ${effectiveSellersList.length > 1 ? `${effectiveSellersList.length} vendedores selecionados` : 'os vendedores do escopo'} (${effectiveScopedRoutes.length} PDVs)`
-                                                }
-                                            >
-                                                <RefreshIcon className="w-3.5 h-3.5 mr-1.5" />
-                                                <span>{isSingleSeller ? 'Otimizar Vendedor' : (effectiveSellersList.length > 1 ? `Otimizar ${effectiveSellersList.length} Vendedores` : 'Otimizar Rotas')}</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleOptimizeSimulate(true)}
-                                                disabled={loading || effectiveScopedRoutes.length === 0}
-                                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-3 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 h-[32px]"
-                                                title="Reordenar a melhor sequência e traçado viário mantendo rigorosamente os dias da semana e quinzenas definidos pelo operador (acatando as trocas manuais e do laço)"
-                                            >
-                                                <Route className="w-3.5 h-3.5 mr-1.5" />
-                                                <span>Reordenar Rota (Manter Dias)</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleOpenSavedSimulationsModal}
-                                                className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition h-[32px] cursor-pointer"
-                                                title="Visualizar, abrir no mapa, editar, excluir ou compartilhar simulações salvas"
-                                            >
-                                                <FolderOpen className="w-3.5 h-3.5 mr-1.5"/> Simulações Salvas
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleManualSyncCoordinatesWithBaseCentral}
-                                                disabled={isSyncingErpCoords || effectiveScopedRoutes.length === 0}
-                                                className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition h-[32px] cursor-pointer disabled:opacity-50"
-                                                title="Rechecar e sincronizar coordenadas GPS mais recentes de todos os clientes a partir da Base Central Salva no banco de dados local (ultrarrápido, sem sobrecarregar o ERP)"
-                                            >
-                                                {isSyncingErpCoords ? (
-                                                    <SpinnerIcon className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                                                ) : (
-                                                    <LocationMarkerIcon className="w-3.5 h-3.5 mr-1.5" />
-                                                )}
-                                                <span>{isSyncingErpCoords ? 'Atualizando...' : 'Atualizar Coordenadas (Base Central)'}</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleOpenSaveModal}
-                                                disabled={saving || effectiveScopedRoutes.length === 0}
-                                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition h-[32px] disabled:opacity-50 cursor-pointer"
-                                                title={isSingleSeller
-                                                    ? `Salvar simulação contendo apenas o vendedor selecionado (${effectiveScopedRoutes.length} PDVs)`
-                                                    : `Salvar simulação contendo os ${effectiveScopedRoutes.length} PDVs dos ${effectiveSellersList.length > 1 ? `${effectiveSellersList.length} vendedores selecionados` : 'vendedores da equipe'}`
-                                                }
-                                            >
-                                                {saving ? <SpinnerIcon className="w-3.5 h-3.5 animate-spin mr-1.5"/> : <CheckCircleIcon className="w-3.5 h-3.5 mr-1.5"/>}
-                                                <span>{isSingleSeller ? 'Salvar Simulação (Vendedor)' : (effectiveSellersList.length > 1 ? `Salvar Simulação (${effectiveSellersList.length} Vendedores)` : 'Salvar Simulação')}</span>
-                                            </button>
-                                        </div>
                                     </div>
                                 </div>
 
-                                {/* FAIXA 2: BARRA DE FILTROS E NAVEGAÇÃO RÁPIDA (DIAS DA SEMANA E QUINZENA) */}
-                                <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
-                                    {/* FILTRO DE DIAS DA SEMANA */}
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 flex items-center">
-                                            Dias:
-                                        </span>
-                                        {WEEKDAYS.map(day => {
-                                            const shortName = day.split('-')[0].slice(0, 3);
-                                            const count = visitsByDay[day] || 0;
-                                            const isSelected = selectedDaysFilter.includes(day);
-                                            const hasAnySelected = selectedDaysFilter.length > 0;
-                                            const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: shortName, bg: 'bg-indigo-600' };
-                                            const dayMetrics = operationalSummary.dayMap[day];
-                                            const displayKm = selectedQuinzenaFilter === '1_3' 
-                                                ? dayMetrics?.km13 
-                                                : (selectedQuinzenaFilter === '2_4' 
-                                                    ? dayMetrics?.km24 
-                                                    : (dayMetrics ? Math.round(((dayMetrics.km13 + dayMetrics.km24) / 2) * 10) / 10 : 0));
-
-                                            return (
-                                                <button
-                                                    key={day}
-                                                    type="button"
-                                                    onClick={() => handleToggleDayFilter(day)}
-                                                    className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
-                                                        isSelected 
-                                                            ? `${dayCfg.bg} text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-slate-400 font-black` 
-                                                            : hasAnySelected
-                                                                ? 'bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-400 opacity-60 hover:opacity-100 hover:text-slate-700 dark:hover:text-slate-200'
-                                                                : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400'
-                                                    }`}
-                                                    title={`Clique para filtrar ${day}. ${selectedQuinzenaFilter === 'ALL' ? `${count} PDVs cadastrados` : `${count} visitas no ciclo ${selectedQuinzenaFilter === '1_3' ? '1/3' : '2/4'}`}${displayKm ? ` • ~${displayKm} km estimados` : ''}`}
-                                                >
-                                                    <span className="uppercase font-semibold">{shortName}:</span>
-                                                    <span className={isSelected ? 'text-white font-black' : 'text-indigo-600 dark:text-indigo-400 font-black'}>
-                                                        {count}
-                                                    </span>
-                                                    {Boolean(displayKm && displayKm > 0) && (
-                                                        <span className={`text-[9px] font-semibold ml-0.5 ${isSelected ? 'text-white/80' : 'text-slate-400 dark:text-slate-400'}`}>
-                                                            • {displayKm}km
-                                                        </span>
-                                                    )}
-                                                </button>
-                                            );
-                                        })}
-
-                                        {operationalSummary.unallocatedCount > 0 && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleToggleDayFilter('SEM ATENDIMENTO')}
-                                                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
-                                                    selectedDaysFilter.includes('SEM ATENDIMENTO')
-                                                        ? 'bg-red-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-red-400 font-black animate-pulse'
-                                                        : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100'
-                                                }`}
-                                                title={`Clientes que excederam o limite diário configurado (${operationalSummary.unallocatedCount} PDVs sem atendimento).`}
-                                            >
-                                                <span>⚠️ Sem Atend:</span>
-                                                <span className="font-black">{operationalSummary.unallocatedCount}</span>
-                                            </button>
-                                        )}
-
-                                        {/* FILTRO RÁPIDO PARA DIAS SOBRECARREGADOS (CONDICIONADO A LIMITAR HORAS / DIA) */}
-                                        {optLimitHours && (
-                                            overloadedDays.length > 0 ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const isFilterActive = overloadedDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === overloadedDays.length;
-                                                        if (isFilterActive) {
-                                                            setSelectedDaysFilter([]);
-                                                        } else {
-                                                            setSelectedDaysFilter(overloadedDays);
-                                                        }
-                                                    }}
-                                                    className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
-                                                        overloadedDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === overloadedDays.length
-                                                            ? 'bg-red-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-red-400 font-black animate-pulse'
-                                                            : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40'
-                                                    }`}
-                                                    title={`Isolar com 1 clique apenas os dias com sobrecarga de jornada (${overloadedDays.join(', ')}).`}
-                                                >
-                                                    <span>🚨 Sobrecarga:</span>
-                                                    <span className="font-black">{overloadedDays.length}</span>
-                                                </button>
-                                            ) : (
-                                                attentionDays.length > 0 && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const isFilterActive = attentionDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === attentionDays.length;
-                                                            if (isFilterActive) {
-                                                                setSelectedDaysFilter([]);
-                                                            } else {
-                                                                setSelectedDaysFilter(attentionDays);
-                                                            }
-                                                        }}
-                                                        className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
-                                                            attentionDays.every(d => selectedDaysFilter.includes(d)) && selectedDaysFilter.length === attentionDays.length
-                                                                ? 'bg-amber-600 text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-amber-400 font-black'
-                                                                : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40'
-                                                        }`}
-                                                        title={`Isolar com 1 clique os dias em atenção de jornada (${attentionDays.join(', ')}).`}
-                                                    >
-                                                        <span>⚠️ Atenção:</span>
-                                                        <span className="font-black">{attentionDays.length}</span>
-                                                    </button>
-                                                )
-                                            )
-                                        )}
-
-                                        {selectedDaysFilter.length > 0 && (
-                                            <button
-                                                type="button"
-                                                onClick={handleClearDayFilter}
-                                                className="text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition cursor-pointer shadow-2xs"
-                                                title="Limpar filtro de dias e exibir a semana completa"
-                                            >
-                                                Todos os Dias
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {/* TOTALIZADORES E FILTROS POR QUINZENA (SEMANAS 1/3 E 2/4) */}
-                                    <div className="flex flex-wrap items-center gap-1.5 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-700 pt-1.5 sm:pt-0 sm:pl-2">
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1">
-                                            Ciclo:
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedQuinzenaFilter('ALL')}
-                                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
-                                                selectedQuinzenaFilter === 'ALL'
-                                                    ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-2xs font-black'
-                                                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                                            }`}
-                                        >
-                                            Todas ({quinzenaTotals.semanalCount + quinzenaTotals.quinzenal13Count + quinzenaTotals.quinzenal24Count})
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedQuinzenaFilter(prev => prev === '1_3' ? 'ALL' : '1_3')}
-                                            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[10px] transition-all active:scale-95 cursor-pointer border ${
-                                                selectedQuinzenaFilter === '1_3'
-                                                    ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400 ring-offset-1 font-black shadow-sm'
-                                                    : selectedQuinzenaFilter !== 'ALL'
-                                                        ? 'bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/40 opacity-50 hover:opacity-100'
-                                                        : 'bg-white dark:bg-slate-900 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 hover:bg-amber-50 font-bold'
-                                            }`}
-                                            title={`Semanas 1 e 3: ${quinzenaTotals.total13} atendimentos (${quinzenaTotals.semanalCount} Semanais + ${quinzenaTotals.quinzenal13Count} Quinzenais 1/3). Clique para filtrar.`}
-                                        >
-                                            <span className="font-semibold">Sem 1/3:</span>
-                                            <span className="font-black">{quinzenaTotals.total13}</span>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedQuinzenaFilter(prev => prev === '2_4' ? 'ALL' : '2_4')}
-                                            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[10px] transition-all active:scale-95 cursor-pointer border ${
-                                                selectedQuinzenaFilter === '2_4'
-                                                    ? 'bg-fuchsia-600 text-white border-fuchsia-700 ring-2 ring-fuchsia-400 ring-offset-1 font-black shadow-sm'
-                                                    : selectedQuinzenaFilter !== 'ALL'
-                                                        ? 'bg-fuchsia-50/50 dark:bg-fuchsia-950/20 text-fuchsia-800 dark:text-fuchsia-300 border-fuchsia-200/50 dark:border-fuchsia-800/40 opacity-50 hover:opacity-100'
-                                                        : 'bg-white dark:bg-slate-900 text-fuchsia-800 dark:text-fuchsia-300 border-fuchsia-200 dark:border-fuchsia-800/60 hover:bg-fuchsia-50 font-bold'
-                                            }`}
-                                            title={`Semanas 2 e 4: ${quinzenaTotals.total24} atendimentos (${quinzenaTotals.semanalCount} Semanais + ${quinzenaTotals.quinzenal24Count} Quinzenais 2/4). Clique para filtrar.`}
-                                        >
-                                            <span className="font-semibold">Sem 2/4:</span>
-                                            <span className="font-black">{quinzenaTotals.total24}</span>
-                                        </button>
-
-                                        {quinzenaTotals.isImbalanced && (
-                                            <span 
-                                                className="text-[9px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow-2xs"
-                                                title={`Variação Semanal Agregada de ${quinzenaTotals.variationPct}% entre as quinzenas:\n• Semanas 1 e 3: ${quinzenaTotals.total13} atendimentos (${formatDuration(operationalSummary.totalTime13)})\n• Semanas 2 e 4: ${quinzenaTotals.total24} atendimentos (${formatDuration(operationalSummary.totalTime24)})`}
-                                            >
-                                                <span>⚠️</span>
-                                                <span>{quinzenaTotals.variationPct}% var. semanal ({formatDuration(operationalSummary.totalTime13)} vs {formatDuration(operationalSummary.totalTime24)})</span>
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
                             </div>
 
                             {tableViewMode === 'accordion' ? (

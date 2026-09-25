@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.251.0',
+    date: 'Hoje',
+    title: 'Fuel360: Tela de Ajuste de Rota Reorganizada (Comandos Agrupados e Filtros Únicos)',
+    changes: [
+      'Barra de Comandos no Topo: Ações agrupadas em "Dados" (Recarregar Rota ERP, Rota via Planilha, Atualizar Coordenadas e Simulações Salvas), "Otimizar" como ação principal (com Reordenar Mantendo Dias e Redistribuir Setor nas opções) e "Salvar Simulação". Sem rota carregada, os botões de carga continuam visíveis diretamente.',
+      'Barra de Filtros Única: Vendedores, Dias da Semana (com KM, Sobrecarga e Sem Atendimento) e Ciclo ficam em uma só barra acima do mapa, fixa ao rolar, valendo para o mapa e para a grade.',
+      'Sem Duplicidades: Removidos da grade os botões repetidos (Otimizar, Reordenar, Simulações Salvas, Atualizar Coordenadas e Salvar) e do mapa os filtros repetidos de Vendedor e Ciclo, que continuam disponíveis no mapa em Tela Cheia.'
+    ]
+  },
+  {
     version: '3.250.1',
     date: 'Hoje',
     title: 'Fuel360: Re-setorização por Carga com Troca de Cidades e Prioridade à Capacidade',
