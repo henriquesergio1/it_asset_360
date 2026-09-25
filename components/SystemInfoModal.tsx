@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.258.0',
+    date: 'Hoje',
+    title: 'Ajuste de Rota: Legenda do Mapa Reorganizada e Arraste em Grupo pelo Laço',
+    changes: [
+      'Legenda do mapa: total de clientes em destaque no cabeçalho, botão para ocultar/exibir (recolhida vira uma pílula compacta com o total) e fonte maior.',
+      'Legenda por vendedor: lista organizada em linhas (2 colunas quando há espaço) com o total de clientes de cada vendedor alinhado à direita e uma barra na cor do vendedor proporcional à maior carteira; ao passar o mouse mostra o % do total.',
+      'Legenda por dia: cada dia exibe a quantidade de clientes.',
+      'Laço: arraste qualquer cliente selecionado e solte sobre a área/linha de outro vendedor para transferir todos os selecionados de uma vez (como no arraste individual). A ação pode ser desfeita pelo botão Desfazer.'
+    ]
+  },
+  {
     version: '3.257.0',
     date: 'Hoje',
     title: 'Ajuste de Rota: Menus Camadas e Relatórios e Mapa Enquadrado nos Clientes',

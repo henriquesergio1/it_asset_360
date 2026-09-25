@@ -3630,6 +3630,7 @@ export const AjusteRota: React.FC = () => {
 
     // Modo de coloração no mapa: 'AUTO' (dia se 1 vendedor, vendedor se > 1), 'VENDEDOR', 'DIA'
     const [mapColorMode, setMapColorMode] = useState<'AUTO' | 'VENDEDOR' | 'DIA'>('AUTO');
+    const [isMapLegendCollapsed, setIsMapLegendCollapsed] = useState<boolean>(false);
 
     const effectiveMapColorMode = useMemo(() => {
         if (mapColorMode === 'VENDEDOR') return 'VENDEDOR';
@@ -3836,6 +3837,26 @@ export const AjusteRota: React.FC = () => {
             const targetDisplayName = formatSellerDisplayName(target.sellerId, targetName);
             const sourceDisplayName = formatSellerDisplayName(client.Cod_Vend, sourceName);
 
+            // Arraste em grupo: cliente faz parte da seleção do laço → transfere todos os selecionados
+            if (selectedLassoClients.length > 1 && selectedLassoClients.includes(client.Cod_Cliente)) {
+                const clientCodes = new Set(selectedLassoClients);
+                pushMapUndo(`Laço arrastado: ${clientCodes.size} clientes → ${targetDisplayName}`);
+                setAdjustedRoutes(prev => prev.map(v => {
+                    if (v.Cod_Cliente && clientCodes.has(v.Cod_Cliente)) {
+                        return {
+                            ...v,
+                            Cod_Vend: target.sellerId,
+                            Nome_Vendedor: targetName
+                        };
+                    }
+                    return v;
+                }));
+                setSelectedLassoClients([]);
+                setIsLassoActive(false);
+                setCriticaToast(`✓ ${clientCodes.size} clientes selecionados no laço transferidos para ${targetDisplayName}!`);
+                return;
+            }
+
             pushMapUndo(`Cliente #${client.Cod_Cliente} arrastado para ${targetDisplayName}`);
             setAdjustedRoutes(prev => prev.map(v => {
                 if (v.Cod_Cliente === client.Cod_Cliente) {
@@ -3852,7 +3873,7 @@ export const AjusteRota: React.FC = () => {
         } else {
             setCriticaToast(`ℹ️ Cliente mantido com ${client.Nome_Vendedor}. Solte sobre ou próximo à linha/área de outro vendedor para transferir.`);
         }
-    }, [adjustedPolylines, adjustedRoutes, getColabBySectorOrName, formatSellerDisplayName, pushMapUndo]);
+    }, [adjustedPolylines, adjustedRoutes, getColabBySectorOrName, formatSellerDisplayName, pushMapUndo, selectedLassoClients]);
 
     const handleToggleTeamSeller = (sellerId: string) => {
         setSelectedTeamSellers(prev => {
@@ -3933,6 +3954,16 @@ export const AjusteRota: React.FC = () => {
             return true;
         });
     }, [effectiveScopedRoutes, selectedDaysFilter, selectedQuinzenaFilter]);
+
+    // Totais exibidos na legenda do mapa: clientes no escopo e contagem por dia da semana
+    const legendTotalClients = effectiveMapColorMode === 'VENDEDOR' ? scopedAdjustedRoutes.length : effectiveScopedRoutes.length;
+    const legendDayCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        effectiveScopedRoutes.forEach(v => {
+            if (v.Dia_Semana) counts[v.Dia_Semana] = (counts[v.Dia_Semana] || 0) + 1;
+        });
+        return counts;
+    }, [effectiveScopedRoutes]);
 
     // Pontos geográficos para renderização do Mapa de Calor (Heatmap)
     const heatmapPoints = useMemo(() => {
@@ -12252,6 +12283,11 @@ export const AjusteRota: React.FC = () => {
                                 <div className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300 font-black">
                                     <span className="text-base">🎯</span>
                                     <span>{selectedLassoClients.length} {selectedLassoClients.length === 1 ? 'cliente selecionado' : 'clientes selecionados'}</span>
+                                    {selectedLassoClients.length > 1 && (
+                                        <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 hidden lg:inline" title="Arraste qualquer cliente selecionado e solte sobre a área/linha de outro vendedor para transferir todos de uma vez">
+                                            (ou arraste um deles até outra área)
+                                        </span>
+                                    )}
                                 </div>
 
                                 <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
@@ -12949,7 +12985,7 @@ export const AjusteRota: React.FC = () => {
                                                                 restricaoCliente?.HoraInicio ? `Janela: ${restricaoCliente.HoraInicio}${restricaoCliente.HoraFim ? ` às ${restricaoCliente.HoraFim}` : ''}` : null,
                                                                 restricaoCliente?.QuinzenaPermitida && restricaoCliente.QuinzenaPermitida !== 'QUALQUER' ? `Quinzena: ${restricaoCliente.QuinzenaPermitida.replace('_', ' ')}` : null,
                                                                 restricaoCliente?.DiasPermitidos ? `Dias: ${restricaoCliente.DiasPermitidos}` : null
-                                                            ].filter(Boolean).join(' • ') || (isSelectedInLasso ? 'Selecionado para ação em lote' : 'Particularidade ativa')}
+                                                            ].filter(Boolean).join(' • ') || (isSelectedInLasso ? (selectedLassoClients.length > 1 ? `Arraste para outra área para transferir os ${selectedLassoClients.length} selecionados` : 'Selecionado para ação em lote') : 'Particularidade ativa')}
                                                         </div>
                                                     </Tooltip>
                                                 )}
@@ -13155,15 +13191,34 @@ export const AjusteRota: React.FC = () => {
                         )}
 
                         {/* Legenda Explicativa de Rotas e Heatmap no Mapa */}
-                        {!isDrawingZone && scopedAdjustedRoutes.length > 0 && (
-                            <div className="absolute bottom-2 right-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg z-[1000] text-[9px] space-y-1.5 max-w-[360px] max-h-[380px] overflow-y-auto">
+                        {!isDrawingZone && scopedAdjustedRoutes.length > 0 && (isMapLegendCollapsed ? (
+                            /* Legenda recolhida: pílula compacta com o total de clientes */
+                            <button
+                                type="button"
+                                onClick={() => setIsMapLegendCollapsed(false)}
+                                className="absolute bottom-2 right-2 z-[1000] bg-white/95 dark:bg-slate-900/95 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 hover:border-indigo-400 transition cursor-pointer"
+                                title="Exibir legenda do mapa"
+                            >
+                                <GlobeIcon className="w-3.5 h-3.5 text-indigo-600"/>
+                                <span>Legenda</span>
+                                <span className="text-slate-400">·</span>
+                                <span className="font-black text-slate-900 dark:text-white tabular-nums">{legendTotalClients.toLocaleString('pt-BR')}</span>
+                                <span className="font-semibold text-slate-500 dark:text-slate-400">clientes</span>
+                                <ChevronDownIcon className="w-3 h-3 rotate-180 text-slate-400" />
+                            </button>
+                        ) : (
+                            <div className="absolute bottom-2 right-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg z-[1000] text-[10px] space-y-2 w-[calc(100%-1rem)] sm:w-auto sm:min-w-[300px] max-w-[460px] max-h-[420px] overflow-y-auto">
                                 {/* Cabeçalho da Legenda com Seletor de Modo de Cor */}
-                                <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200/80 dark:border-slate-800 pb-1 gap-2">
-                                    <span className="flex items-center gap-1 shrink-0">
-                                        <GlobeIcon className="w-3 h-3 text-indigo-600"/> 
+                                <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200/80 dark:border-slate-800 pb-1.5 gap-2">
+                                    <span className="flex items-center gap-1.5 shrink-0 text-[11px]">
+                                        <GlobeIcon className="w-3.5 h-3.5 text-indigo-600"/>
                                         {effectiveMapColorMode === 'VENDEDOR' ? 'Legenda por Vendedor' : 'Legenda por Dia'}
+                                        <span className="ml-1 px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-black tabular-nums" title="Total de clientes no escopo exibido">
+                                            {legendTotalClients.toLocaleString('pt-BR')} <span className="font-semibold">clientes</span>
+                                        </span>
                                     </span>
-                                    <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[8px]">
+                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[9px]">
                                         <button
                                             type="button"
                                             onClick={() => setMapColorMode('AUTO')}
@@ -13201,12 +13256,21 @@ export const AjusteRota: React.FC = () => {
                                             Dia
                                         </button>
                                     </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsMapLegendCollapsed(true)}
+                                        className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                        title="Ocultar legenda"
+                                    >
+                                        <ChevronDownIcon className="w-3.5 h-3.5" />
+                                    </button>
+                                    </div>
                                 </div>
 
                                 {/* Conteúdo da Legenda: MODO VENDEDOR */}
                                 {effectiveMapColorMode === 'VENDEDOR' ? (
                                     <div className="space-y-1">
-                                        <div className="flex items-center justify-between text-[8px] text-slate-500 dark:text-slate-400 font-semibold">
+                                        <div className="flex items-center justify-between text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
                                             <span>Vendedores ({availableTeamSellers.length})</span>
                                             {(focusedMapSellerId !== null || selectedTeamSellers.size > 0) && (
                                                 <button
@@ -13218,9 +13282,11 @@ export const AjusteRota: React.FC = () => {
                                                 </button>
                                             )}
                                         </div>
-                                        <div className="flex flex-wrap gap-1 max-h-[140px] overflow-y-auto pr-0.5">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[220px] overflow-y-auto pr-0.5">
                                             {availableTeamSellers.map(seller => {
                                                 const isFocused = (selectedTeamSellers.size === 1 && selectedTeamSellers.has(seller.id)) || (focusedMapSellerId === Number(seller.id));
+                                                const maxSellerCount = Math.max(1, ...availableTeamSellers.map(s => s.count));
+                                                const sharePct = legendTotalClients > 0 ? Math.round((seller.count / legendTotalClients) * 100) : 0;
                                                 return (
                                                     <button
                                                         key={seller.id}
@@ -13232,21 +13298,26 @@ export const AjusteRota: React.FC = () => {
                                                                 handleSelectOnlySeller(seller.id);
                                                             }
                                                         }}
-                                                        className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-[8.5px] font-bold transition-all cursor-pointer select-none active:scale-95 border ${
+                                                        className={`relative overflow-hidden flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer select-none active:scale-95 border min-w-0 ${
                                                             isFocused
                                                                 ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xs ring-1 ring-offset-1 ring-slate-400'
-                                                                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                                : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                                                         }`}
-                                                        title={`Clique para ${isFocused ? 'desfocar' : 'isolar'} no vendedor ${seller.name}`}
+                                                        title={`${seller.name} — ${seller.count} clientes (${sharePct}% do total). Clique para ${isFocused ? 'desfocar' : 'isolar'} no mapa.`}
                                                     >
-                                                        <span 
-                                                            className="w-2.5 h-2.5 rounded-full shrink-0 border border-white dark:border-slate-900 shadow-xs" 
-                                                            style={{ backgroundColor: seller.color }} 
+                                                        <span
+                                                            className="w-2.5 h-2.5 rounded-full shrink-0 border border-white dark:border-slate-900 shadow-xs"
+                                                            style={{ backgroundColor: seller.color }}
                                                         />
-                                                        <span className="max-w-[120px] truncate">{seller.name}</span>
-                                                        <span className="text-[8px] opacity-70 bg-black/10 dark:bg-white/10 px-1 rounded-full font-mono">
+                                                        <span className="flex-1 min-w-0 truncate text-left">{seller.name}</span>
+                                                        <span className="shrink-0 text-[11px] font-black tabular-nums">
                                                             {seller.count}
                                                         </span>
+                                                        {/* Barra de participação proporcional à maior carteira */}
+                                                        <span
+                                                            className="absolute left-0 bottom-0 h-[2px] opacity-80"
+                                                            style={{ width: `${(seller.count / maxSellerCount) * 100}%`, backgroundColor: seller.color }}
+                                                        />
                                                     </button>
                                                 );
                                             })}
@@ -13256,7 +13327,7 @@ export const AjusteRota: React.FC = () => {
                                     /* Conteúdo da Legenda: MODO DIA DA SEMANA */
                                     <>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[8px] text-slate-500 dark:text-slate-400 font-semibold">Dias da Semana</span>
+                                            <span className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Dias da Semana</span>
                                             {(selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL') && (
                                                 <button
                                                     type="button"
@@ -13265,7 +13336,7 @@ export const AjusteRota: React.FC = () => {
                                                         setSelectedDaysFilter([]);
                                                         setSelectedQuinzenaFilter('ALL');
                                                     }}
-                                                    className="text-[8px] font-black text-red-600 dark:text-red-400 hover:underline cursor-pointer flex items-center gap-0.5 ml-0.5"
+                                                    className="text-[9px] font-black text-red-600 dark:text-red-400 hover:underline cursor-pointer flex items-center gap-0.5 ml-0.5"
                                                     title="Limpar todos os filtros da legenda"
                                                 >
                                                     ✕ Limpar
@@ -13286,7 +13357,7 @@ export const AjusteRota: React.FC = () => {
                                                             e.stopPropagation();
                                                             handleToggleDayFilter(day);
                                                         }}
-                                                        className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-[8.5px] font-bold transition-all cursor-pointer select-none active:scale-95 border ${
+                                                        className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer select-none active:scale-95 border ${
                                                             isSelected 
                                                                 ? `${cfg.bg} text-white border-transparent shadow-2xs ring-1 ring-offset-1 ring-slate-400 font-black` 
                                                                 : hasAnySelected
@@ -13297,11 +13368,12 @@ export const AjusteRota: React.FC = () => {
                                                     >
                                                         <span className={`w-2 h-2 rounded-full shrink-0 ${isSelected ? 'bg-white' : ''}`} style={{ backgroundColor: isSelected ? undefined : cfg.hex }}/>
                                                         <span>{cfg.label}</span>
+                                                        <span className="font-black tabular-nums opacity-80">{legendDayCounts[day] || 0}</span>
                                                     </button>
                                                 );
                                             })}
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-slate-600 dark:text-slate-400 font-medium text-[8.5px]">
+                                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-slate-600 dark:text-slate-400 font-medium text-[10px]">
                                             <button
                                                 type="button"
                                                 onClick={(e) => {
@@ -13366,14 +13438,14 @@ export const AjusteRota: React.FC = () => {
                                     </>
                                 )}
                                 {showHeatmap && (
-                                    <div className="flex items-center justify-between text-[8px] text-slate-600 dark:text-slate-300 font-bold pt-1 border-t border-slate-200/80 dark:border-slate-800">
+                                    <div className="flex items-center justify-between text-[9px] text-slate-600 dark:text-slate-300 font-bold pt-1 border-t border-slate-200/80 dark:border-slate-800">
                                         <span className="flex items-center gap-1">🔥 Menor densidade</span>
                                         <div className="w-20 h-2 rounded-full bg-gradient-to-r from-blue-500 via-yellow-400 to-red-600 mx-2 shadow-xs ring-1 ring-slate-300 dark:ring-slate-700" />
                                         <span>Alta densidade</span>
                                     </div>
                                 )}
                             </div>
-                        )}
+                        ))}
                     </div>
 
                     {/* TABELA DE AJUSTE MANUAL E EDICAO DE ROTAS */}
