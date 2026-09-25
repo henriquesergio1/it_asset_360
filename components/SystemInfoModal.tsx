@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.257.0',
+    date: 'Hoje',
+    title: 'Ajuste de Rota: Menus Camadas e Relatórios e Mapa Enquadrado nos Clientes',
+    changes: [
+      'Mapa: os botões Mapa de Calor e Setores (Polígonos e Centroides) foram agrupados no menu \"Camadas ▾\", que indica quais camadas estão ativas. Seletor de vendedor, quinzenas, Laço, Desfazer e Tela Cheia continuam como botões diretos.',
+      'Grade: Resumo KM & Tempo, Itinerário do Dia, Comparativo e Exportar Excel (em Abas) foram agrupados no menu \"Relatórios ▾\", com cores neutras; o contador de alterações do Comparativo continua visível no botão.',
+      'Mapa enquadrado automaticamente nos clientes ao carregar um roteiro ou trocar equipe, escopo ou vendedor (antes abria fixo no centro de São Paulo). Edições de clientes, laço e desfazer não movem o mapa.'
+    ]
+  },
+  {
     version: '3.256.0',
     date: 'Hoje',
     title: 'Fuel360: Cabeçalhos Redundantes Removidos e Ações ao Lado da Busca',

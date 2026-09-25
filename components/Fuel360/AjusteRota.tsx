@@ -583,6 +583,26 @@ const MapFlyToHandler: React.FC<{
     return null;
 };
 
+// Enquadra o mapa nos clientes exibidos ao carregar um roteiro ou trocar equipe/escopo/vendedor.
+// Só reage à mudança de "fitKey" — edições de clientes (dia, vendedor, laço, desfazer) não movem o mapa.
+const MapAutoFitHandler: React.FC<{ fitKey: string; points: Array<[number, number]> }> = ({ fitKey, points }) => {
+    const map = useMap();
+    useEffect(() => {
+        const valid = points.filter(([lat, lng]) => lat && lng && Math.abs(lat) <= 90 && Math.abs(lng) <= 180);
+        if (valid.length === 0) return;
+        const timer = setTimeout(() => {
+            if (valid.length === 1) {
+                map.setView(valid[0], 14);
+            } else {
+                map.fitBounds(L.latLngBounds(valid), { padding: [40, 40], maxZoom: 15 });
+            }
+        }, 200);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fitKey, map]);
+    return null;
+};
+
 const pinClientIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -1934,7 +1954,9 @@ export const AjusteRota: React.FC = () => {
     const clearMapUndo = useCallback(() => setMapUndoStack([]), []);
 
     // Menus suspensos da barra de comandos do topo ("Dados" e "Otimizar")
-    const [openTopMenu, setOpenTopMenu] = useState<'dados' | 'otimizar' | null>(null);
+    const [openTopMenu, setOpenTopMenu] = useState<'dados' | 'otimizar' | 'camadas' | 'relatorios' | null>(null);
+    // Posição do menu "Relatórios" (fixo na tela, para não ser cortado pelo cartão da grade)
+    const [reportsMenuPos, setReportsMenuPos] = useState<{ top: number; right: number } | null>(null);
     
     // NOVO: Mapping manual
     const [unmatchedNames, setUnmatchedNames] = useState<string[]>([]);
@@ -12110,20 +12132,57 @@ export const AjusteRota: React.FC = () => {
                                     </>
                                     )}
 
-                                    {/* Botão Heatmap de Concentração de Visitas */}
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowHeatmap(prev => !prev)}
-                                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 cursor-pointer ${
-                                            showHeatmap 
-                                                ? 'bg-gradient-to-r from-orange-500 to-rose-600 text-white border-orange-400 shadow-orange-500/30 ring-2 ring-orange-400/40' 
-                                                : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800 hover:border-orange-400 hover:text-orange-600'
-                                        }`}
-                                        title={showHeatmap ? "Ocultar Mapa de Calor de Concentração" : "Exibir Mapa de Calor de Concentração de Visitas"}
-                                    >
-                                        <span className="text-sm leading-none">🔥</span>
-                                        <span>{showHeatmap ? 'Calor Ativo' : 'Mapa de Calor'}</span>
-                                    </button>
+                                    {/* Menu "Camadas": Mapa de Calor e Polígonos/Centroides dos Setores */}
+                                    <div className="relative">
+                                        {openTopMenu === 'camadas' && (
+                                            <div className="fixed inset-0 z-40 cursor-default" onClick={() => setOpenTopMenu(null)} />
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => setOpenTopMenu(prev => prev === 'camadas' ? null : 'camadas')}
+                                            className={`relative z-50 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 cursor-pointer bg-white/95 dark:bg-slate-900/95 backdrop-blur text-slate-700 dark:text-slate-200 hover:border-indigo-400 hover:text-indigo-600 ${
+                                                (showHeatmap || showSectorPolygons) ? 'border-indigo-400 dark:border-indigo-600' : 'border-slate-200/80 dark:border-slate-800'
+                                            }`}
+                                            title="Exibir ou ocultar camadas do mapa (Mapa de Calor e Setores)"
+                                        >
+                                            <span className="text-sm leading-none">🗂️</span>
+                                            <span>Camadas</span>
+                                            {(showHeatmap || showSectorPolygons) && (
+                                                <span className="bg-indigo-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                                                    {(showHeatmap ? 1 : 0) + (showSectorPolygons ? 1 : 0)}
+                                                </span>
+                                            )}
+                                            <ChevronDownIcon className={`w-3 h-3 transition-transform ${openTopMenu === 'camadas' ? 'rotate-180' : ''}`} />
+                                        </button>
+                                        {openTopMenu === 'camadas' && (
+                                            <div className="absolute right-0 top-full mt-1.5 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 p-1.5 space-y-0.5 animate-in fade-in zoom-in-95">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowHeatmap(prev => !prev)}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                                    title={showHeatmap ? "Ocultar Mapa de Calor de Concentração" : "Exibir Mapa de Calor de Concentração de Visitas"}
+                                                >
+                                                    <span className="text-sm leading-none">🔥</span>
+                                                    <span className="flex-1 text-left">Mapa de Calor</span>
+                                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${showHeatmap ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'}`}>
+                                                        {showHeatmap ? 'ATIVO' : 'OFF'}
+                                                    </span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowSectorPolygons(prev => !prev)}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                                    title={showSectorPolygons ? "Ocultar Polígonos e Centroides dos Setores" : "Exibir Polígonos e Centroides dos Setores no Mapa"}
+                                                >
+                                                    <span className="text-sm leading-none">🗺️</span>
+                                                    <span className="flex-1 text-left">Setores (Polígonos e Centroides)</span>
+                                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${showSectorPolygons ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'}`}>
+                                                        {showSectorPolygons ? 'ATIVO' : 'OFF'}
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
 
                                     {/* Botão Ferramenta de Laço / Seleção no Mapa */}
                                     <button
@@ -12145,20 +12204,6 @@ export const AjusteRota: React.FC = () => {
                                         <span>{isLassoActive ? 'Laço Ativo' : 'Laço de Seleção'}</span>
                                     </button>
 
-                                    {/* Botão de Exibição dos Polígonos de Setor e Centroides */}
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowSectorPolygons(prev => !prev)}
-                                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 cursor-pointer ${
-                                            showSectorPolygons 
-                                                ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white border-teal-400 shadow-teal-500/30 ring-2 ring-teal-400/40' 
-                                                : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800 hover:border-teal-400 hover:text-teal-600'
-                                        }`}
-                                        title={showSectorPolygons ? "Ocultar Polígonos e Centroides dos Setores" : "Exibir Polígonos e Centroides dos Setores no Mapa"}
-                                    >
-                                        <span className="text-sm leading-none">🗺️</span>
-                                        <span>{showSectorPolygons ? 'Setores Ativos' : 'Ver Setores'}</span>
-                                    </button>
                                 </>
                             )}
 
@@ -12355,6 +12400,10 @@ export const AjusteRota: React.FC = () => {
                             >
                                 <MapResizeHandler isFullscreen={isMapFullscreen} />
                                 <MapFlyToHandler target={mapFlyToTarget} markerRefs={markerRefs} />
+                                <MapAutoFitHandler
+                                    fitKey={`${teamType}|${scopeMode}|${selectedSeller}|${selectedPromoter}|${Array.from(selectedTeamSellers).sort().join(',')}|${focusedMapSellerId ?? ''}|${originalRoutes.length}|${loadedSimInfo?.id ?? ''}`}
+                                    points={filteredRoutes.filter(v => v.Lat && v.Long).map(v => [v.Lat, v.Long] as [number, number])}
+                                />
                                 <LassoSelectionHandler 
                                     isActive={isLassoActive}
                                     clients={filteredRoutes}
@@ -13434,45 +13483,76 @@ export const AjusteRota: React.FC = () => {
 
                                     {/* BOTÕES DE AÇÃO COM WRAP SUAVE E ALINHAMENTO IMPECÁVEL */}
                                     <div className="flex flex-wrap items-center gap-2">
+                                        {/* Menu "Relatórios": Resumo KM & Tempo, Itinerário, Comparativo e Exportação Excel */}
+                                        {openTopMenu === 'relatorios' && (
+                                            <div className="fixed inset-0 z-40 cursor-default" onClick={() => setOpenTopMenu(null)} />
+                                        )}
                                         <button
-                                            onClick={handleOpenSummaryModal}
-                                            disabled={scopedAdjustedRoutes.length === 0}
-                                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center border border-blue-200 dark:border-blue-800 shadow-2xs transition h-[32px] disabled:opacity-50 cursor-pointer"
-                                            title="Visualizar o resumo operacional consolidado de KM, tempo em trânsito e balanceamento diário e quinzenal"
+                                            type="button"
+                                            onClick={(e) => {
+                                                const r = e.currentTarget.getBoundingClientRect();
+                                                setReportsMenuPos({ top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) });
+                                                setOpenTopMenu(prev => prev === 'relatorios' ? null : 'relatorios');
+                                            }}
+                                            className="relative z-50 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition h-[32px] cursor-pointer"
+                                            title="Resumo de KM e tempo, itinerário do dia, comparativo e exportação Excel"
                                         >
-                                            <ChartBarIcon className="w-3.5 h-3.5 mr-1.5 text-blue-600 dark:text-blue-400"/>
-                                            Resumo KM & Tempo
-                                        </button>
-                                        <button
-                                            onClick={() => setShowItineraryModal(true)}
-                                            disabled={scopedAdjustedRoutes.length === 0}
-                                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center border border-emerald-200 dark:border-emerald-800 shadow-2xs transition h-[32px] disabled:opacity-50 cursor-pointer"
-                                            title="Visualizar a sequência cronológica da rota do dia com links de navegação para Google Maps e Waze"
-                                        >
-                                            <LocationMarkerIcon className="w-3.5 h-3.5 mr-1.5 text-emerald-600 dark:text-emerald-400"/>
-                                            Itinerário do Dia
-                                        </button>
-                                        <button
-                                            onClick={handleOpenCompareModal}
-                                            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 dark:text-indigo-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center border border-indigo-200 dark:border-indigo-800 shadow-2xs transition h-[32px]"
-                                            title="Comparar a rota original com a rota ajustada antes de salvar"
-                                        >
-                                            <PresentationChartLineIcon className="w-3.5 h-3.5 mr-1.5 text-indigo-600 dark:text-indigo-400"/>
-                                            Comparativo
+                                            <ChartBarIcon className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400"/>
+                                            <span>Relatórios</span>
                                             {routeComparisonDiff.totalChanged > 0 && (
-                                                <span className="ml-1.5 bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                                                <span className="bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full" title={`${routeComparisonDiff.totalChanged} alteração(ões) em relação à rota original`}>
                                                     {routeComparisonDiff.totalChanged}
                                                 </span>
                                             )}
+                                            <ChevronDownIcon className={`w-3 h-3 transition-transform ${openTopMenu === 'relatorios' ? 'rotate-180' : ''}`} />
                                         </button>
-                                        <button
-                                            type="button"
-                                            onClick={handleExportExcel}
-                                            className="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition h-[32px]"
-                                            title="Exportar planilha Excel estruturada com abas consolidadas e por equipe/colaborador conforme o escopo selecionado"
-                                        >
-                                            <UploadIcon className="w-3.5 h-3.5 mr-1.5 rotate-180"/> Exportar Excel (em Abas)
-                                        </button>
+                                        {openTopMenu === 'relatorios' && reportsMenuPos && (
+                                            <div
+                                                className="fixed w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 p-1.5 space-y-0.5 animate-in fade-in zoom-in-95"
+                                                style={{ top: reportsMenuPos.top, right: reportsMenuPos.right }}
+                                            >
+                                                <button
+                                                    onClick={() => { setOpenTopMenu(null); handleOpenSummaryModal(); }}
+                                                    disabled={scopedAdjustedRoutes.length === 0}
+                                                    className="w-full flex items-center px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50 cursor-pointer"
+                                                    title="Visualizar o resumo operacional consolidado de KM, tempo em trânsito e balanceamento diário e quinzenal"
+                                                >
+                                                    <ChartBarIcon className="w-3.5 h-3.5 mr-2 text-blue-600 dark:text-blue-400"/>
+                                                    Resumo KM & Tempo
+                                                </button>
+                                                <button
+                                                    onClick={() => { setOpenTopMenu(null); setShowItineraryModal(true); }}
+                                                    disabled={scopedAdjustedRoutes.length === 0}
+                                                    className="w-full flex items-center px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50 cursor-pointer"
+                                                    title="Visualizar a sequência cronológica da rota do dia com links de navegação para Google Maps e Waze"
+                                                >
+                                                    <LocationMarkerIcon className="w-3.5 h-3.5 mr-2 text-emerald-600 dark:text-emerald-400"/>
+                                                    Itinerário do Dia
+                                                </button>
+                                                <button
+                                                    onClick={() => { setOpenTopMenu(null); handleOpenCompareModal(); }}
+                                                    className="w-full flex items-center px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                                    title="Comparar a rota original com a rota ajustada antes de salvar"
+                                                >
+                                                    <PresentationChartLineIcon className="w-3.5 h-3.5 mr-2 text-indigo-600 dark:text-indigo-400"/>
+                                                    <span className="flex-1 text-left">Comparativo</span>
+                                                    {routeComparisonDiff.totalChanged > 0 && (
+                                                        <span className="ml-1.5 bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                                                            {routeComparisonDiff.totalChanged}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                                <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setOpenTopMenu(null); handleExportExcel(); }}
+                                                    className="w-full flex items-center px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                                    title="Exportar planilha Excel estruturada com abas consolidadas e por equipe/colaborador conforme o escopo selecionado"
+                                                >
+                                                    <UploadIcon className="w-3.5 h-3.5 mr-2 rotate-180 text-slate-500"/> Exportar Excel (em Abas)
+                                                </button>
+                                            </div>
+                                        )}
 
                                     </div>
                                 </div>
