@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.252.0',
+    date: 'Hoje',
+    title: 'T.I.: Remoção do Cabeçalho Redundante das Telas (Mais Espaço Útil)',
+    changes: [
+      'O título e a descrição de cada tela já exibidos na barra superior do sistema deixaram de ser repetidos em um cartão grande no conteúdo, liberando altura útil em Dashboard, Dispositivos, Colaboradores, Chips/SIMs, Licenças/Contas, Consumíveis, Tarefas, Relatórios, Entrega e Devolução e Administração.',
+      'Nenhum botão foi removido: em Chips/SIMs e Tarefas as ações (exportação, colunas e novo cadastro) foram para a linha de busca/filtros; nas demais telas ficaram em uma faixa compacta alinhada à direita. As abas de Relatórios e o status "Sistema Online" do Dashboard foram mantidos.'
+    ]
+  },
+  {
     version: '3.251.1',
     date: 'Hoje',
     title: 'Fuel360: Correção do "Marcar Todos" no Filtro de Vendedores',

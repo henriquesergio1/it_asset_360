@@ -482,13 +482,6 @@ const Operations = () => {
 
  return (
  <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
- <div className="flex justify-between items-end">
-  <div>
-  <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Painel de Operações</h1>
-  <p className="font-medium text-slate-500 dark:text-slate-400">Gestão centralizada de Entregas e Devoluções.</p>
-  </div>
- </div>
-
  <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700">
  <div className="flex bg-slate-50 dark:bg-slate-900 p-2 gap-2 transition-colors border-b border-slate-200 dark:border-slate-700">
  <button onClick={() => { setActiveTab('CHECKOUT'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-bold uppercase text-xs tracking-wider transition-all border ${activeTab === 'CHECKOUT' ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:text-slate-200'}`}>

@@ -999,14 +999,8 @@ const DeviceManager = () => {
 
  return (
     <div className="space-y-6 relative pb-20 animate-fade-in">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl relative z-30">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2 truncate">
-            <Smartphone className="text-blue-500 shrink-0" size={24} />
-            Inventário de Dispositivos / Ativos
-          </h2>
-          <p className="text-[10px] sm:text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1 sm:mt-1.5 opacity-80 truncate">Relação completa de máquinas, coletores e celulares</p>
-        </div>
+      {/* AÇÕES DA TELA (o título da tela fica na barra superior do sistema) */}
+      <div className="flex flex-wrap items-center justify-end gap-3 relative z-30">
         <div className="flex flex-nowrap items-center gap-2 sm:gap-3 shrink-0">
           <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner shrink-0">
             <button 

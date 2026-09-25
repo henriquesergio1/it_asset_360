@@ -326,15 +326,8 @@ const Consumables = () => {
 
     return (
         <div className="space-y-6 animate-fade-in relative pb-20">
-            {/* NOVO CABEÇALHO PADRONIZADO */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl relative z-30">
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-                        <Package className="text-blue-500" size={28} />
-                        Gestão de Consumíveis / Insumos
-                    </h2>
-                    <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1.5 opacity-80">Controle de estoque, toners, etiquetas e insumos técnicos</p>
-                </div>
+            {/* AÇÕES DA TELA (o título da tela fica na barra superior do sistema) */}
+            <div className="flex flex-wrap items-center justify-end gap-3 relative z-30">
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner">
                         <button 

@@ -424,15 +424,8 @@ const AccountManager = () => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-20 relative">
-      {/* CABEÇALHO PADRONIZADO */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl relative z-30">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-            <ShieldCheck className="text-indigo-600 dark:text-indigo-400" size={28} />
-            Gestão de Contas e Licenças
-          </h2>
-          <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1.5 opacity-80">Controle de credenciais e acessos corporativos</p>
-        </div>
+      {/* AÇÕES DA TELA (o título da tela fica na barra superior do sistema) */}
+      <div className="flex flex-wrap items-center justify-end gap-3 relative z-30">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner">
             <button onClick={() => handleExport('csv')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400 transition-all shadow-inner" title="Exportar CSV"><FileText size={18}/></button>

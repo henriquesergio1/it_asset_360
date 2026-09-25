@@ -347,50 +347,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
 
   return (
     <div className="space-y-6 pb-20 animate-fade-in relative">
-      {/* CABEÇALHO PADRONIZADO */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-            <ClipboardList className="text-indigo-500" size={28} />
-            Gestão de Tarefas e Rotinas IT
-          </h2>
-          <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1.5 opacity-80">Acompanhamento de manutenções, auditorias e fluxos de trabalho</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner">
-            <button 
-              onClick={() => handleExport('csv')} 
-              className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400"
-              title="Exportar CSV"
-            >
-              <FileText size={UI_ICON_SIZE_BASE}/>
-            </button>
-            <button 
-              onClick={() => handleExport('excel')} 
-              className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400"
-              title="Exportar Excel"
-            >
-              <FileSpreadsheet size={UI_ICON_SIZE_BASE}/>
-            </button>
-            <button 
-              onClick={() => handleExport('pdf')} 
-              className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400"
-              title="Exportar PDF"
-            >
-              <Download size={UI_ICON_SIZE_BASE}/>
-            </button>
-          </div>
-
-          <button 
-            onClick={() => setIsAdding(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-indigo-900/40 border-b-4 border-b-indigo-800 active:border-b-0 active:translate-y-[2px]"
-          >
-            <Plus size={UI_ICON_SIZE_BASE} /> Nova Tarefa
-          </button>
-        </div>
-      </div>
-
-      {/* DASHBOARD CARDS PADRONIZADOS */}
+      {/* DASHBOARD CARDS PADRONIZADOS (o título da tela fica na barra superior do sistema) */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
           <div>
@@ -467,6 +424,38 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
               <option value={TaskType.AUDIT}>Auditorias</option>
               <option value={TaskType.OTHER}>Outros</option>
             </select>
+
+            {/* Exportação e nova tarefa (antes no cabeçalho da tela) */}
+            <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner">
+              <button
+                onClick={() => handleExport('csv')}
+                className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400"
+                title="Exportar CSV"
+              >
+                <FileText size={UI_ICON_SIZE_BASE}/>
+              </button>
+              <button
+                onClick={() => handleExport('excel')}
+                className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400"
+                title="Exportar Excel"
+              >
+                <FileSpreadsheet size={UI_ICON_SIZE_BASE}/>
+              </button>
+              <button
+                onClick={() => handleExport('pdf')}
+                className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400"
+                title="Exportar PDF"
+              >
+                <Download size={UI_ICON_SIZE_BASE}/>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setIsAdding(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-indigo-900/40 border-b-4 border-b-indigo-800 active:border-b-0 active:translate-y-[2px]"
+            >
+              <Plus size={UI_ICON_SIZE_BASE} /> Nova Tarefa
+            </button>
           </div>
         </div>
       </div>

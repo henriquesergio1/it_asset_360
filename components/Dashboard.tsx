@@ -710,15 +710,8 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 pb-10 animate-fade-in">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-            <LayoutDashboard className="text-blue-500" size={28} />
-            Dashboard
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mt-1">Bem-vindo ao centro de controle do seu inventário de TI.</p>
-        </div>
+      {/* Header Section: status do sistema (o título da tela fica na barra superior do sistema) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
         <div className="flex items-center gap-3">
           <div className="px-4 py-2 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>

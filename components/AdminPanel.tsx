@@ -1019,13 +1019,6 @@ ORDER BY a.CODCET;`;
 
  return (
  <div className="space-y-6">
- <div className="flex justify-between items-end">
- <div>
- <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Administração do Sistema</h1>
- <p className="text-sm">Gerencie acessos, configurações e auditoria estruturada.</p>
- </div>
- </div>
-
  <div className="flex border-b border-slate-200 dark:border-slate-700 overflow-x-auto bg-white dark:bg-slate-800 px-2 pt-2 rounded-t-xl transition-colors">
  <button onClick={() => setActiveTab('USERS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'USERS' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><Shield size={16} /> Acesso</button>
  <button onClick={() => setActiveTab('SETTINGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'SETTINGS' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><Settings size={16} /> Geral</button>
