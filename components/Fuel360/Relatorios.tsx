@@ -363,16 +363,6 @@ export const Relatorios: React.FC = () => {
 
     return (
         <div className="space-y-8 print:w-full print:absolute print:top-0 print:left-0 print:bg-white print:z-[200]">
-            <div className="flex items-center justify-between print:hidden">
-                <div>
-                    <h2 className="text-3xl font-extrabold text-slate-800 dark:text-white mb-2 tracking-tight">Relatórios de Reembolso</h2>
-                    <p className="text-slate-500 dark:text-slate-400 font-medium">Consulte o histórico financeiro e operacional.</p>
-                </div>
-                <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-full">
-                    <ChartBarIcon className="w-8 h-8 text-blue-600 dark:text-sky-400"/>
-                </div>
-            </div>
-
             {/* Print Header (Visible only on print) */}
             <div className="hidden print:block text-center border-b-2 border-slate-900 pb-4 mb-4">
                 <h1 className="text-2xl font-black uppercase">Relatório de Reembolso - Fuel360</h1>

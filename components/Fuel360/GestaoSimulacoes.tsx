@@ -396,10 +396,6 @@ export const GestaoSimulacoes: React.FC = () => {
             />
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                <div>
-                    <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">Gestão de Simulações e Cálculos</h2>
-                    <p className="text-slate-500 dark:text-slate-400 font-medium">Auditoria, ajuste e exclusão de históricos.</p>
-                </div>
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 flex flex-wrap gap-1 shadow-sm mt-4 md:mt-0 transition-colors">
                     <button 
                         onClick={() => setActiveTab('CALCULO')} 

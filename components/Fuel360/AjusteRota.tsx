@@ -11137,21 +11137,6 @@ export const AjusteRota: React.FC = () => {
             <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-3 transition-colors">
                 {/* LADO ESQUERDO: TÍTULO, SELETOR DE EQUIPE E SELETOR DE ESCOPO */}
                 <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center space-x-2.5 mr-1">
-                        <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/60 text-indigo-600 dark:text-indigo-400 shrink-0">
-                            <CogIcon className="w-5 h-5 animate-spin-slow"/>
-                        </div>
-                        <div>
-                            <h2 className="text-sm sm:text-base font-black text-slate-800 dark:text-white leading-tight">
-                                Ajuste & Otimização de Rotas
-                            </h2>
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-tight">
-                                Simulação, balanceamento e sequenciamento viário
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="h-6 w-px bg-slate-200 dark:border-slate-800 hidden md:block" />
 
                     {/* Alternador Vendas / Promotores */}
                     <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">

@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.256.0',
+    date: 'Hoje',
+    title: 'Fuel360: Cabeçalhos Redundantes Removidos e Ações ao Lado da Busca',
+    changes: [
+      'Telas do Fuel360 (Gestão de Simulações, Relatórios, Equipe & Setores, Gestão de Ausências, Geolocalizador ERP e Ajuste de Rota): removido o título grande da página, que repetia o nome já exibido na barra superior.',
+      'Equipe & Setores: botões Sincronizar, Endereços e Novo Cadastro movidos para a barra de busca/filtros. Gestão de Ausências: Excel, PDF e Nova Ausência movidos para a barra de busca/filtros. Botões mais compactos.',
+      'Geolocalizador ERP: período, sincronização e exportação mantidos no cartão de controles, agora mais compacto. Gestão de Simulações: abas mantidas. Ajuste de Rota: seletores e ações mantidos na barra de comandos.'
+    ]
+  },
+  {
     version: '3.255.0',
     date: 'Hoje',
     title: 'R.H.: Cabeçalhos Redundantes Removidos e Ações ao Lado da Busca',

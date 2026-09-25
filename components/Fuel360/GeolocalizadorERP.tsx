@@ -1017,24 +1017,7 @@ export const GeolocalizadorERP: React.FC = () => {
     return (
         <div className="space-y-6">
             {/* CABEÇALHO DO MÓDULO */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center gap-4">
-                    <div className="p-3.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl border border-emerald-500/20">
-                        <Crosshair size={28} />
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                            Geolocalizador & Auditor ERP
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                                Fuel360
-                            </span>
-                        </h2>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                            Conferência e auditoria métrica de latitude/longitude cadastrada no ERP vs geocodificação real dos endereços.
-                        </p>
-                    </div>
-                </div>
-
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
                 {/* CONTROLES DE CARGA ERP */}
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700">
